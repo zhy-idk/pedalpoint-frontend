@@ -1,6 +1,6 @@
 function Searchbar() {
   return (
-    <label className="input w-full">
+    <label className="input w-full input-sm md:input-md">
       <svg className="h-[1em] opacity-50" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
         <g
         strokeLinejoin="round"

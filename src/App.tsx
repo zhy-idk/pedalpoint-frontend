@@ -2,6 +2,7 @@ import './App.css'
 import NavBar from './components/Navbar'
 import Home from './pages/Home'
 import Login from './pages/Login'
+import Product from './pages/Product'
 import Builder from './pages/Builder'
 import Prebuilt from './pages/Prebuilt'
 import Cart from './pages/Cart'
@@ -21,6 +22,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="login/" element={<Login />} />
+        <Route path="product/" element={<Product />} />
         <Route path="builder/" element={<Builder />} />
         <Route path="prebuilt/" element={<Prebuilt />} />
         <Route path="cart/" element={<Cart />} />

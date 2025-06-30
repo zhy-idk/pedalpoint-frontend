@@ -7,7 +7,7 @@ function Menu() {
       <li>
         <details>
           <summary>Products</summary>
-          <ul>
+          <ul className="z-10">
             <li><Link to="/">Link 1</Link></li>
             <li><Link to="">Link 2</Link></li>
           </ul>
@@ -16,7 +16,7 @@ function Menu() {
       <li>
         <details>
           <summary>Services</summary>
-          <ul>
+          <ul className="z-10">
             <li><Link to="/">Repair</Link></li>
             <li><Link to="builder/">Build</Link></li>
           </ul>
@@ -24,7 +24,6 @@ function Menu() {
       </li>
       <li><Link to="about/">About</Link></li>
       <li><Link to="/">Contact</Link></li>
-
     </>
   );
 }

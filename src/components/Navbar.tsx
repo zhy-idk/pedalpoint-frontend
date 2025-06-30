@@ -6,11 +6,11 @@ function NavBar() {
     return (
       <div className="navbar grid place-items-center grid-rows-2 h-30 shadow-md">
       <div className="flex flex-wrap justify-center items-center w-full">
+
         {/* Hamburger Menu Button for mobile*/}
-        <div className="lg:hidden">
+        <div className="md:hidden">
           <input id="my-drawer1" type="checkbox" className="drawer-toggle" />
           <div className="drawer-content">
-            {/* Page content here */}
             <label htmlFor="my-drawer1" className="btn btn-square btn-ghost">
               <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                   className="inline-block h-5 w-5 stroke-current">
@@ -20,10 +20,11 @@ function NavBar() {
             </label>
           </div>
 
+          {/* Sidebar Menu */}
           <div className="drawer-side">
             <label htmlFor="my-drawer1" aria-label="close sidebar" className="drawer-overlay"></label>
-            <ul className="menu p-4 w-80 min-h-full bg-base-200 text-base-content">
-              <div className="menu-vertical">
+            <ul className="menu p-4 min-w-3/5 min-h-full bg-base-200 text-base-content sm:min-w-1/3">
+              <div className="menu-vertical font-medium text-">
                 <Menu />
               </div>
             </ul>
@@ -31,15 +32,14 @@ function NavBar() {
         </div>
 
         {/* Logo and Title */}
-        <div className="flex items-center justify-center flex-1 lg:flex-none">
-          <Link to="/" className="btn btn-ghost text-xl rounded-sm lg:flex-none">PedalPoint</Link>
+        <div className="flex items-center justify-center flex-1 ml-10 md:flex-none md:m-0">
+          <Link to="/" className="btn btn-ghost text-xl rounded-sm md:flex-none">PedalPoint</Link>
         </div>
 
         {/* Searchbar - Hidden on mobile, shown on desktop */}
-        <div className="w-full max-w-2xl hidden lg:flex">
+        <div className="w-full max-w-lg hidden md:flex">
           <Searchbar />
         </div>
-        
 
         {/* Cart Button */}
         <div className="dropdown dropdown-end">
@@ -50,7 +50,7 @@ function NavBar() {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
               d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" /> 
             </svg>
-            <span className="badge badge-sm indicator-item">8</span>
+            <span className="badge badge-sm indicator-item z-0">8</span>
           </div>
         </div>
         <div
@@ -92,12 +92,12 @@ function NavBar() {
       </div>
 
       {/* Mobile Search Bar - Second Row */}
-      <div className="w-full px-6 lg:hidden">
+      <div className="w-full px-6 md:hidden">
         <Searchbar />
       </div>
 
       {/* Menu Section*/}
-      <ul className="menu menu-horizontal px-1 hidden lg:flex">
+      <ul className="menu menu-horizontal px-1 font-medium hidden md:flex md:text-md">
         <Menu />
       </ul>
 
