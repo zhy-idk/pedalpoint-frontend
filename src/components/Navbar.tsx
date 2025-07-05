@@ -4,7 +4,7 @@ import Searchbar from "./Searchbar";
 
 function NavBar() {
     return (
-      <div className="navbar grid place-items-center grid-rows-2 h-30 shadow-md">
+      <div className="navbar grid place-items-center grid-rows-2 h-30 border-b-1 border-b-base-300 rounded-md">
       <div className="flex flex-wrap justify-center items-center w-full">
 
         {/* Hamburger Menu Button for mobile*/}

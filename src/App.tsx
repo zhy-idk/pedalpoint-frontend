@@ -18,7 +18,7 @@ function App() {
   return (
     <>
     <NavBar />
-    <main>
+    <main className='bg-base-200'>
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="login/" element={<Login />} />

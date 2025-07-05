@@ -1,5 +1,8 @@
 import { useState } from "react";
 
+import AddLogo from "../assets/add_24dp.svg";
+import MinusLogo from "../assets/remove_24dp.svg";
+
 function QuantityInput() {
   const [quantity, setQuantity] = useState(1);
 
@@ -19,58 +22,28 @@ function QuantityInput() {
   };
 
   return (
-    <div className="relative flex items-center max-w-[8rem]">
+    <div className="relative flex items-center max-w-min">
       <button 
         type="button"
         onClick={handleDecrement}
-        className="btn rounded-l-lg rounded-none"
+        className="btn btn-neutral btn-xs btn-square rounded-l-lg rounded-none md:btn-sm"
       >
-        <svg 
-          className="w-3 h-3 text-gray-900 dark:text-white " 
-          aria-hidden="true" 
-          xmlns="http://www.w3.org/2000/svg" 
-          fill="none" 
-          viewBox="0 0 18 2"
-        >
-          <path 
-            stroke="currentColor" 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth="2" 
-            d="M1 1h16"
-          />
-        </svg>
+        <img src={MinusLogo} alt="Decrement" className="h-4"/>
       </button>
       
       <input 
         type="text"
         value={quantity}
         onChange={handleInputChange}
-        className="input input-ghost rounded-none text-center border-gray-200 dark:border-gray-600/30 " 
-        placeholder="999"
-        required 
+        className="input input-xs rounded-none text-center text-[15px] md:text-lg md:input-sm" 
       />
       
       <button 
         type="button"
         onClick={handleIncrement}
-        className="btn rounded-r-lg rounded-none"
+        className="btn btn-neutral btn-xs btn-square rounded-r-lg rounded-none md:btn-sm"
       >
-        <svg 
-          className="w-3 h-3 text-gray-900 dark:text-white" 
-          aria-hidden="true" 
-          xmlns="http://www.w3.org/2000/svg" 
-          fill="none" 
-          viewBox="0 0 18 18"
-        >
-          <path 
-            stroke="currentColor" 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth="2" 
-            d="M9 1v16M1 9h16"
-          />
-        </svg>
+        <img src={AddLogo} alt="Increment" className="h-4"/>
       </button>
     </div>
   );

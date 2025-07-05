@@ -11,13 +11,13 @@ function ItemCard() {
             className="h-full object-cover rounded-lg border-gray-300 border-1"/>
         </figure>
         <div className="card-body m-0 p-3">
-          <h1 className="font-normal card-title text-[9px] line-clamp-2">This bike has an incredibly long name because I need to see what it looks like if an item has an unusually long name</h1>
+          <h1 className="font-normal card-title text-[10px] line-clamp-2 xs:text-xs md:text-sm">This bike has an incredibly long name because I need to see what it looks like if an item has an unusually long name</h1>
           <div className="card-actions flex flex-wrap">
-            <div className="badge badge-soft badge-xs px-1 py-0.5 text-[8px]">Category</div>
-            <div className="badge badge-soft badge-xs px-1 py-0.5 text-[8px]">New</div>
-            <div className="badge badge-soft badge-xs px-1 py-0.5 text-[8px]">Lorem</div>
+            <div className="badge badge-soft badge-outline badge-xs px-1 py-0.5 text-[9px] xs:text-[10px] md:badge-sm">Category</div>
+            <div className="badge badge-soft badge-outline badge-xs px-1 py-0.5 text-[9px] xs:text-[10px] md:badge-sm">New</div>
+            <div className="badge badge-soft badge-outline badge-xs px-1 py-0.5 text-[9px] xs:text-[10px] md:badge-sm">Lorem</div>
           </div>
-          <span className="font-medium text-[9px] ">₱100.00</span>
+          <span className="font-medium text-[10px] xs:text-xs md:text-sm">₱100.00</span>
         </div>
       </Link>
     </div>
