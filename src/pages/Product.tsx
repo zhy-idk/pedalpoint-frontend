@@ -14,20 +14,23 @@ function Product() {
   const [currentColor, setCurrentColor] = useState("Blue");
 
   return (
-    <div className="bg-base-100 p-3 mx-3 rounded-sm xs:mx-5 md:mx-10 lg:mx-20">
+    <div className="bg-base-100 p-3 mx-3 rounded-sm xs:mx-[clamp(0.75rem,6vw,7.5rem)] lg:mx-30">
       {/* Breadcrumbs Section */}
       <Breadcrumbs />
 
       {/* Product Image Carousel Section */}
-      <div className="flex flex-col border-b-1 border-gray-600 mb-2 xl:pb-4 xl:flex-row items-center">
-        <div className="md:max-w-150 xl:basis-2/5">
-          <ImageCarousel />
+      <div className="flex flex-col border-b-1 border-gray-600 mb-2 xl:pb-4 xl:flex-row">
+        <div className="flex flex-col items-center">
+          <div className="md:max-w-150 xl:basis-2/5">
+            <ImageCarousel />
+          </div>
         </div>
+        
         
         <div className="xl:ml-10 xl:basis-3/5">
           {/* Product Title and Price Section */}
           <div>
-            <h1 className="text-xl font-bold md:text-2xl xl:text-3xl">This bike has an incredibly long name because I need to see what it looks like if an item has an unusually long name</h1>
+            <h1 className="text-xl font-bold md:text-2xl xl:text-3xl">Bike name</h1>
             <div className="text-lg my-4 md:text-xl"><span>₱100.00</span></div>
           </div>
           {/* Category tags section */}

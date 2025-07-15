@@ -6,10 +6,11 @@ function Menu() {
       <li><Link to="/">Home</Link></li>
       <li>
         <details>
-          <summary>Products</summary>
+          <summary>Category</summary>
           <ul className="z-10">
-            <li><Link to="/">Link 1</Link></li>
-            <li><Link to="">Link 2</Link></li>
+            <li><Link to="category/">Bikes</Link></li>
+            <li><Link to="category/">Components</Link></li>
+            <li><Link to="category/">Miscellaneous</Link></li>
           </ul>
         </details>
       </li>
@@ -17,13 +18,13 @@ function Menu() {
         <details>
           <summary>Services</summary>
           <ul className="z-10">
-            <li><Link to="/">Repair</Link></li>
+            <li><Link to="repair/">Repair</Link></li>
             <li><Link to="builder/">Build</Link></li>
           </ul>
         </details>
       </li>
       <li><Link to="about/">About</Link></li>
-      <li><Link to="/">Contact</Link></li>
+      <li><Link to="contact/">Contact</Link></li>
     </>
   );
 }

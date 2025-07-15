@@ -22,11 +22,11 @@ function QuantityInput() {
   };
 
   return (
-    <div className="relative flex items-center max-w-min">
+    <div className="relative flex items-center w-min">
       <button 
         type="button"
         onClick={handleDecrement}
-        className="btn btn-neutral btn-xs btn-square rounded-l-lg rounded-none md:btn-sm"
+        className="btn btn-neutral btn-xs btn-square rounded-l-md rounded-none md:btn-sm"
       >
         <img src={MinusLogo} alt="Decrement" className="h-4"/>
       </button>
@@ -35,13 +35,13 @@ function QuantityInput() {
         type="text"
         value={quantity}
         onChange={handleInputChange}
-        className="input input-xs rounded-none text-center text-[15px] md:text-lg md:input-sm" 
+        className="input input-xs w-10 rounded-none text-center text-xs md:text-lg md:input-sm" 
       />
       
       <button 
         type="button"
         onClick={handleIncrement}
-        className="btn btn-neutral btn-xs btn-square rounded-r-lg rounded-none md:btn-sm"
+        className="btn btn-neutral btn-xs btn-square rounded-r-md rounded-none md:btn-sm"
       >
         <img src={AddLogo} alt="Increment" className="h-4"/>
       </button>

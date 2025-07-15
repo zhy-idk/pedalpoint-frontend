@@ -3,11 +3,13 @@ import NavBar from './components/Navbar'
 import Home from './pages/Home'
 import Login from './pages/Login'
 import Product from './pages/Product'
+import Repair from './pages/Repair'
 import Builder from './pages/Builder'
-import Prebuilt from './pages/Prebuilt'
+import Category from './pages/Category'
 import Cart from './pages/Cart'
 import Checkout from './pages/Checkout'
 import About from './pages/About'
+import Contact from './pages/Contact'
 import Profile from './pages/Profile'
 import Purchases from './pages/Purchases'
 import Error from './pages/Error'
@@ -23,11 +25,13 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="login/" element={<Login />} />
         <Route path="product/" element={<Product />} />
+        <Route path="repair/" element={<Repair />} />
         <Route path="builder/" element={<Builder />} />
-        <Route path="prebuilt/" element={<Prebuilt />} />
+        <Route path="category/" element={<Category />} />
         <Route path="cart/" element={<Cart />} />
         <Route path="checkout/" element={<Checkout />} />
         <Route path="about/" element={<About />} />
+        <Route path="contact/" element={<Contact />} />
         <Route path="profile/" element={<Profile />} />
         <Route path="purchases/" element={<Purchases />} />
         <Route path="*" element={<Error />} />
