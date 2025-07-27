@@ -1,6 +1,0 @@
-@import "tailwindcss";
-@plugin "@tailwindcss/typography";
-@plugin "daisyui";
-@theme {
-  --breakpoint-xs: 26.875rem;
-}

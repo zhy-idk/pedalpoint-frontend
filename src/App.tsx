@@ -1,6 +1,6 @@
-import './App.css'
 import NavBar from './components/Navbar'
 import Home from './pages/Home'
+import Signup from './pages/Signup'
 import Login from './pages/Login'
 import Product from './pages/Product'
 import Repair from './pages/Repair'
@@ -14,6 +14,7 @@ import Profile from './pages/Profile'
 import Purchases from './pages/Purchases'
 import Error from './pages/Error'
 import Footer from './components/Footer';
+import ScrollToTopButton from "./components/ScrollToTopButton";
 import { Routes, Route } from "react-router-dom";
 
 function App() {
@@ -23,6 +24,7 @@ function App() {
     <main className='bg-base-200'>
       <Routes>
         <Route path="/" element={<Home />} />
+        <Route path="signup/" element={<Signup />} />
         <Route path="login/" element={<Login />} />
         <Route path="product/" element={<Product />} />
         <Route path="repair/" element={<Repair />} />
@@ -37,6 +39,7 @@ function App() {
         <Route path="*" element={<Error />} />
       </Routes>
     </main>
+    <ScrollToTopButton />
     <Footer />
     </>
   )

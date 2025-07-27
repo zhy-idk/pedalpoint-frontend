@@ -8,13 +8,14 @@ import StarFilter from "../components/StarFilter";
 import ItemCarousel from "../components/ItemCarousel";
 
 import CartLogo from "../assets/add_shopping_cart_24dp.svg";
+import ChatButton from "../components/Chat";
 
 function Product() {
   const [currentSize, setCurrentSize] = useState("XS");
   const [currentColor, setCurrentColor] = useState("Blue");
 
   return (
-    <div className="bg-base-100 p-3 mx-3 rounded-sm xs:mx-[clamp(0.75rem,6vw,7.5rem)] lg:mx-30">
+    <div className="bg-base-100 p-3 mx-3 rounded-sm xs:mx-[clamp(0.75rem,6vw,7.5rem)] lg:mx-30 shadow-xl">
       {/* Breadcrumbs Section */}
       <Breadcrumbs />
 
@@ -25,7 +26,6 @@ function Product() {
             <ImageCarousel />
           </div>
         </div>
-        
         
         <div className="xl:ml-10 xl:basis-3/5">
           {/* Product Title and Price Section */}
@@ -43,7 +43,7 @@ function Product() {
           <div className="py-2">
             <div className="mb-2">
               <div className="flex flex-row items-center">
-                <div className="flex flex-row items-center basis-1/4">
+                <div className="flex flex-row items-center basis-1/4 hidden">
                   {/* Size Selection */}
                   <label>Sizes:</label>
                   <details className="dropdown">
@@ -57,7 +57,7 @@ function Product() {
                     </ul>
                   </details>
                 </div>
-                <div className="flex flex-row items-center basis-1/4">
+                <div className="flex flex-row items-center basis-1/4 hidden ">
                   {/* Color Selection */}
                   <label>Colors:</label>
                   <details className="dropdown"> 
@@ -144,6 +144,7 @@ function Product() {
       <div className="my-2">
         <ItemCarousel />
       </div>
+      <ChatButton />
     </div>
   );
 }

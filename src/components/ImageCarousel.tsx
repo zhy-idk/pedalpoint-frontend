@@ -36,7 +36,7 @@ function ImageCarousel() {
   return (
     <div className="relative">
       <div 
-        className="carousel rounded-box border-gray-600 border-1" 
+        className="carousel rounded-box border-base-300 border-1 shadow-lg" 
         onScroll={handleScroll}
         ref={carouselRef}
       >

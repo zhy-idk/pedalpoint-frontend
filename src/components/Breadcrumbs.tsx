@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 function Breadcrumbs(){
   return(
-    <div className="breadcrumbs text-xs overflow-auto mb-2">
+    <div className="breadcrumbs text-xs overflow-auto mb-2 scrollbar-hide">
         <ul>
           <li><Link to="#" className="link">Home</Link></li>
           <li><Link to="#" className="link">Documents</Link></li>
