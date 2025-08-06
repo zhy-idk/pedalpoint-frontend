@@ -6,7 +6,7 @@ function Breadcrumbs(){
         <ul>
           <li><Link to="#" className="link">Home</Link></li>
           <li><Link to="#" className="link">Documents</Link></li>
-          <li><Link to="#">This bike has an incredibly long name because I need to see what it looks like if an item has an unusually long name</Link></li>
+          <li>This bike has an incredibly long name because I need to see what it looks like if an item has an unusually long name</li>
         </ul>
       </div>
   )

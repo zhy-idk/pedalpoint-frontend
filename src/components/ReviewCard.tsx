@@ -1,18 +1,37 @@
-function ReviewCard(){
+import parse from 'html-react-parser';
+
+interface ReviewCardProps {
+  review: string;
+  starRating: number;
+  username: string;
+  date: string; 
+}
+
+function ReviewCard({ review, date, starRating, username }: ReviewCardProps){
+  const reviewContent = parse(review);
+
+  const renderStars = () => {
+    return Array.from({ length: 5 }, (_, index) => (
+      <div
+        key={index}
+        className="mask mask-star-2 bg-orange-400"
+        aria-label={`${index + 1} star`}
+        aria-current={index === starRating - 1 ? "true" : undefined}
+      ></div>
+    ));
+  };
+  
   return (
       <div className="card w-full bg-base-100 card-xs shadow-sm my-2">
       <div className="card-body">
         <h2 className="card-title">
           <div className="rating rating-xs sm:rating-sm">
-            <div className="mask mask-star bg-orange-400" aria-label="1 star"></div>  
-            <div className="mask mask-star bg-orange-400" aria-label="2 star"></div>
-            <div className="mask mask-star bg-orange-400" aria-label="3 star"></div>
-            <div className="mask mask-star bg-orange-400" aria-label="4 star"></div>
-            <div className="mask mask-star bg-orange-400" aria-label="5 star" aria-current="true"></div>
+            {renderStars()}
           </div>
-          <div className="text-xs sm:text-sm">Person 1</div>
+          <div className="text-xs sm:text-sm">{username}</div>
+          <div className="text-xs font-normal text-gray-500">{date}</div>
         </h2>
-        <p className="line-clamp-3 md:text-sm">Lorem ipsum, dolor sit amet consectetur adipisicing elit. Quae quod aliquid pariatur, cumque dolorum quidem asperiores magnam maiores voluptatibus reiciendis nostrum culpa excepturi repudiandae, at, voluptatem quasi modi. Quasi, saepe.</p>
+        <p className="line-clamp-3 md:text-sm">{reviewContent}</p>
       </div>
     </div>
   );

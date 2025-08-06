@@ -4,7 +4,9 @@ import Axios from 'axios';
 import { AuthContext } from '../contexts/AuthContext';
 import { authReducer, initialState } from '../reducers/authReducer';
 import type { AuthContextType } from '../types/auth';
-import { API_BASE_URL, getCSRFToken, fetchCSRFToken } from '../utils/auth';
+import { fetchCSRFToken } from '../api/auth';
+import { getCSRFToken } from '../utils/csrf';
+import api from '../api/index'
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -23,7 +25,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     fetchCSRFToken().catch(console.error);
   }, []);
 
-  const signup = async (email: string, password: string): Promise<void> => {
+  const signup = async (email: string, password1: string, password2: string): Promise<void> => {
     dispatch({ type: 'AUTH_START'})
     try {
       // Ensure we have CSRF token
@@ -34,20 +36,12 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error('Unable to get CSRF token');
       }
 
-
-
-      await Axios.post(
-        `${API_BASE_URL}/_allauth/browser/v1/auth/signup`,
+      await api.post(
+        '/_allauth/browser/v1/auth/signup',
         {
           email,
-          password,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": token,
-          },
-          withCredentials: true,
+          password1,
+          password2
         }
       );
 
@@ -79,18 +73,11 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error('Unable to get CSRF token');
       }
 
-      await Axios.post(
-        `${API_BASE_URL}/_allauth/browser/v1/auth/login`,
+      await api.post(
+        '/_allauth/browser/v1/auth/login',
         {
           email,
           password,
-        },
-        {
-          headers: {
-            "Content-Type": "application/json",
-            "X-CSRFToken": token,
-          },
-          withCredentials: true,
         }
       );
 
@@ -116,16 +103,9 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     dispatch({ type: 'SET_LOADING', payload: true });
 
     try {
-      const token = getCSRFToken();
       
-      await Axios.delete(
-        `${API_BASE_URL}/_allauth/browser/v1/auth/session`,
-        {
-          headers: {
-            "X-CSRFToken": token,
-          },
-          withCredentials: true,
-        }
+      await api.delete(
+        '/_allauth/browser/v1/auth/session',
       );
 
       dispatch({ type: 'LOGOUT' });
@@ -138,11 +118,9 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const checkAuth = async (): Promise<void> => {
     try {
-      const response = await Axios.get(`${API_BASE_URL}/api/test`, {
-        withCredentials: true,
-      });
+      const response = await api.get('/api/test');
 
-      console.log(response);
+      console.log('API response:', response.data);
 
       // Assuming your /api/test endpoint returns user data when authenticated
       // Adjust this based on your actual API response structure

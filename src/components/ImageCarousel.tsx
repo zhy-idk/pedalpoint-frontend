@@ -1,9 +1,48 @@
 import { useState, useRef } from "react";
+import type { Product } from "../types/product";
+import { apiBaseUrl } from '../api/index';
+import PlaceholderIMG from "../assets/placeholder_img.jpg";
 
-function ImageCarousel() {
+function ImageCarousel({ product } : {product?: Product}) {
   const [currentImage, setCurrentImage] = useState(1);
-  const totalImages = 5;
   const carouselRef = useRef<HTMLDivElement>(null);
+
+  console.log("Placeholder path:", PlaceholderIMG)
+
+  if (!product) {
+    return null;
+  }
+
+  type ImageType = { image: string; alt_text: string };
+  const getAllImages = (): ImageType[] => {
+  let allImages: ImageType[] = [];
+  
+  // Combine product images and variant images (if they exist)
+  if (product.images || product.variants?.some(v => v.variant_images)) {
+    const productImages = product.images?.map(img => ({
+      image: `${apiBaseUrl}${img.image}`,
+      alt_text: img.alt_text
+    })) || [];
+
+    const variantImages = product.variants?.flatMap(variant => 
+      variant.variant_images?.map(img => ({
+        image: `${apiBaseUrl}${img.image}`,
+        alt_text: img.alt_text
+      })) || []
+    ) || [];
+
+    allImages = [...productImages, ...variantImages];
+  } 
+
+  if (allImages.length === 0) {
+    // Fallback to placeholder if no images exist
+    allImages.push({ image: `${PlaceholderIMG}`, alt_text: "Placeholder Image" });
+  }
+  
+  return allImages;
+};
+
+console.log("All images:", getAllImages());
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const carousel = e.target as HTMLDivElement;
@@ -22,6 +61,7 @@ function ImageCarousel() {
     }
   };
 
+
   const nextSlide = () => {
     const nextIndex = currentImage === totalImages ? 0 : currentImage;
     goToSlide(nextIndex);
@@ -32,7 +72,8 @@ function ImageCarousel() {
     goToSlide(prevIndex);
   };
 
-
+  const images = getAllImages();
+  const totalImages = images.length;
   return (
     <div className="relative">
       <div 
@@ -40,56 +81,34 @@ function ImageCarousel() {
         onScroll={handleScroll}
         ref={carouselRef}
       >
-        <div className="carousel-item relative w-full">
-          <img
-            src="https://voltbikes.co.uk/images/e-bikes/pulse-light-grey-xt-electric-bike.jpg"
-            className="w-full object-contain"
-            alt="Electric bike" />
-          <div className="absolute left-5 right-5 top-1/2 -translate-y-1/2 transform justify-between hidden lg:flex">
-            <button onClick={prevSlide} className="btn btn-circle">❮</button>
-            <button onClick={nextSlide} className="btn btn-circle">❯</button>
+        {images.map((imageObj, index) => (
+          
+          
+          <div key={index} className="carousel-item relative w-full">
+            <img
+              src={imageObj.image}
+              className="w-full object-contain bg-white aspect-4/3"
+              alt={imageObj.alt_text || `Image ${index + 1}`}
+            />
+            
+            {totalImages > 1 && (
+              <div className="absolute left-4 right-4 top-1/2 -translate-y-1/2 transform justify-between hidden lg:flex">
+                <button 
+                  onClick={prevSlide} 
+                  className="bg-white/80 hover:bg-white text-gray-800 rounded-full w-10 h-10 flex items-center justify-center shadow-lg"
+                >
+                  ❮
+                </button>
+                <button 
+                  onClick={nextSlide} 
+                  className="bg-white/80 hover:bg-white text-gray-800 rounded-full w-10 h-10 flex items-center justify-center shadow-lg"
+                >
+                  ❯
+                </button>
+              </div>
+            )}
           </div>
-        </div>
-        <div className="carousel-item relative w-full">
-          <img
-            src="https://contents.mediadecathlon.com/p1574676/k$3be5882a1bce6c60c24269eb54c6af5f/riverside-100-hybrid-bike-matte-black-riverside-8550625.jpg?f=1920x0&format=auto"
-            className="w-full object-contain"
-            alt="Hybrid bike" />
-          <div className="absolute left-5 right-5 top-1/2 -translate-y-1/2 transform justify-between hidden lg:flex">
-            <button onClick={prevSlide} className="btn btn-circle">❮</button>
-            <button onClick={nextSlide} className="btn btn-circle">❯</button>
-          </div>
-        </div>
-        <div className="carousel-item relative w-full">
-          <img
-            src="https://i5.walmartimages.com/seo/26-inch-Mountain-Bike-for-Men-Adult-Mens-Bike-with-21-Speed-Disc-Brakes_aea780b0-8cbb-4119-b8f1-05cf192f88e6.bfd903a4d9d5fd346c1db8c0280f18f5.jpeg"
-            className="w-full object-contain"
-            alt="Mountain bike" />
-          <div className="absolute left-5 right-5 top-1/2 -translate-y-1/2 transform justify-between hidden lg:flex">
-            <button onClick={prevSlide} className="btn btn-circle">❮</button>
-            <button onClick={nextSlide} className="btn btn-circle">❯</button>
-          </div>
-        </div>
-        <div className="carousel-item relative w-full">
-          <img
-            src="https://contents.mediadecathlon.com/p2020517/k$513fdeec0a658e3709b3e3f9b66b733b/riverside-100-20-kids-hybrid-bike-btwin-8733628.jpg?f=1920x0&format=auto"
-            className="w-full object-contain"
-            alt="Kids bike" />
-          <div className="absolute left-5 right-5 top-1/2 -translate-y-1/2 transform justify-between hidden lg:flex">
-            <button onClick={prevSlide} className="btn btn-circle">❮</button>
-            <button onClick={nextSlide} className="btn btn-circle">❯</button>
-          </div>
-        </div>
-        <div className="carousel-item relative w-full">
-          <img
-            src="https://i5.walmartimages.com/seo/24-Hyper-Bicycles-Havoc-Mountain-Bike-Youth-Adult-Recommended-Ages-10-14-Years-Old-Black_39747aed-d61d-400a-a9b0-62ef5182f001.3fe80af3ddee72662d877afb6a2b8504.jpeg"
-            className="w-full object-contain"
-            alt="Youth mountain bike" />
-          <div className="absolute left-5 right-5 top-1/2 -translate-y-1/2 transform justify-between hidden lg:flex">
-            <button onClick={prevSlide} className="btn btn-circle">❮</button>
-            <button onClick={nextSlide} className="btn btn-circle">❯</button>
-          </div>
-        </div>
+        ))}
       </div>
       
       {/* Image Counter */}

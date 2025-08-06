@@ -26,7 +26,7 @@ function Signup() {
   }
     
     try {
-      await signup(formData.email, formData.password);
+      await signup(formData.email, formData.password, formData.confirmPassword);
       alert("Signup successful!");
       setFormData({ email: "", password: "", confirmPassword: "" });
       navigate("/login");

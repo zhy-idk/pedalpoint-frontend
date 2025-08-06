@@ -85,7 +85,7 @@ function Login() {
           {/* Test who is logged in */}
           <button 
             type="button"
-            className="btn w-full btn-outline mt-2 hidden"
+            className="btn w-full btn-outline mt-2 "
             onClick={async () => {
               who()
             }}>Test</button>
