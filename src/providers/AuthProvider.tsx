@@ -124,11 +124,8 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Assuming your /api/test endpoint returns user data when authenticated
       // Adjust this based on your actual API response structure
-      if (response.data && response.data.user) {
+      if (response.data && response.data.username) {
         dispatch({ type: 'AUTH_SUCCESS', payload: response.data.user });
-      } else if (response.data && response.data.id) {
-        // If the response directly contains user data
-        dispatch({ type: 'AUTH_SUCCESS', payload: response.data });
       } else {
         dispatch({ type: 'LOGOUT' });
       }

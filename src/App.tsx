@@ -2,7 +2,7 @@ import NavBar from './components/Navbar'
 import Home from './pages/Home'
 import Signup from './pages/Signup'
 import Login from './pages/Login'
-import Product from './pages/Product'
+import ProductDetail from './pages/ProductDetail'
 import Repair from './pages/Repair'
 import Builder from './pages/Builder'
 import Category from './pages/Category'
@@ -26,7 +26,7 @@ function App() {
         <Route path="/" element={<Home />} />
         <Route path="signup/" element={<Signup />} />
         <Route path="login/" element={<Login />} />
-        <Route path="product/:slug" element={<Product />} />
+        <Route path="product/:slug" element={<ProductDetail />} />
         <Route path="repair/" element={<Repair />} />
         <Route path="builder/" element={<Builder />} />
         <Route path="category/" element={<Category />} />

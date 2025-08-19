@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import ArrowUp from "../assets/arrow_upward_24dp.svg"
+import ArrowUp from "../assets/arrow_upward_24dp.svg?react"
 
 export default function ScrollToTopButton() {
   const [isVisible, setIsVisible] = useState(false);
@@ -32,10 +32,10 @@ export default function ScrollToTopButton() {
       {isVisible && (
         <button
           onClick={scrollToTop}
-          className="btn btn-primary btn-sm btn-circle fixed bottom-8 right-8 z-1 md:btn-md"
+          className="btn btn-primary btn-sm btn-circle fixed bottom-8 right-8 z-1 md:btn-md animate-bounce"
           aria-label="Scroll to top"
         >
-          <img src={ArrowUp} alt="Arrow Up" />
+          <ArrowUp/>
         </button>
       )}
     </div>
