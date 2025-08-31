@@ -17,38 +17,71 @@ function ImageCarousel({ product }: { product?: Product }) {
   const getAllImages = (): ImageType[] => {
     let allImages: ImageType[] = [];
 
-    // Combine product images and variant images (if they exist)
-    if (product.images || product.variants?.some((v) => v.variant_images)) {
-      const productImages =
-        product.images?.map((img) => ({
-          image: `${apiBaseUrl}${img.image}`,
-          alt_text: img.alt_text,
-        })) || [];
+    console.log("=== ImageCarousel Debug ===");
+    console.log("Product:", product);
+    console.log("Product images:", product.images);
+    console.log("Product products (variants):", product.products);
 
-      const variantImages =
-        product.variants?.flatMap(
-          (variant) =>
-            variant.variant_images?.map((img) => ({
-              image: `${apiBaseUrl}${img.image}`,
-              alt_text: img.alt_text,
-            })) || [],
-        ) || [];
-
-      allImages = [...productImages, ...variantImages];
+    // First, add the main product image if it exists
+    if (product.image && product.image.trim() !== "") {
+      const mainImage = {
+        image: `${apiBaseUrl}${product.image}`,
+        alt_text: "Main Product Image",
+      };
+      allImages.push(mainImage);
+      console.log("Added main image:", mainImage);
     }
 
-    if (allImages.length === 0) {
+    // Then, add product images if they exist
+    if (product.images && product.images.length > 0) {
+      const productImages = product.images.map((img) => ({
+        image:
+          img.image && img.image.trim() !== ""
+            ? `${apiBaseUrl}${img.image}`
+            : PlaceholderIMG,
+        alt_text: img.alt_text || "Product Image",
+      }));
+      allImages = [...allImages, ...productImages];
+      console.log("Added main product images:", productImages);
+    }
+
+    // Finally, add variant images from the products array
+    if (product.products && product.products.length > 0) {
+      const variantImages = product.products.flatMap(
+        (variant) =>
+          variant.product_images?.map((img) => ({
+            image:
+              img.image && img.image.trim() !== ""
+                ? `${apiBaseUrl}${img.image}`
+                : PlaceholderIMG,
+            alt_text:
+              img.alt_text || `${variant.name} - ${variant.variant_attribute}`,
+          })) || [],
+      );
+      allImages = [...allImages, ...variantImages];
+      console.log("Added variant images:", variantImages);
+    }
+
+    // Remove duplicates based on image URL
+    const uniqueImages = allImages.filter(
+      (img, index, self) =>
+        index === self.findIndex((i) => i.image === img.image),
+    );
+
+    if (uniqueImages.length === 0) {
       // Fallback to placeholder if no images exist
-      allImages.push({
-        image: `${PlaceholderIMG}`,
+      console.log("No images found, using placeholder");
+      uniqueImages.push({
+        image: PlaceholderIMG,
         alt_text: "Placeholder Image",
       });
     }
 
-    return allImages;
-  };
+    console.log("Final allImages array:", uniqueImages);
+    console.log("=== End Debug ===");
 
-  console.log("All images:", getAllImages());
+    return uniqueImages;
+  };
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const carousel = e.target as HTMLDivElement;
@@ -79,6 +112,7 @@ function ImageCarousel({ product }: { product?: Product }) {
 
   const images = getAllImages();
   const totalImages = images.length;
+
   return (
     <div className="relative">
       <div
@@ -92,6 +126,10 @@ function ImageCarousel({ product }: { product?: Product }) {
               src={imageObj.image}
               className="aspect-4/3 w-full bg-white object-contain"
               alt={imageObj.alt_text || `Image ${index + 1}`}
+              onError={(e) => {
+                // Fallback to placeholder if image fails to load
+                (e.target as HTMLImageElement).src = PlaceholderIMG;
+              }}
             />
 
             {totalImages > 1 && (
@@ -115,9 +153,11 @@ function ImageCarousel({ product }: { product?: Product }) {
       </div>
 
       {/* Image Counter */}
-      <div className="bg-base-200/65 absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-lg border-1 border-gray-300 px-2 text-sm">
-        {currentImage}/{totalImages}
-      </div>
+      {totalImages > 1 && (
+        <div className="bg-base-200/65 absolute bottom-4 left-1/2 z-10 -translate-x-1/2 rounded-lg border-1 border-gray-300 px-2 text-sm">
+          {currentImage}/{totalImages}
+        </div>
+      )}
     </div>
   );
 }

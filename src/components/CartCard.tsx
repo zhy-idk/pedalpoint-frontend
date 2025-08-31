@@ -1,32 +1,106 @@
-import QuantityInput from "./QuantityInput"
+import { useState } from "react";
+import { Trash2, Minus, Plus } from "lucide-react";
+import { useCart } from "../providers/CartProvider";
+import type { CartItem } from "../types/cart";
 
-function CartCard(){
-  return(
-    <div className="card card-side card-xs flex-row card-border border-base-300 bg-base-100 shadow-md" >
-      <div>
-        <figure className="w-[clamp(5.625rem,20vw,8rem)]">
+interface CartCardProps {
+  item: CartItem;
+}
+
+function CartCard({ item }: CartCardProps) {
+  const { actions } = useCart();
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleQuantityChange = async (newQuantity: number) => {
+    if (newQuantity < 1 || newQuantity > item.product.stock) return;
+    
+    setIsUpdating(true);
+    try {
+      await actions.updateQuantity(item.product.id, newQuantity);
+    } catch (error) {
+      console.error('Error updating quantity:', error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const handleRemove = async () => {
+    try {
+      await actions.removeItem(item.product.id);
+    } catch (error) {
+      console.error('Error removing item:', error);
+    }
+  };
+
+  return (
+    <div className="card bg-base-100 shadow-xl">
+      <div className="card-body p-4">
+        <div className="flex items-center gap-4">
+          {/* Product Image */}
           <img
-            src="https://contents.mediadecathlon.com/p1619234/k$a9d1d702aa04c055f076e193675f3615/rcr-900-af-road-bike-105-van-rysel-8560890.jpg?f=1920x0&format=auto"
-            className="bg-white w-full h-full object-contain rounded-lg "
-            alt="Movie"
+            src={item.product.product_listing.image || '/src/assets/placeholder_img.jpg'}
+            alt={item.product.product_listing.name}
+            className="w-20 h-20 object-cover rounded-lg"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.src = '/src/assets/placeholder_img.jpg';
+            }}
           />
-        </figure>
-      </div>
 
-      <div className="card-body flex-col">
-        <div className="flex flex-col basis-4/5">
-          <div className="grow border-red-600">
-            <h2 className="text-[clamp(0.688rem,2.5vw,1rem)] font-bold ">This bike has an incredibly long name because I need to see what it looks like if an item has an unusually long name</h2>
+          {/* Product Details */}
+          <div className="flex-1">
+            <h3 className="font-semibold text-lg">{item.product.product_listing.name}</h3>
+            <p className="text-sm text-base-content/70 mb-1">SKU: {item.product.sku}</p>
+            <p className="text-sm text-base-content/70 mb-1">Variant: {item.product.name}</p>
+            <p className="text-primary font-bold text-lg">${item.product.price}</p>
+            <p className="text-xs text-base-content/60">Stock: {item.product.stock}</p>
           </div>
 
-            <span className="font-medium text-[10px] xs:text-xs md:text-sm">₱100.00</span>
+          {/* Quantity Controls */}
+          <div className="flex flex-col items-center gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                className="btn btn-sm btn-circle btn-outline"
+                onClick={() => handleQuantityChange(item.quantity - 1)}
+                disabled={isUpdating || item.quantity <= 1}
+              >
+                <Minus className="w-3 h-3" />
+              </button>
+              
+              <span className="text-lg font-medium min-w-[2rem] text-center">
+                {isUpdating ? (
+                  <div className="loading loading-spinner loading-xs"></div>
+                ) : (
+                  item.quantity
+                )}
+              </span>
+              
+              <button
+                className="btn btn-sm btn-circle btn-outline"
+                onClick={() => handleQuantityChange(item.quantity + 1)}
+                disabled={isUpdating || item.quantity >= item.product.stock}
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+            
+            <p className="text-xs text-base-content/60">
+              Total: ${(parseFloat(item.product.price) * item.quantity).toFixed(2)}
+            </p>
+          </div>
 
-        </div>
-        <div className="flex flex-col basis-1/5 items-center justify-center">
-          <QuantityInput/>
+          {/* Remove Button */}
+          <button
+            className="btn btn-sm btn-circle btn-error btn-outline"
+            onClick={handleRemove}
+            title="Remove item"
+          >
+            <Trash2 className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </div>
-  )
+  );
 }
-export default CartCard
+
+export default CartCard;

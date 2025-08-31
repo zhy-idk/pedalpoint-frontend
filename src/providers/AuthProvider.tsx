@@ -73,11 +73,15 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         throw new Error('Unable to get CSRF token');
       }
 
+      // Use allauth browser API with proper session handling
       await api.post(
         '/_allauth/browser/v1/auth/login',
         {
           email,
           password,
+        },
+        {
+          withCredentials: true, // Important: include cookies
         }
       );
 
@@ -118,15 +122,21 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const checkAuth = async (): Promise<void> => {
     try {
+      console.log('Checking authentication...');
       const response = await api.get('/api/test');
 
       console.log('API response:', response.data);
 
-      // Assuming your /api/test endpoint returns user data when authenticated
-      // Adjust this based on your actual API response structure
-      if (response.data && response.data.username) {
+      // Check if we have user data in the response
+      if (response.data && response.data.user) {
+        console.log('User data found:', response.data.user);
         dispatch({ type: 'AUTH_SUCCESS', payload: response.data.user });
+      } else if (response.data && response.data.username) {
+        // Fallback for different response structure
+        console.log('Username found:', response.data.username);
+        dispatch({ type: 'AUTH_SUCCESS', payload: response.data });
       } else {
+        console.log('No user data found, logging out');
         dispatch({ type: 'LOGOUT' });
       }
     } catch (error) {

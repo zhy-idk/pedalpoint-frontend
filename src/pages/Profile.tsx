@@ -1,10 +1,9 @@
-
 function Profile() {
   return (
-    <div className="flex flex-col items-center justify-center h-screen">
+    <div className="flex h-screen flex-col items-center justify-center">
       <div className="prose">
         <h1>Profile Page</h1>
-        <p>This is the profile page.</p>
+        <p>Profile page under construction.</p>
       </div>
     </div>
   );

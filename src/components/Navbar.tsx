@@ -4,9 +4,11 @@ import Searchbar from "./Searchbar";
 import ProfileDropdown from "./ProfileDropdown";
 import CartIcon from "../assets/shopping_cart_24dp.svg?react";
 import { useTheme } from "../hooks/useTheme";
+import { useCart } from "../providers/CartProvider";
 
 function NavBar() {
   const { theme } = useTheme();
+  const { state: cart } = useCart();
 
   return (
     <div className="navbar grid place-items-center grid-rows-2 h-30 border-b-1 border-b-base-300 rounded-md">
@@ -51,18 +53,47 @@ function NavBar() {
       <div tabIndex={0} role="button" className="btn btn-ghost btn-circle">
         <div className="indicator">
           <CartIcon fill={theme === "dark" ? "currentColor" : "black"} />
-          <span className="badge badge-sm indicator-item z-0 hidden">8</span>
+          {!cart.loading && cart.totalItems > 0 && (
+            <span className="badge badge-sm indicator-item z-0 badge-primary">
+              {cart.totalItems > 99 ? '99+' : cart.totalItems}
+            </span>
+          )}
         </div>
       </div>
       <div
         tabIndex={0}
         className="card card-compact dropdown-content bg-base-100 z-10 mt-3 w-52 shadow">
         <div className="card-body">
-        <span className="text-lg font-bold">8 Items</span>
-        <span className="text-info">Subtotal: $999</span>
-        <div className="card-actions">
-          <Link to="/cart" className="btn btn-primary btn-block">View Cart</Link>
-        </div>
+          {cart.loading ? (
+            <>
+              <div className="loading loading-spinner loading-sm mx-auto mb-2"></div>
+              <span className="text-center">Loading cart...</span>
+            </>
+          ) : cart.error && cart.error.includes('log in') ? (
+            <>
+              <span className="text-lg font-bold">Please Log In</span>
+              <span className="text-base-content/70">Log in to view your cart</span>
+              <div className="card-actions">
+                <Link to="/login" className="btn btn-primary btn-block">Log In</Link>
+              </div>
+            </>
+          ) : cart.totalItems > 0 ? (
+            <>
+              <span className="text-lg font-bold">{cart.totalItems} Item{cart.totalItems !== 1 ? 's' : ''}</span>
+              <span className="text-info">Subtotal: ${cart.totalPrice.toFixed(2)}</span>
+              <div className="card-actions">
+                <Link to="/cart" className="btn btn-primary btn-block">View Cart</Link>
+              </div>
+            </>
+          ) : (
+            <>
+              <span className="text-lg font-bold">Your cart is empty</span>
+              <span className="text-base-content/70">Add some items to get started</span>
+              <div className="card-actions">
+                <Link to="/" className="btn btn-primary btn-block">Start Shopping</Link>
+              </div>
+            </>
+          )}
         </div>
       </div>
       </div>

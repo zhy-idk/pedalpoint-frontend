@@ -1,6 +1,191 @@
-function SearchResult(){
-  return(
-    <></>
-  )
+import { useSearchParams, useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import ItemCard from "../components/ItemCard";
+import ItemCardSkeleton from "../components/ItemCardSkeleton";
+import Breadcrumbs from "../components/Breadcrumbs";
+import { Search, X, ArrowLeft } from "lucide-react";
+import type { ProductListing, Product } from "../types/product";
+
+function SearchResult() {
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const query = searchParams.get("q") || "";
+  const [searchResults, setSearchResults] = useState<Product[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Redirect to home if no query
+  useEffect(() => {
+    if (!query.trim()) {
+      navigate('/');
+    }
+  }, [query, navigate]);
+
+  // Fetch search results
+  useEffect(() => {
+    const fetchSearchResults = async () => {
+      if (!query.trim()) return;
+
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        const response = await fetch('http://localhost:8000/api/listings/');
+        if (!response.ok) {
+          throw new Error('Failed to fetch products');
+        }
+
+        const data: ProductListing[] = await response.json();
+
+        // Filter products based on search query
+        const filteredProducts = data.filter(listing => {
+          const searchLower = query.toLowerCase();
+          return (
+            listing.name.toLowerCase().includes(searchLower) ||
+            listing.brand.name.toLowerCase().includes(searchLower) ||
+            listing.description.toLowerCase().includes(searchLower) ||
+            listing.category.name.toLowerCase().includes(searchLower)
+          );
+        });
+
+        // Transform to Product format
+        const transformedProducts: Product[] = filteredProducts.map(listing => {
+          const firstVariant = listing.products[0];
+          const defaultImage = firstVariant?.product_images[0]?.image || '/src/assets/placeholder_img.jpg';
+          
+          return {
+            id: listing.id,
+            name: listing.name,
+            price: parseFloat(listing.price),
+            description: listing.description,
+            image: defaultImage,
+            slug: listing.slug,
+            available: listing.available,
+            brand: listing.brand,
+            category: listing.category,
+            images: listing.images,
+            variants: listing.products.map(variant => ({
+              id: variant.id,
+              name: variant.name,
+              sku: variant.sku,
+              price: parseFloat(variant.price),
+              stock: variant.stock,
+              available: variant.available,
+              variant_images: variant.product_images
+            })),
+            reviews: listing.reviews,
+            compatibility: listing.compatibility_attributes
+          };
+        });
+
+        setSearchResults(transformedProducts);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+        console.error('Error searching products:', err);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSearchResults();
+  }, [query]);
+
+  // Don't render anything if redirecting
+  if (!query.trim()) {
+    return null;
+  }
+
+  return (
+    <div className="bg-base-100 xs:mx-[clamp(0.75rem,6vw,7.5rem)] mx-3 flex flex-col items-center rounded-sm p-3 lg:mx-30">
+      <Breadcrumbs />
+      
+      {/* Search Header */}
+      <div className="w-full mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <h1 className="text-3xl font-bold">Search Results</h1>
+          <div className="badge badge-primary badge-lg">
+            {searchResults.length} {searchResults.length === 1 ? 'result' : 'results'}
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-3 p-4 bg-base-200 rounded-lg">
+          <Search className="w-5 h-5 text-primary" />
+          <span className="text-lg">"{query}"</span>
+          <button 
+            onClick={() => navigate('/')} 
+            className="btn btn-ghost btn-sm"
+          >
+            <X className="w-4 h-4" />
+            Clear Search
+          </button>
+        </div>
+      </div>
+
+      {/* Loading State */}
+      {isLoading && (
+        <div className="w-full">
+          <div className="xs:grid-cols-3 grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <ItemCardSkeleton key={index} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="w-full text-center py-8">
+          <div className="alert alert-error mb-4">
+            <span>Error searching products: {error}</span>
+          </div>
+          <button 
+            className="btn btn-primary"
+            onClick={() => window.location.reload()}
+          >
+            Try Again
+          </button>
+        </div>
+      )}
+
+      {/* Search Results */}
+      {!isLoading && !error && (
+        <>
+          {searchResults.length === 0 ? (
+            <div className="w-full text-center py-8">
+              <Search className="w-16 h-16 mx-auto mb-4 opacity-50" />
+              <h2 className="text-xl font-semibold mb-2">No products found</h2>
+              <p className="text-base-content/70 mb-4">
+                We couldn't find any products matching "{query}"
+              </p>
+              <div className="space-y-2 mb-6">
+                <p className="text-sm text-base-content/60">Try:</p>
+                <ul className="text-sm text-base-content/60 space-y-1">
+                  <li>• Using different keywords</li>
+                  <li>• Checking your spelling</li>
+                  <li>• Using more general terms</li>
+                </ul>
+              </div>
+              <button 
+                onClick={() => navigate('/')}
+                className="btn btn-outline btn-primary"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to All Products
+              </button>
+            </div>
+          ) : (
+            <div className="w-full">
+              <div className="xs:grid-cols-3 grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+                {searchResults.map((product: Product, index: number) => (
+                  <ItemCard key={product.id || index} product={product} />
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      )}
+    </div>
+  );
 }
-export default SearchResult
+
+export default SearchResult;

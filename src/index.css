@@ -1,12 +1,12 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
-@import 'tailwind-scrollbar-hide/v4';
-@plugin "daisyui";
+@import "tailwind-scrollbar-hide/v4";
+@plugin "daisyui" {
+  exclude: rootscrollgutter;
+}
 @theme {
   --breakpoint-xs: 26.875rem;
 }
-
-
 
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;

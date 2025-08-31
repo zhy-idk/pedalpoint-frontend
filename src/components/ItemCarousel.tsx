@@ -1,8 +1,13 @@
 import { useRef } from "react";
 import ItemCard from "./ItemCard";
+import type { Product } from "../types/product";
 
+interface ItemCarouselProps {
+  products: Product[];
+  title?: string;
+}
 
-function ItemCarousel() {
+function ItemCarousel({ products, title = "Items you might also like" }: ItemCarouselProps) {
   const carouselRef = useRef<HTMLDivElement>(null);
 
   const scrollCarousel = (direction: string) => {
@@ -21,41 +26,31 @@ function ItemCarousel() {
     }
   };
 
+  // Show message if no products instead of returning null
+  if (!products || products.length === 0) {
+    return (
+      <>
+        <h3 className="font-medium md:text-lg">{title}</h3>
+        <div className="text-center py-8 text-gray-500">
+          <p>No recommendations available at this time.</p>
+        </div>
+      </>
+    );
+  }
+
   return(
     <>
-      <h3 className="font-medium md:text-lg">Items you might also like</h3>
+      <h3 className="font-medium md:text-lg">{title}</h3>
       <div className="relative overflow-auto flex">
         <div
           ref={carouselRef}
           className="carousel gap-1 py-2 mx-0 rounded-sm lg:mx-9"
         >
-          <div className="carousel-item snap-start" style={{ width: 'clamp(6.25rem, 20vw, 13rem)' }}>
-            <ItemCard />
-          </div>
-          <div className="carousel-item snap-start" style={{ width: 'clamp(6.25rem, 20vw, 13rem)' }}>
-            <ItemCard />
-          </div>
-          <div className="carousel-item snap-start" style={{ width: 'clamp(6.25rem, 20vw, 13rem)' }}>
-            <ItemCard />
-          </div>
-          <div className="carousel-item snap-start" style={{ width: 'clamp(6.25rem, 20vw, 13rem)' }}>
-            <ItemCard />
-          </div>
-          <div className="carousel-item snap-start" style={{ width: 'clamp(6.25rem, 20vw, 13rem)' }}>
-            <ItemCard />
-          </div>
-          <div className="carousel-item snap-start" style={{ width: 'clamp(6.25rem, 20vw, 13rem)' }}>
-            <ItemCard />
-          </div>
-          <div className="carousel-item snap-start" style={{ width: 'clamp(6.25rem, 20vw, 13rem)' }}>
-            <ItemCard />
-          </div>
-          <div className="carousel-item snap-start" style={{ width: 'clamp(6.25rem, 20vw, 13rem)' }}>
-            <ItemCard />
-          </div>
-          <div className="carousel-item snap-start" style={{ width: 'clamp(6.25rem, 20vw, 13rem)' }}>
-            <ItemCard />
-          </div>
+          {products.map((product) => (
+            <div key={product.id} className="carousel-item snap-start" style={{ width: 'clamp(6.25rem, 20vw, 13rem)' }}>
+              <ItemCard product={product} />
+            </div>
+          ))}
         </div>
 
 
