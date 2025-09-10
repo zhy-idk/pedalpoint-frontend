@@ -1,8 +1,11 @@
 export interface User {
-  id: string;
-  email: string;
+  id?: string;
+  username?: string;
+  email?: string;
   first_name?: string;
   last_name?: string;
+  is_staff?: boolean;
+  is_superuser?: boolean;
   // Add other user fields as needed
 }
 
@@ -26,9 +29,10 @@ export interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   error: string | null;
-  signup: (email: string, password1: string, password2: string) => Promise<void>;
+  signup: (email: string, password: string, password2: string) => Promise<void>;
   login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   checkAuth: () => Promise<void>;
+  forgotPassword: (email: string) => Promise<void>;
   clearError: () => void;
 }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import type { ProductListing } from '../types/product';
 import PlaceholderIMG from '../assets/placeholder_img.jpg';
+import { apiBaseUrl } from '../api/index';
 
 export const useRecommendations = (categorySlug: string) => {
   const [recommendations, setRecommendations] = useState<ProductListing[]>([]);
@@ -19,7 +20,7 @@ export const useRecommendations = (categorySlug: string) => {
       setError(null);
 
       try {
-        const response = await fetch(`http://localhost:8000/api/categories/${categorySlug}/recommendations/`, {
+        const response = await fetch(`${apiBaseUrl}/api/categories/${categorySlug}/recommendations/`, {
           credentials: 'include',
           headers: {
             'Content-Type': 'application/json',

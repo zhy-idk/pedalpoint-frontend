@@ -1,9 +1,6 @@
-import Axios from "axios";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
-
-const API_BASE_URL = "http://localhost:8000";
 
 function Login() {
   const navigate = useNavigate();
@@ -13,13 +10,6 @@ function Login() {
     email: "",
     password: "",
   });
-
-  const who = async () => {
-    const response = await Axios.get(`${API_BASE_URL}/api/test`, {
-      withCredentials: true,
-    });
-    console.log(response);
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -40,7 +30,7 @@ function Login() {
   };
 
   return (
-    <div className="flex h-fit py-10 w-full items-center justify-center">
+    <div className="flex h-fit w-full items-center justify-center py-10">
       <fieldset className="fieldset bg-base-100 border-base-300 rounded-box w-xs border p-4 shadow-lg">
         <legend className="fieldset-legend text-lg">Login</legend>
 
@@ -74,28 +64,24 @@ function Login() {
           </label>
 
           <button
-            className="btn w-full btn-neutral mt-4 btn-sm md:btn-md lg:btn-lg xl:btn-xl"
+            className="btn btn-neutral btn-sm md:btn-md lg:btn-lg xl:btn-xl mt-4 w-full"
             type="submit"
             disabled={isLoading}
           >
             {isLoading ? "Logging in..." : "Login"}
           </button>
 
-          {/* Test who is logged in */}
-          <button
-            type="button"
-            className="btn w-full btn-outline mt-2 "
-            onClick={async () => {
-              who();
-            }}
-          >
-            Test
-          </button>
+          <span>
+            Forgot password?
+            <Link to="/forgot-password" className="link link-hover mx-1">
+              Click me
+            </Link>
+          </span>
 
-          <div className="flex flex-col pt-2 mt-2 gap-2 border-t-1 border-gray-600">
+          <div className="mt-2 flex flex-col gap-2 border-t-1 border-gray-600 pt-2">
             <button
               type="button"
-              className="btn w-full bg-white text-black border-[#e5e5e5] shadow-[#e5e5e5] shadow-xs"
+              className="btn w-full border-[#e5e5e5] bg-white text-black shadow-xs shadow-[#e5e5e5]"
               disabled={isLoading}
             >
               <svg
@@ -129,7 +115,7 @@ function Login() {
 
             <button
               type="button"
-              className="btn w-full bg-[#1A77F2] text-white border-[#005fd8] shadow-[#005fd8] shadow-xs"
+              className="btn w-full border-[#005fd8] bg-[#1A77F2] text-white shadow-xs shadow-[#005fd8]"
               disabled={isLoading}
             >
               <svg

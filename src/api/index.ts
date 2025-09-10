@@ -1,10 +1,21 @@
 import axios from "axios";
 import { getCSRFToken } from '../utils/csrf';
 
-export const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
+// Determine API base URL dynamically
+const getApiBaseUrl = () => {
+  const envUrl = import.meta.env.VITE_API_BASE_URL;
+  if (envUrl) return envUrl;
+  
+  // If no env var, use same host as current page but port 8000
+  const currentHost = window.location.hostname;
+  const protocol = window.location.protocol;
+  return `${protocol}//${currentHost}:8000`;
+};
+
+export const apiBaseUrl = getApiBaseUrl();
 
 const api = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL,
+    baseURL: apiBaseUrl,
     withCredentials: true,
 });
 

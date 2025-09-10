@@ -7,7 +7,7 @@ import { useAuth } from "../hooks/useAuth";
 function ProfileDropdown(){
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
-  const { logout, isAuthenticated } = useAuth();
+  const { logout, isAuthenticated, user } = useAuth();
   
 
   const handleLogout = async () => {
@@ -41,6 +41,9 @@ function ProfileDropdown(){
             className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow">
             <li><Link to="/profile" className="justify-between">Profile</Link></li>
             <li><Link to="/purchases">Purchases</Link></li>
+            {(user?.is_staff || user?.is_superuser) && (
+              <li><Link to="/manage">Manage</Link></li>
+            )}
             <li onClick={toggleTheme}><a><ThemeSwitch />Switch {theme}</a></li>
             <li>
               <a

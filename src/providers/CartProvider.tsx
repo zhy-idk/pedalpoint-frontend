@@ -2,6 +2,7 @@ import { createContext, useContext, useReducer, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { cartReducer, initialState } from '../reducers/cartReducer';
 import type { CartContextType, CartItem, CartResponse } from '../types/cart';
+import { apiBaseUrl } from '../api/index';
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
@@ -70,7 +71,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         headers['X-CSRFToken'] = csrfToken;
       }
 
-      const response = await fetch('http://localhost:8000/api/cart/', {
+      const response = await fetch(`${apiBaseUrl}/api/cart/`, {
         signal: controller.signal,
         credentials: 'include',
         headers,
@@ -128,7 +129,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         headers['X-CSRFToken'] = csrfToken;
       }
 
-      const response = await fetch('http://localhost:8000/api/cart/add/', {
+      const response = await fetch(`${apiBaseUrl}/api/cart/add/`, {
         method: 'POST',
         credentials: 'include',
         headers,
@@ -174,7 +175,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         headers['X-CSRFToken'] = csrfToken;
       }
 
-      const response = await fetch(`http://localhost:8000/api/cart/remove/${productId}/`, {
+      const response = await fetch(`${apiBaseUrl}/api/cart/remove/${productId}/`, {
         method: 'DELETE',
         credentials: 'include',
         headers,
@@ -218,7 +219,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         headers['X-CSRFToken'] = csrfToken;
       }
 
-      const response = await fetch(`http://localhost:8000/api/cart/update/${productId}/`, {
+      const response = await fetch(`${apiBaseUrl}/api/cart/update/${productId}/`, {
         method: 'PUT',
         credentials: 'include',
         headers,
@@ -263,7 +264,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         headers['X-CSRFToken'] = csrfToken;
       }
 
-      const response = await fetch('http://localhost:8000/api/cart/clear/', {
+      const response = await fetch(`${apiBaseUrl}/api/cart/clear/`, {
         method: 'DELETE',
         credentials: 'include',
         headers,
@@ -288,29 +289,51 @@ export const CartProvider = ({ children }: CartProviderProps) => {
   };
 
   useEffect(() => {
-    fetchCart();
+    // Only fetch cart if user is authenticated
+    const isAuthenticated = checkIfUserIsAuthenticated();
+    if (isAuthenticated) {
+      fetchCart();
+    } else {
+      // Clear cart if user is not authenticated
+      dispatch({ type: 'SET_CART', payload: [] });
+      dispatch({ type: 'SET_ERROR', payload: null });
+    }
   }, []);
 
-  // Monitor authentication state and clear cart when user logs out
+  // Function to clear cart (can be called from AuthProvider)
+  const clearCartOnLogout = () => {
+    console.log('Clearing cart on logout');
+    dispatch({ type: 'SET_CART', payload: [] });
+    dispatch({ type: 'SET_ERROR', payload: null });
+  };
+
+  // Function to refresh cart (can be called from AuthProvider)
+  const refreshCartOnLogin = () => {
+    console.log('Refreshing cart on login');
+    fetchCart();
+  };
+
+  // Expose the functions globally so AuthProvider can call them
   useEffect(() => {
-    const checkAuthAndClearCart = () => {
-      const isAuthenticated = checkIfUserIsAuthenticated();
-      if (!isAuthenticated && state.items.length > 0) {
-        console.log('User logged out, clearing cart');
-        dispatch({ type: 'SET_CART', payload: [] });
-        dispatch({ type: 'SET_ERROR', payload: null });
+    (window as any).clearCartOnLogout = clearCartOnLogout;
+    (window as any).refreshCartOnLogin = refreshCartOnLogin;
+    
+    // Listen for storage events (when user logs out in another tab)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'sessionid' && !e.newValue) {
+        // Session was cleared, clear cart
+        clearCartOnLogout();
       }
     };
-
-    // Check immediately
-    checkAuthAndClearCart();
-
-    // Set up interval to check authentication status
-    const intervalId = setInterval(checkAuthAndClearCart, 1000); // Check every second
-
-    // Cleanup interval on unmount
-    return () => clearInterval(intervalId);
-  }, [state.items.length]);
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    return () => {
+      delete (window as any).clearCartOnLogout;
+      delete (window as any).refreshCartOnLogin;
+      window.removeEventListener('storage', handleStorageChange);
+    };
+  }, []);
 
   const actions = {
     fetchCart,
@@ -318,6 +341,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
     removeItem,
     updateQuantity,
     clearCart,
+    refreshCartOnLogin,
   };
 
   const value: CartContextType = {

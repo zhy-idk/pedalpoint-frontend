@@ -2,6 +2,8 @@ import { useState } from "react";
 import { Trash2, Minus, Plus } from "lucide-react";
 import { useCart } from "../providers/CartProvider";
 import type { CartItem } from "../types/cart";
+import { apiBaseUrl } from "../api/index";
+import PlaceholderIMG from "../assets/placeholder_img.jpg";
 
 interface CartCardProps {
   item: CartItem;
@@ -38,12 +40,25 @@ function CartCard({ item }: CartCardProps) {
         <div className="flex items-center gap-4">
           {/* Product Image */}
           <img
-            src={item.product.product_listing.image || '/src/assets/placeholder_img.jpg'}
+            src={(() => {
+              const image = item.product.product_listing.image;
+              if (!image || image.trim() === '') {
+                return PlaceholderIMG;
+              }
+              
+              // Check if it's already a full URL or local path
+              if (image.startsWith('http') || image.startsWith('/src/') || image === PlaceholderIMG) {
+                return image;
+              }
+              
+              // Otherwise, it's an API image path, so prepend the base URL
+              return `${apiBaseUrl}${image}`;
+            })()}
             alt={item.product.product_listing.name}
             className="w-20 h-20 object-cover rounded-lg"
             onError={(e) => {
               const target = e.target as HTMLImageElement;
-              target.src = '/src/assets/placeholder_img.jpg';
+              target.src = PlaceholderIMG;
             }}
           />
 
@@ -51,7 +66,7 @@ function CartCard({ item }: CartCardProps) {
           <div className="flex-1">
             <h3 className="font-semibold text-lg">{item.product.product_listing.name}</h3>
             <p className="text-sm text-base-content/70 mb-1">SKU: {item.product.sku}</p>
-            <p className="text-sm text-base-content/70 mb-1">Variant: {item.product.name}</p>
+            <p className="text-sm text-base-content/70 mb-1">Variant: {item.product.variant_attribute}</p>
             <p className="text-primary font-bold text-lg">${item.product.price}</p>
             <p className="text-xs text-base-content/60">Stock: {item.product.stock}</p>
           </div>

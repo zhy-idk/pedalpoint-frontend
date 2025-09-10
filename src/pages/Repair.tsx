@@ -10,6 +10,7 @@ import {
   Loader2,
 } from "lucide-react";
 import ChatButton from "../components/Chat";
+import { apiBaseUrl } from "../api/index";
 
 function Repair() {
   const [date, setDate] = useState<Date | undefined>();
@@ -52,7 +53,7 @@ function Repair() {
       }
 
       // Try to get user info from cart endpoint (which we know works)
-      const response = await fetch("http://localhost:8000/api/cart/", {
+      const response = await fetch(`${apiBaseUrl}/api/cart/`, {
         credentials: "include",
         headers: {
           "Content-Type": "application/json",
@@ -113,7 +114,7 @@ function Repair() {
         headers["X-CSRFToken"] = csrfToken;
       }
 
-      const response = await fetch("http://localhost:8000/api/queue/add/", {
+      const response = await fetch(`${apiBaseUrl}/api/queue/add/`, {
         method: "POST",
         headers,
         credentials: "include",

@@ -25,7 +25,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     fetchCSRFToken().catch(console.error);
   }, []);
 
-  const signup = async (email: string, password1: string, password2: string): Promise<void> => {
+  const signup = async (email: string, password: string, password2: string): Promise<void> => {
     dispatch({ type: 'AUTH_START'})
     try {
       // Ensure we have CSRF token
@@ -40,11 +40,14 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         '/_allauth/browser/v1/auth/signup',
         {
           email,
-          password1,
+          password,
           password2
         }
       );
 
+      // Check authentication status after successful signup
+      // (allauth automatically logs in the user)
+      await checkAuth();
 
     } catch (error: unknown) {
       let errorMessage = 'Signup failed';
@@ -87,6 +90,11 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // After successful login, get user info
       await checkAuth();
+      
+      // Refresh cart when user logs in
+      if ((window as any).refreshCartOnLogin) {
+        (window as any).refreshCartOnLogin();
+      }
 
     } catch (error: unknown) {
       let errorMessage = 'Login failed';
@@ -113,10 +121,20 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       );
 
       dispatch({ type: 'LOGOUT' });
+      
+      // Clear cart when user logs out
+      if ((window as any).clearCartOnLogout) {
+        (window as any).clearCartOnLogout();
+      }
     } catch (error) {
       console.error('Logout error:', error);
       // Even if logout fails on server, clear local state
       dispatch({ type: 'LOGOUT' });
+      
+      // Clear cart even if logout fails
+      if ((window as any).clearCartOnLogout) {
+        (window as any).clearCartOnLogout();
+      }
     }
   };
 
@@ -131,17 +149,77 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.data && response.data.user) {
         console.log('User data found:', response.data.user);
         dispatch({ type: 'AUTH_SUCCESS', payload: response.data.user });
+        
+        // Refresh cart when user is authenticated
+        if ((window as any).refreshCartOnLogin) {
+          (window as any).refreshCartOnLogin();
+        }
       } else if (response.data && response.data.username) {
         // Fallback for different response structure
         console.log('Username found:', response.data.username);
         dispatch({ type: 'AUTH_SUCCESS', payload: response.data });
+        
+        // Refresh cart when user is authenticated
+        if ((window as any).refreshCartOnLogin) {
+          (window as any).refreshCartOnLogin();
+        }
       } else {
         console.log('No user data found, logging out');
         dispatch({ type: 'LOGOUT' });
+        
+        // Clear cart when user is not authenticated
+        if ((window as any).clearCartOnLogout) {
+          (window as any).clearCartOnLogout();
+        }
       }
     } catch (error) {
       console.error('Auth check failed:', error);
       dispatch({ type: 'LOGOUT' });
+      
+      // Clear cart when auth check fails
+      if ((window as any).clearCartOnLogout) {
+        (window as any).clearCartOnLogout();
+      }
+    }
+  };
+
+  const forgotPassword = async (email: string): Promise<void> => {
+    dispatch({ type: 'AUTH_START' });
+
+    try {
+      // Ensure we have CSRF token
+      await fetchCSRFToken();
+      const token = getCSRFToken();
+
+      if (!token) {
+        throw new Error('Unable to get CSRF token');
+      }
+
+      // Use allauth browser API for password reset
+      await api.post(
+        '/_allauth/browser/v1/auth/password/reset',
+        {
+          email,
+        },
+        {
+          withCredentials: true,
+        }
+      );
+
+      dispatch({ type: 'SET_LOADING', payload: false });
+
+    } catch (error: unknown) {
+      let errorMessage = 'Password reset failed';
+      
+      if (Axios.isAxiosError(error)) {
+        errorMessage = error.response?.data?.message || 
+                      error.response?.data?.error || 
+                      error.message || 
+                      'Password reset failed';
+      }
+      
+      dispatch({ type: 'AUTH_ERROR', payload: errorMessage });
+      throw error;
     }
   };
 
@@ -158,6 +236,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     logout,
     checkAuth,
+    forgotPassword,
     clearError,
   };
 
