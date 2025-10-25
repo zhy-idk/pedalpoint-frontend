@@ -6,7 +6,7 @@ import { authReducer, initialState } from '../reducers/authReducer';
 import type { AuthContextType } from '../types/auth';
 import { fetchCSRFToken } from '../api/auth';
 import { getCSRFToken } from '../utils/csrf';
-import api from '../api/index'
+import api, { apiBaseUrl } from '../api/index'
 
 interface AuthProviderProps {
   children: React.ReactNode;
@@ -111,6 +111,50 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   };
 
+  const handleSocialLogin = async (provider: "google" | "facebook") => {
+    try {
+      // 1. Ensure CSRF cookie/session exists
+      await fetch(`${apiBaseUrl}/_allauth/browser/v1/auth/session`, {
+        credentials: "include",
+      });
+
+      // 2. Get CSRF token
+      const csrf = getCSRFToken();
+      if (!csrf) {
+        console.error("Missing csrftoken cookie");
+        return;
+      }
+
+      // 3. Create a hidden form to submit
+      const form = document.createElement("form");
+      form.method = "POST";
+      form.action = `${apiBaseUrl}/_allauth/browser/v1/auth/provider/redirect`;
+
+      // Helper function to add hidden inputs
+      const addInput = (name: string, value: string) => {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = name;
+        input.value = value;
+        form.appendChild(input);
+      };
+
+      // 4. Add form data
+      addInput("csrfmiddlewaretoken", csrf);
+      addInput("provider", provider);
+      addInput("process", "login");
+      // Callback URL - where Django redirects after OAuth completes
+      addInput("callback_url", `${window.location.origin}/auth/callback`);
+
+      // 5. Submit the form
+      document.body.appendChild(form);
+      form.submit();
+    } catch (error) {
+      console.error(`${provider} login failed:`, error);
+      throw error;
+    }
+  }
+
   const logout = async (): Promise<void> => {
     dispatch({ type: 'SET_LOADING', payload: true });
 
@@ -139,49 +183,80 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   };
 
   const checkAuth = async (): Promise<void> => {
-    try {
-      console.log('Checking authentication...');
-      const response = await api.get('/api/test');
+  try {
+    console.log('Checking authentication...');
+    
+    // Use allauth headless session endpoint
+    const response = await fetch(`${apiBaseUrl}/_allauth/browser/v1/auth/session`, {
+      credentials: 'include',
+    });
 
-      console.log('API response:', response.data);
+    const data = await response.json();
+    console.log('Allauth session response:', data);
 
-      // Check if we have user data in the response
-      if (response.data && response.data.user) {
-        console.log('User data found:', response.data.user);
-        dispatch({ type: 'AUTH_SUCCESS', payload: response.data.user });
-        
-        // Refresh cart when user is authenticated
-        if ((window as any).refreshCartOnLogin) {
-          (window as any).refreshCartOnLogin();
+    // Check if user is authenticated via allauth
+    if (data.meta?.is_authenticated && data.data?.user) {
+      console.log('User authenticated via allauth:', data.data.user);
+      
+      // Now fetch your custom user data from your API
+      try {
+        const userResponse = await api.get('/api/test');
+        console.log('Custom user data:', userResponse.data);
+
+        // Check if we have user data in the response
+        if (userResponse.data && userResponse.data.id) {
+          // Process the user data to extract user_info
+          const userData = {
+            ...userResponse.data,
+            // Extract the first user_info entry if it exists
+            primaryUserInfo: userResponse.data.user_info && userResponse.data.user_info.length > 0 
+              ? userResponse.data.user_info[0] 
+              : null
+          };
+          
+          dispatch({ type: 'AUTH_SUCCESS', payload: userData });
+          
+          // Refresh cart when user is authenticated
+          if ((window as any).refreshCartOnLogin) {
+            (window as any).refreshCartOnLogin();
+          }
+        } else {
+          console.log('Allauth authenticated but no custom user data found');
+          dispatch({ type: 'LOGOUT' });
+          
+          // Clear cart when user data not found
+          if ((window as any).clearCartOnLogout) {
+            (window as any).clearCartOnLogout();
+          }
         }
-      } else if (response.data && response.data.username) {
-        // Fallback for different response structure
-        console.log('Username found:', response.data.username);
-        dispatch({ type: 'AUTH_SUCCESS', payload: response.data });
-        
-        // Refresh cart when user is authenticated
-        if ((window as any).refreshCartOnLogin) {
-          (window as any).refreshCartOnLogin();
-        }
-      } else {
-        console.log('No user data found, logging out');
+      } catch (apiError) {
+        console.error('Failed to fetch custom user data:', apiError);
         dispatch({ type: 'LOGOUT' });
         
-        // Clear cart when user is not authenticated
+        // Clear cart when API fails
         if ((window as any).clearCartOnLogout) {
           (window as any).clearCartOnLogout();
         }
       }
-    } catch (error) {
-      console.error('Auth check failed:', error);
+    } else {
+      console.log('User not authenticated via allauth');
       dispatch({ type: 'LOGOUT' });
       
-      // Clear cart when auth check fails
+      // Clear cart when user is not authenticated
       if ((window as any).clearCartOnLogout) {
         (window as any).clearCartOnLogout();
       }
     }
-  };
+  } catch (error) {
+    console.error('Auth check failed:', error);
+    dispatch({ type: 'LOGOUT' });
+    
+    // Clear cart when auth check fails
+    if ((window as any).clearCartOnLogout) {
+      (window as any).clearCartOnLogout();
+    }
+  }
+};
 
   const forgotPassword = async (email: string): Promise<void> => {
     dispatch({ type: 'AUTH_START' });
@@ -197,7 +272,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
       // Use allauth browser API for password reset
       await api.post(
-        '/_allauth/browser/v1/auth/password/reset',
+        '/_allauth/browser/v1/auth/password/request',
         {
           email,
         },
@@ -234,6 +309,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     error: state.error,
     signup,
     login,
+    handleSocialLogin,
     logout,
     checkAuth,
     forgotPassword,

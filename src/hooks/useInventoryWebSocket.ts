@@ -6,10 +6,13 @@ interface InventoryItem {
   variant_attribute: string;
   brand: string;
   price: number;
+  supplier_price?: number;
   stock: number;
   sku: string;
   available: boolean;
   product_listing?: number;
+  supply?: string;
+  supply_id?: number;
 }
 
 interface InventoryUpdate {

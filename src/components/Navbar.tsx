@@ -11,7 +11,7 @@ function NavBar() {
   const { state: cart } = useCart();
 
   return (
-    <div className="navbar grid place-items-center grid-rows-2 h-30 border-b-1 border-b-base-300 rounded-md">
+    <div className="navbar grid place-items-center grid-rows-2 h-30 border-b-1 border-b-base-300 rounded-md relative z-50">
     <div className="flex flex-wrap justify-center items-center w-full">
 
       {/* Hamburger Menu Button for mobile*/}
@@ -28,7 +28,7 @@ function NavBar() {
         </div>
 
         {/* Sidebar Menu */}
-        <div className="drawer-side z-20">
+        <div className="drawer-side z-[60]">
           <label htmlFor="my-drawer1" aria-label="close sidebar" className="drawer-overlay"></label>
           <ul className="menu p-4 min-w-3/5 min-h-full bg-base-200 text-base-content sm:min-w-1/3">
             <div className="menu-vertical font-medium text-">
@@ -62,7 +62,7 @@ function NavBar() {
       </div>
       <div
         tabIndex={0}
-        className="card card-compact dropdown-content bg-base-100 z-10 mt-3 w-52 shadow">
+        className="card card-compact dropdown-content bg-base-100 z-[55] mt-3 w-52 shadow">
         <div className="card-body">
           {cart.loading ? (
             <>

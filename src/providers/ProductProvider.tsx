@@ -89,18 +89,26 @@ export const ProductProvider: React.FC<ProductProviderProps> = ({
       }
     },
 
-    buyNow: () => {
-      if (!state.product) return;
+    buyNow: async () => {
+      if (!state.product || !state.selectedVariant) {
+        alert("Please select a product variant");
+        return;
+      }
 
-      // TODO: Implement buy now functionality
-      console.log("Buy now:", {
-        product: state.product,
-        variant: state.selectedVariant,
-        quantity: state.quantity,
-      });
-
-      // Navigate to checkout or handle immediate purchase
-      // navigate('/checkout', { state: { ... } });
+      try {
+        // Navigate to checkout with buy now data
+        navigate('/checkout/', { 
+          state: { 
+            buyNow: true,
+            product: state.selectedVariant,
+            quantity: state.quantity,
+            productListing: state.product
+          } 
+        });
+      } catch (error) {
+        console.error("Error with buy now:", error);
+        alert("Failed to process. Please try again.");
+      }
     },
 
     refreshProduct: () => {

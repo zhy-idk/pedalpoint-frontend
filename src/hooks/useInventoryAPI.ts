@@ -8,10 +8,13 @@ interface InventoryItem {
   variant_attribute: string;
   brand: string;
   price: number;
+  supplier_price?: number;
   stock: number;
   sku: string;
   available: boolean;
   product_listing?: number;
+  supply?: string;
+  supply_id?: number;
 }
 
 interface CreateInventoryItemData {
@@ -23,6 +26,7 @@ interface CreateInventoryItemData {
   sku: string;
   available: boolean;
   product_listing?: number;
+  supplier_id?: number;
 }
 
 interface UpdateInventoryItemData {
@@ -33,6 +37,7 @@ interface UpdateInventoryItemData {
   stock?: number;
   sku?: string;
   available?: boolean;
+  supplier_id?: number;
 }
 
 interface BulkUpdateItem {
@@ -94,8 +99,10 @@ export const useInventoryAPI = (): UseInventoryAPIReturn => {
     setError(combinedError);
     
     try {
-      if (!csrfReady) {
-        throw new Error('CSRF token not ready. Please wait and try again.');
+      // Check if we have a CSRF token available
+      const csrfToken = getCSRFToken();
+      if (!csrfToken) {
+        throw new Error('CSRF token not available. Please refresh the page and try again.');
       }
       
       const response = await requestFn();
@@ -103,6 +110,11 @@ export const useInventoryAPI = (): UseInventoryAPIReturn => {
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+      }
+      
+      // Don't try to parse JSON for 204 No Content responses
+      if (response.status === 204) {
+        return undefined as T;
       }
       
       return await response.json();
@@ -123,7 +135,7 @@ export const useInventoryAPI = (): UseInventoryAPIReturn => {
         headers: getHeaders(),
       })
     );
-  }, []);
+  }, [csrfReady, csrfError]);
 
   const createItem = useCallback(async (data: CreateInventoryItemData): Promise<InventoryItem> => {
     return handleRequest<InventoryItem>(() =>
@@ -134,7 +146,7 @@ export const useInventoryAPI = (): UseInventoryAPIReturn => {
         body: JSON.stringify(data),
       })
     );
-  }, []);
+  }, [csrfReady, csrfError]);
 
   const updateItem = useCallback(async (id: number, data: UpdateInventoryItemData): Promise<InventoryItem> => {
     return handleRequest<InventoryItem>(() =>
@@ -145,7 +157,7 @@ export const useInventoryAPI = (): UseInventoryAPIReturn => {
         body: JSON.stringify(data),
       })
     );
-  }, []);
+  }, [csrfReady, csrfError]);
 
   const deleteItem = useCallback(async (id: number): Promise<void> => {
     return handleRequest<void>(() =>
@@ -155,7 +167,7 @@ export const useInventoryAPI = (): UseInventoryAPIReturn => {
         headers: getHeaders(),
       })
     );
-  }, []);
+  }, [csrfReady, csrfError]);
 
   const bulkUpdate = useCallback(async (updates: BulkUpdateItem[]): Promise<{ updated_count: number }> => {
     return handleRequest<{ updated_count: number }>(() =>
@@ -166,7 +178,7 @@ export const useInventoryAPI = (): UseInventoryAPIReturn => {
         body: JSON.stringify({ updates }),
       })
     );
-  }, []);
+  }, [csrfReady, csrfError]);
 
   return {
     loading,

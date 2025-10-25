@@ -1,34 +1,59 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { GoogleGenAI } from "@google/genai";
 import ChatIcon from "../assets/chat_24dp.svg?react";
 import AgentIcon from "../assets/support_agent_24dp.svg?react";
 import SendIcon from "../assets/send_24dp.svg?react";
 import CloseIcon from "../assets/close_24dp.svg?react";
+import { useChatWebSocket } from "../hooks/useChatWebSocket";
+import { useAuth } from "../hooks/useAuth";
 
 const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
+type TabType = 'customer_chat' | 'ai_assistant';
+
 export default function Chat() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    { text: "Welcome to PedalPoint! How can I help you today? You can ask about bikes, get repair estimates, or ask for general assistance.", isUser: false },
-  ]);
+  const [activeTab, setActiveTab] = useState<TabType>('customer_chat');
   const [inputText, setInputText] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const { user, isAuthenticated } = useAuth();
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  const sendMessage = async () => {
-    if (!inputText.trim() || isLoading) return;
+  // Only authenticated users can use chat
+  const roomId = isAuthenticated && user?.id ? `customer_${user.id}` : '';
 
-    const userMessage = inputText;
+  // Use WebSocket for real-time chat (only if authenticated)
+  const { messages, isConnected, sendMessage, markRead, connectionError } = useChatWebSocket(roomId);
+
+  // AI Assistant messages (local only)
+  const [aiMessages, setAiMessages] = useState([
+    {
+      text: "Welcome to PedalPoint! How can I help you today? You can ask about bikes, get repair estimates, or ask for general assistance.",
+      isUser: false,
+    },
+  ]);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+
+  const handleSendMessage = () => {
+    if (!inputText.trim()) return;
+
+    if (activeTab === 'customer_chat') {
+      sendMessage(inputText);
+    } else {
+      sendAiMessage(inputText);
+    }
     setInputText("");
-    const newMessages = [...messages, { text: userMessage, isUser: true }];
-    setMessages(newMessages);
-    setIsLoading(true);
+  };
 
-          try {
-        // Combined prompt for all bike-related questions
-        const response = await ai.models.generateContent({
-          model: "gemini-2.5-flash",
-          contents: `You are a professional bike shop assistant for PedalPoint. Always act like a helpful, knowledgeable shop assistant while providing accurate information.
+  // AI Assistant with Gemini
+  const sendAiMessage = async (userMessage: string) => {
+    setAiMessages((prev) => [...prev, { text: userMessage, isUser: true }]);
+    setIsAiLoading(true);
+
+    try {
+      // Combined prompt for all bike-related questions
+      const response = await ai.models.generateContent({
+        model: "gemini-2.0-flash-exp",
+        contents: `You are a professional bike shop assistant for PedalPoint. Always act like a helpful, knowledgeable shop assistant while providing accurate information.
 
 For bike problems or repair questions, refer to this comprehensive guide to provide accurate cost estimates and parts recommendations:
 
@@ -47,7 +72,7 @@ For bike problems or repair questions, refer to this comprehensive guide to prov
 **Parts:**
 - If axle is broken: Front Axle (different types depending on bike type) - ₱65-120
 - If skewer is broken: Front Skewer ₱100, Optional: Front & Rear Skewer Set ₱180-350
-- If only bearing is damaged: Steel balls ₱30, Corona Front ₱10, Sealed Bearing (various sizes) ₱65-110
+- If only bearing is damaged: Steel balls ₱30, Corona Front ₱10, Sealed Bearing (various sizes) - ₱65-110
 - If the bearing housing/hub needs replacement:
   - Hub Ord (Thread Type) ₱220-230
   - Hub Set (Thread Type) ₱750-1150
@@ -58,7 +83,7 @@ For bike problems or repair questions, refer to this comprehensive guide to prov
 ## 3. Chain Wheel/Bottom Bracket
 **Signs of damage:** Chain wheel shakes, bearings fall out (meaning internal bearings are broken or the bearing housing is damaged).
 **Parts:**
-- If replacing the complete Bottom Bracket set: Cotterless Axle/ET/ET(Jumbo) ₱195-220, Bottom Bracket Set (various sizes and types) ₱280-550
+- If replacing the complete Bottom Bracket set: Cotterless Axle/ET/ET(Jumbo) ₱195-220, Bottom Bracket Set (various sizes and types) - ₱280-550
 - If only bearing is damaged: Corona ET ₱12, Corona OPC ₱20, Corona 9/16 ₱12
 **Additional:** Grease ₱15  
 **Labor/Service Charge:** ₱50-100 (bearing or bottom bracket replacement)
@@ -68,7 +93,7 @@ For bike problems or repair questions, refer to this comprehensive guide to prov
 **Parts:**
 - If axle is broken: Rear Axle (different types depending on bike type) - ₱85-175
 - If skewer is broken: Rear Skewer ₱120, Optional: Front & Rear Skewer Set ₱180-350
-- If only bearing is damaged: Steel balls ₱30, Corona Rear ₱10, Sealed Bearing (various sizes) ₱65-110
+- If only bearing is damaged: Steel balls ₱30, Corona Rear ₱10, Sealed Bearing (various sizes) - ₱65-110
 - If the bearing housing/hub needs replacement:
   - Hub Ord (Thread Type) ₱230-250
   - Hub Set (Thread Type) ₱750-1150
@@ -116,7 +141,7 @@ For bike problems or repair questions, refer to this comprehensive guide to prov
 **Labor/Service Charge:** ₱30-50 (pad replacement)
 
 Here's our conversation so far:
-${newMessages.map((msg) => `${msg.isUser ? "Customer" : "Assistant"}: ${msg.text}`).join("\n")}
+${aiMessages.map((msg) => `${msg.isUser ? "Customer" : "Assistant"}: ${msg.text}`).join("\n")}
 
 Customer question: ${userMessage}
 
@@ -138,134 +163,239 @@ For repair estimates, structure your response like this:
 4. Next steps recommendation
 
 Keep responses concise and easy to read. Use line breaks between sections for better readability. Use exact part names and pricing from the guide when applicable.`,
-        });
+      });
 
-        const responseText = response.text || "";
-
-      setMessages((prev) => [...prev, { text: responseText, isUser: false }]);
+      const responseText = response.text || "";
+      setAiMessages((prev) => [...prev, { text: responseText, isUser: false }]);
     } catch (error) {
-      console.error("Error:", error);
-      setMessages((prev) => [
+      console.error("AI Error:", error);
+      setAiMessages((prev) => [
         ...prev,
         {
-          text: "Sorry, I'm having trouble connecting. Please try again.",
+          text: "Sorry, I'm having trouble connecting. Please try again or switch to Live Chat for immediate assistance.",
           isUser: false,
         },
       ]);
+    } finally {
+      setIsAiLoading(false);
     }
-
-    setIsLoading(false);
   };
 
   const handleKeyPress = (e: { key: string }) => {
-    if (e.key === "Enter") {
-      sendMessage();
-    }
+    if (e.key === "Enter") handleSendMessage();
   };
+
+  const currentMessages = activeTab === 'customer_chat' ? messages : aiMessages;
+  const isLoading = activeTab === 'customer_chat' ? !isConnected : isAiLoading;
+
+  // Auto-scroll to bottom when new messages arrive or tab changes
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [currentMessages, activeTab]);
+
+  // Mark messages as read when chat is open and on customer_chat tab
+  useEffect(() => {
+    if (isOpen && activeTab === 'customer_chat' && messages.length > 0 && isConnected) {
+      markRead();
+    }
+  }, [isOpen, activeTab, messages.length, isConnected]); // Removed markRead from dependencies to use the ref version
+
+  // Don't show chat for unauthenticated users
+  if (!isAuthenticated) {
+    return null;
+  }
 
   return (
     <div>
       {/* Chat Toggle Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className={`btn btn-lg btn-circle btn-info lg:btn-xl fixed bottom-8 left-8 z-10 transition-opacity duration-300 ${
+        className={`btn btn-md sm:btn-lg btn-circle btn-info lg:btn-xl fixed bottom-4 sm:bottom-8 left-4 sm:left-8 z-10 transition-opacity duration-300 ${
           isOpen ? "pointer-events-none opacity-0" : "opacity-100"
         }`}
       >
-        <ChatIcon />
+        <ChatIcon className="w-5 h-5 sm:w-6 sm:h-6" />
       </button>
 
       {/* Chat Window */}
       <div
-        className={`fixed bottom-20 left-8 z-40 h-96 w-100 transform rounded-lg transition-all duration-300 ease-in-out ${
+        className={`fixed bottom-2 left-2 right-2 sm:bottom-20 sm:left-8 sm:right-auto z-40 h-[calc(100vh-5rem)] sm:h-96 w-auto sm:w-100 transform rounded-lg transition-all duration-300 ease-in-out ${
           isOpen
             ? "scale-100 opacity-100"
             : "pointer-events-none scale-95 opacity-0"
         }`}
       >
         {/* Chat Header */}
-        <div className="bg-info flex items-center justify-between rounded-t-lg p-3 text-white">
-          <h3 className="text-sm font-semibold">PedalPoint Assistant</h3>
-          <button
-            onClick={() => setIsOpen(false)}
-            className="btn btn-circle btn-xs"
-          >
-            <CloseIcon />
+        <div className="bg-info flex items-center justify-between rounded-t-lg p-2 sm:p-3 text-white">
+          <h3 className="text-xs sm:text-sm font-semibold truncate">
+            {activeTab === 'customer_chat'
+              ? 'Live Support'
+              : 'AI Assistant'}
+          </h3>
+          <button onClick={() => setIsOpen(false)} className="btn btn-circle btn-xs shrink-0">
+            <CloseIcon className="w-3 h-3 sm:w-4 sm:h-4" />
           </button>
         </div>
 
         {/* Chat Content */}
         <div className="flex h-full flex-col overflow-hidden rounded-b-lg">
-          {/* Messages Area */}
-          <div className="bg-base-100 flex-1 overflow-y-auto p-3">
+          {/* Tabs */}
+          <div className="tabs tabs-boxed bg-base-200 p-1">
+            <button
+              className={`tab tab-xs sm:tab-sm flex-1 text-[10px] sm:text-xs ${
+                activeTab === 'customer_chat' ? 'tab-active' : ''
+              }`}
+              onClick={() => {
+                setActiveTab('customer_chat');
+                setInputText('');
+              }}
+            >
+              <div className="flex items-center gap-1">
+                <span className="hidden sm:inline">Live Chat</span>
+                <span className="sm:hidden">Live</span>
+                {activeTab === 'customer_chat' && (
+                  <div
+                    className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full ${
+                      isConnected ? 'bg-green-500' : 'bg-red-500'
+                    }`}
+                  ></div>
+                )}
+              </div>
+            </button>
+            <button
+              className={`tab tab-xs sm:tab-sm flex-1 text-[10px] sm:text-xs ${
+                activeTab === 'ai_assistant' ? 'tab-active' : ''
+              }`}
+              onClick={() => {
+                setActiveTab('ai_assistant');
+                setInputText('');
+              }}
+            >
+              <span className="hidden sm:inline">AI Assistant</span>
+              <span className="sm:hidden">AI</span>
+            </button>
+          </div>
+
+          {/* Connection Error */}
+          {activeTab === 'customer_chat' && connectionError && (
+            <div className="bg-red-100 text-red-800 text-xs p-2 text-center">
+              Connection Error: {connectionError}
+            </div>
+          )}
+
+          {/* Messages */}
+          <div className="bg-base-100 flex-1 overflow-y-auto p-2 sm:p-3">
             <div className="space-y-2">
-              {messages.map((message, index) => (
-                <div
-                  key={index}
-                  className={`chat ${message.isUser ? "chat-end ml-8" : "chat-start mr-8"}`}
-                >
-                  <div className="chat-image avatar">
-                    <div className="w-8 rounded-full">
-                      {message.isUser ? (
-                        <img
-                          alt="Avatar"
-                          src="https://img.daisyui.com/images/profile/demo/anakeen@192.webp"
-                        />
-                      ) : (
-                        <AgentIcon width={28} height={28} />
-                      )}
+              {currentMessages.map((message, index) => {
+                // For customer_chat, check if sender is current user
+                const isMyMessage = activeTab === 'customer_chat'
+                  ? (message as any).sender?.id === user?.id
+                  : (message as any).isUser;
+
+                return (
+                  <div
+                    key={index}
+                    className={`chat ${isMyMessage ? 'chat-end ml-4 sm:ml-8' : 'chat-start mr-4 sm:mr-8'}`}
+                  >
+                    <div className="chat-image avatar">
+                      <div className="w-6 sm:w-8 rounded-full">
+                        {activeTab === 'ai_assistant' ? (
+                          isMyMessage ? (
+                            <img
+                              alt="Avatar"
+                              src="https://img.daisyui.com/images/profile/demo/anakeen@192.webp"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <AgentIcon className="w-5 h-5 sm:w-7 sm:h-7" />
+                          )
+                        ) : isMyMessage ? (
+                          <img
+                            alt="Avatar"
+                            src="https://img.daisyui.com/images/profile/demo/anakeen@192.webp"
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <AgentIcon className="w-5 h-5 sm:w-7 sm:h-7" />
+                        )}
+                      </div>
                     </div>
+                    <div className="chat-header text-[10px] sm:text-xs">
+                      {activeTab === 'ai_assistant'
+                        ? isMyMessage
+                          ? 'You'
+                          : 'AI'
+                        : isMyMessage
+                        ? 'You'
+                        : (message as any).staff_name || 'Staff'}
+                      <time className="ml-1 text-[9px] sm:text-xs opacity-50">
+                        {(activeTab === 'customer_chat'
+                          ? (message as any).formatted_timestamp
+                          : undefined) ||
+                          new Date().toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                      </time>
+                    </div>
+                    <div className="chat-bubble max-w-[200px] sm:max-w-xs text-[11px] sm:text-xs leading-relaxed whitespace-pre-line">
+                      {(message as any).content || (message as any).text}
+                    </div>
+                    {activeTab === 'customer_chat' && isMyMessage && (
+                      <div className="text-[9px] sm:text-[10px] opacity-60 ml-6 sm:ml-10 mt-0.5">
+                        {(message as any).is_read ? 'Seen' : 'Sent'}
+                      </div>
+                    )}
                   </div>
-                  <div className="chat-header text-xs">
-                    {message.isUser ? "You" : "PedalPoint Assistant"}
-                    <time className="ml-1 text-xs opacity-50">
-                      {new Date().toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </time>
-                  </div>
-                  <div className="chat-bubble max-w-xs text-xs whitespace-pre-line leading-relaxed">
-                    {message.text}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
+
+              {/* Loading indicator */}
               {isLoading && (
-                <div className="chat chat-start">
+                <div className="chat chat-start mr-4 sm:mr-8">
                   <div className="chat-image avatar">
-                    <div className="w-8 rounded-full">
-                      <AgentIcon width={28} height={28} />
+                    <div className="w-6 sm:w-8 rounded-full">
+                      <AgentIcon className="w-5 h-5 sm:w-7 sm:h-7" />
                     </div>
                   </div>
-                  <div className="chat-header text-xs">
-                    PedalPoint Assistant
+                  <div className="chat-header text-[10px] sm:text-xs">
+                    {activeTab === 'customer_chat'
+                      ? 'Staff'
+                      : 'AI'}
                   </div>
                   <div className="chat-bubble text-xs">
                     <span className="loading loading-dots loading-xs"></span>
                   </div>
                 </div>
               )}
+
+              {/* Invisible div for auto-scroll */}
+              <div ref={messagesEndRef} />
             </div>
           </div>
 
           {/* Input Area */}
-          <div className="bg-base-100 p-3">
-            <div className="flex space-x-2">
+          <div className="bg-base-100 p-2 sm:p-3">
+            <div className="flex space-x-1 sm:space-x-2">
               <input
                 type="text"
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyPress}
-                placeholder="Ask about bikes..."
+                placeholder={
+                  activeTab === 'customer_chat'
+                    ? 'Message...'
+                    : 'Ask...'
+                }
                 disabled={isLoading}
-                className="input flex-1 rounded px-2 py-1 text-sm"
+                className="input input-xs sm:input-sm flex-1 rounded px-2 py-1 text-[11px] sm:text-sm"
               />
               <button
-                onClick={sendMessage}
+                onClick={handleSendMessage}
                 disabled={isLoading || !inputText.trim()}
-                className="btn btn-ghost px-3 py-1"
+                className="btn btn-ghost btn-xs sm:btn-sm px-2 sm:px-3 py-1"
               >
-                <SendIcon />
+                <SendIcon className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
           </div>

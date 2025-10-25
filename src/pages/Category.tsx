@@ -30,7 +30,7 @@ function Category() {
       return {
         id: listing.id,
         name: listing.name,
-        price: parseFloat(listing.price),
+        price: listing.price ? parseFloat(listing.price) : 0,
         description: listing.description,
         image: defaultImage,
         slug: listing.slug,
@@ -42,14 +42,17 @@ function Category() {
           id: variant.id,
           name: variant.name,
           sku: variant.sku,
-          price: parseFloat(variant.price),
-          stock: variant.stock,
+          price: variant.price ? parseFloat(variant.price) : 0,
+          stock: variant.stock || 0,
           available: variant.available,
           variant_images: variant.product_images,
         })),
         reviews: listing.reviews,
         compatibility: listing.compatibility_attributes,
       };
+    }).filter((product: Product) => {
+      // Filter out products with missing essential data
+      return product.id && product.name && product.slug;
     }) || [];
 
   // Get category display name

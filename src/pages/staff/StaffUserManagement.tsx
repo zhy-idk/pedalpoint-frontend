@@ -9,73 +9,14 @@ import {
   Mail,
   Shield,
   ShieldCheck,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
-
-interface User {
-  id: number;
-  email: string;
-  firstName: string;
-  lastName: string;
-  isStaff: boolean;
-  isActive: boolean;
-  dateJoined: string;
-  lastLogin: string | null;
-}
+import { useUsers, type User } from "../../hooks/useUsers";
 
 function StaffUserManagement() {
-  const [users, setUsers] = useState<User[]>([
-    {
-      id: 1,
-      email: "admin@pedalpoint.com",
-      firstName: "Admin",
-      lastName: "User",
-      isStaff: true,
-      isActive: true,
-      dateJoined: "2025-01-01",
-      lastLogin: "2025-09-02T10:30:00Z",
-    },
-    {
-      id: 2,
-      email: "staff@pedalpoint.com",
-      firstName: "Staff",
-      lastName: "Member",
-      isStaff: true,
-      isActive: true,
-      dateJoined: "2025-02-15",
-      lastLogin: "2025-09-01T15:45:00Z",
-    },
-    {
-      id: 3,
-      email: "customer1@example.com",
-      firstName: "John",
-      lastName: "Doe",
-      isStaff: false,
-      isActive: true,
-      dateJoined: "2025-03-10",
-      lastLogin: "2025-08-30T09:20:00Z",
-    },
-    {
-      id: 4,
-      email: "customer2@example.com",
-      firstName: "Jane",
-      lastName: "Smith",
-      isStaff: false,
-      isActive: false,
-      dateJoined: "2025-04-05",
-      lastLogin: null,
-    },
-    {
-      id: 5,
-      email: "manager@pedalpoint.com",
-      firstName: "Manager",
-      lastName: "Boss",
-      isStaff: true,
-      isActive: true,
-      dateJoined: "2025-01-15",
-      lastLogin: "2025-09-02T08:15:00Z",
-    },
-  ]);
+  const { users, loading, error, refresh, updateUser, deleteUser } = useUsers();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
@@ -93,11 +34,13 @@ function StaffUserManagement() {
   const filteredUsers = users.filter(
     (user) =>
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.lastName.toLowerCase().includes(searchTerm.toLowerCase()),
+      user.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.username.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
-  const formatDate = (dateString: string) => {
+  const formatDate = (dateString: string | null) => {
+    if (!dateString) return "Never";
     return new Date(dateString).toLocaleDateString();
   };
 
@@ -106,20 +49,24 @@ function StaffUserManagement() {
     return new Date(dateString).toLocaleString();
   };
 
-  const toggleStaffStatus = (userId: number) => {
-    setUsers(
-      users.map((user) =>
-        user.id === userId ? { ...user, isStaff: !user.isStaff } : user,
-      ),
-    );
+  const toggleStaffStatus = async (userId: number) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    
+    const success = await updateUser(userId, { is_staff: !user.is_staff });
+    if (success) {
+      // The users list will be refreshed automatically by the hook
+    }
   };
 
-  const toggleActiveStatus = (userId: number) => {
-    setUsers(
-      users.map((user) =>
-        user.id === userId ? { ...user, isActive: !user.isActive } : user,
-      ),
-    );
+  const toggleActiveStatus = async (userId: number) => {
+    const user = users.find(u => u.id === userId);
+    if (!user) return;
+    
+    const success = await updateUser(userId, { is_active: !user.is_active });
+    if (success) {
+      // The users list will be refreshed automatically by the hook
+    }
   };
 
   const openEditModal = (user: User) => {
@@ -197,9 +144,12 @@ function StaffUserManagement() {
     }
   };
 
-  const deleteUser = (userId: number) => {
+  const handleDeleteUser = async (userId: number) => {
     if (confirm("Are you sure you want to delete this user?")) {
-      setUsers(users.filter((user) => user.id !== userId));
+      const success = await deleteUser(userId);
+      if (success) {
+        // The users list will be refreshed automatically by the hook
+      }
     }
   };
 
@@ -219,56 +169,78 @@ function StaffUserManagement() {
         </button>
       </div>
 
-      {/* Search and Filters */}
-      <div className="mb-4 flex items-center gap-4">
-        <label className="input input-bordered flex w-full max-w-md items-center gap-2">
-          <Search className="h-4 w-4 opacity-50" />
-          <input
-            type="text"
-            placeholder="Search users..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="grow"
-          />
-        </label>
+      {/* Error Display */}
+      {error && (
+        <div className="alert alert-error mb-6">
+          <AlertCircle className="h-4 w-4" />
+          <div>
+            <div className="font-bold">Error</div>
+            <div className="text-sm">{error}</div>
+          </div>
+        </div>
+      )}
 
-        <div className="stats shadow">
-          <div className="stat">
-            <div className="stat-title">Total Users</div>
-            <div className="stat-value text-primary">{users.length}</div>
-          </div>
-          <div className="stat">
-            <div className="stat-title">Staff Members</div>
-            <div className="stat-value text-secondary">
-              {users.filter((u) => u.isStaff).length}
+      {/* Loading State */}
+      {loading && (
+        <div className="flex justify-center items-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="ml-2">Loading users...</span>
+        </div>
+      )}
+
+      {/* Search and Filters */}
+      {!loading && (
+        <div className="mb-4 flex items-center gap-4">
+          <label className="input input-bordered flex w-full max-w-md items-center gap-2">
+            <Search className="h-4 w-4 opacity-50" />
+            <input
+              type="text"
+              placeholder="Search users..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="grow"
+            />
+          </label>
+
+          <div className="stats shadow">
+            <div className="stat">
+              <div className="stat-title">Total Users</div>
+              <div className="stat-value text-primary">{users.length}</div>
             </div>
-          </div>
-          <div className="stat">
-            <div className="stat-title">Active Users</div>
-            <div className="stat-value text-accent">
-              {users.filter((u) => u.isActive).length}
+            <div className="stat">
+              <div className="stat-title">Staff Members</div>
+              <div className="stat-value text-secondary">
+                {users.filter((u) => u.is_staff).length}
+              </div>
+            </div>
+            <div className="stat">
+              <div className="stat-title">Active Users</div>
+              <div className="stat-value text-accent">
+                {users.filter((u) => u.is_active).length}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Users Table */}
-      <div className="overflow-x-auto">
-        <table className="table-zebra table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Name</th>
-              <th>Email</th>
-              <th>Staff</th>
-              <th>Active</th>
-              <th>Date Joined</th>
-              <th>Last Login</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredUsers.map((user) => (
+      {!loading && (
+        <div className="overflow-x-auto">
+          <table className="table-zebra table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Staff</th>
+                <th>Active</th>
+                <th>Date Joined</th>
+                <th>Last Login</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredUsers.map((user) => (
               <tr key={user.id} className="hover">
                 <th>{user.id}</th>
                 <td>
@@ -276,14 +248,14 @@ function StaffUserManagement() {
                     <div className="avatar placeholder">
                       <div className="bg-neutral text-neutral-content w-8 rounded-full">
                         <span className="text-xs">
-                          {user.firstName.charAt(0)}
-                          {user.lastName.charAt(0)}
+                          {user.first_name?.charAt(0) || user.username.charAt(0)}
+                          {user.last_name?.charAt(0) || ''}
                         </span>
                       </div>
                     </div>
                     <div>
                       <div className="font-bold">
-                        {user.firstName} {user.lastName}
+                        {user.full_name}
                       </div>
                     </div>
                   </div>
@@ -298,10 +270,10 @@ function StaffUserManagement() {
                   <button
                     onClick={() => toggleStaffStatus(user.id)}
                     className={`btn btn-sm gap-2 ${
-                      user.isStaff ? "btn-success" : "btn-ghost"
+                      user.is_staff ? "btn-success" : "btn-ghost"
                     }`}
                   >
-                    {user.isStaff ? (
+                    {user.is_staff ? (
                       <>
                         <ShieldCheck className="h-4 w-4" />
                         Staff
@@ -318,10 +290,10 @@ function StaffUserManagement() {
                   <button
                     onClick={() => toggleActiveStatus(user.id)}
                     className={`btn btn-sm gap-2 ${
-                      user.isActive ? "btn-success" : "btn-error"
+                      user.is_active ? "btn-success" : "btn-error"
                     }`}
                   >
-                    {user.isActive ? (
+                    {user.is_active ? (
                       <>
                         <UserCheck className="h-4 w-4" />
                         Active
@@ -334,16 +306,16 @@ function StaffUserManagement() {
                     )}
                   </button>
                 </td>
-                <td>{formatDate(user.dateJoined)}</td>
+                <td>{formatDate(user.date_joined)}</td>
                 <td>
                   <span
                     className={
-                      user.lastLogin
+                      user.last_login
                         ? "text-base-content"
                         : "text-base-content/50"
                     }
                   >
-                    {formatLastLogin(user.lastLogin)}
+                    {formatLastLogin(user.last_login)}
                   </span>
                 </td>
                 <td>
@@ -356,7 +328,7 @@ function StaffUserManagement() {
                       <Edit className="h-4 w-4" />
                     </button>
                     <button
-                      onClick={() => deleteUser(user.id)}
+                      onClick={() => handleDeleteUser(user.id)}
                       className="btn btn-ghost btn-sm text-error"
                       title="Delete user"
                     >
@@ -368,14 +340,15 @@ function StaffUserManagement() {
             ))}
           </tbody>
         </table>
+        
+        {filteredUsers.length === 0 && (
+          <div className="py-8 text-center">
+            <p className="text-base-content/50">
+              No users found matching your search.
+            </p>
+          </div>
+        )}
       </div>
-
-      {filteredUsers.length === 0 && (
-        <div className="py-8 text-center">
-          <p className="text-base-content/50">
-            No users found matching your search.
-          </p>
-        </div>
       )}
 
       {/* Create User Modal */}

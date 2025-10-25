@@ -1,4 +1,6 @@
 import { NavLink } from "react-router-dom";
+import { useState } from "react";
+import { Menu, X } from "lucide-react";
 import DashboardSVG from "../../assets/dashboard_24dp.svg?react";
 import PosSVG from "../../assets/point_of_sale_24dp.svg?react";
 import ChatsSVG from "../../assets/chat_24dp.svg?react";
@@ -8,15 +10,18 @@ import InventorySVG from "../../assets/inventory_24dp.svg?react";
 import QueueSVG from "../../assets/queue.svg?react";
 import UserSVG from "../../assets/manage_accounts_24dp.svg?react";
 import ReturnSVG from "../../assets/undo_24dp.svg?react";
+import ReserveSVG from "../../assets/bookmarks_24dp.svg?react";
+import SalesSVG from "../../assets/finance_24dp.svg?react";
+import SupplierSVG from "../../assets/pallet_24dp.svg?react";
 import { useAuth } from "../../hooks/useAuth";
 
 function StaffSidebar() {
   const { user } = useAuth();
   const isSuperuser = user?.is_superuser;
+  const [isOpen, setIsOpen] = useState(false);
 
-  return (
-    <div className="bg-base-200 flex h-screen w-20 flex-shrink-0 flex-col items-center">
-      <ul className="menu rounded-box flex-1 gap-1">
+  const navItems = (
+    <ul className="menu rounded-box flex-1 gap-1">
         <li>
           <NavLink
             to="/manage"
@@ -27,6 +32,18 @@ function StaffSidebar() {
             data-tip="Dashboard"
           >
             <DashboardSVG width={35} height={35} />
+          </NavLink>
+        </li>
+        <li>
+          <NavLink
+            to="/manage/sales"
+            className={({ isActive, isPending }) =>
+              `tooltip tooltip-right flex items-center justify-center ${isActive && !isPending ? "bg-neutral-400/15" : ""}`
+            }
+            end
+            data-tip="Sales"
+          >
+            <SalesSVG width={35} height={35} />
           </NavLink>
         </li>
         {isSuperuser && (
@@ -88,6 +105,28 @@ function StaffSidebar() {
         </li>
         <li>
           <NavLink
+            to="/manage/suppliers"
+            className={({ isActive }) =>
+              `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
+            }
+            data-tip="Suppliers"
+          >
+            <SupplierSVG width={35} height={35} />
+          </NavLink>
+        </li>
+        <li>
+          <NavLink
+            to="/manage/reservations"
+            className={({ isActive }) =>
+              `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
+            }
+            data-tip="Reservations"
+          >
+            <ReserveSVG width={35} height={35} />
+          </NavLink>
+        </li>
+        <li>
+          <NavLink
             to="/manage/queueing"
             className={({ isActive }) =>
               `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
@@ -134,9 +173,43 @@ function StaffSidebar() {
           </NavLink>
         </li>
       </ul>
+  );
 
-      {/* Return to User UI Button */}
-    </div>
+  return (
+    <>
+      {/* Mobile Menu Button */}
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="md:hidden fixed top-4 left-4 z-50 btn btn-circle btn-primary"
+      >
+        {isOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+      </button>
+
+      {/* Sidebar for desktop (always visible on md and up) */}
+      <div className="hidden md:flex bg-base-200 h-screen w-20 flex-shrink-0 flex-col items-center">
+        {navItems}
+      </div>
+
+      {/* Mobile drawer overlay */}
+      {isOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/50 z-40"
+          onClick={() => setIsOpen(false)}
+        />
+      )}
+
+      {/* Mobile drawer sidebar */}
+      <div
+        className={`md:hidden fixed top-0 left-0 h-screen w-64 bg-base-200 z-40 transform transition-transform duration-300 ${
+          isOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="p-4 pt-20">
+          <h2 className="text-xl font-bold mb-4">Menu</h2>
+          {navItems}
+        </div>
+      </div>
+    </>
   );
 }
 export default StaffSidebar;

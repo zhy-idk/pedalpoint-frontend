@@ -3,13 +3,13 @@ import type { ProductListing } from '../types/product';
 import PlaceholderIMG from '../assets/placeholder_img.jpg';
 import { apiBaseUrl } from '../api/index';
 
-export const useRecommendations = (categorySlug: string) => {
+export const useRecommendations = (categorySlug: string, excludeProductId?: number) => {
   const [recommendations, setRecommendations] = useState<ProductListing[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log('useRecommendations hook called with categorySlug:', categorySlug);
+    console.log('useRecommendations hook called with categorySlug:', categorySlug, 'excludeProductId:', excludeProductId);
     if (!categorySlug) {
       console.log('No categorySlug provided, skipping recommendations fetch');
       return;
@@ -33,21 +33,32 @@ export const useRecommendations = (categorySlug: string) => {
 
         const data = await response.json();
         
+        let fetchedRecommendations: ProductListing[] = [];
+        
         // Handle different response structures
         if (Array.isArray(data)) {
-          setRecommendations(data);
+          fetchedRecommendations = data;
         } else if (data && Array.isArray(data.listings)) {
-          setRecommendations(data.listings);
+          fetchedRecommendations = data.listings;
         } else if (data && Array.isArray(data.results)) {
-          setRecommendations(data.results);
+          fetchedRecommendations = data.results;
         } else if (data && Array.isArray(data.items)) {
-          setRecommendations(data.items);
+          fetchedRecommendations = data.items;
         } else if (data && Array.isArray(data.data)) {
-          setRecommendations(data.data);
+          fetchedRecommendations = data.data;
         } else {
           console.warn('Unexpected recommendations API response structure:', data);
-          setRecommendations([]);
+          fetchedRecommendations = [];
         }
+        
+        // Filter out the current product if excludeProductId is provided
+        if (excludeProductId) {
+          fetchedRecommendations = fetchedRecommendations.filter(
+            (listing: ProductListing) => listing.id !== excludeProductId
+          );
+        }
+        
+        setRecommendations(fetchedRecommendations);
       } catch (err) {
         console.error('Error fetching recommendations:', err);
         setError(err instanceof Error ? err.message : 'Failed to fetch recommendations');
@@ -57,7 +68,7 @@ export const useRecommendations = (categorySlug: string) => {
     };
 
     fetchRecommendations();
-  }, [categorySlug]);
+  }, [categorySlug, excludeProductId]);
 
   // Transform ProductListing to Product format for ItemCard compatibility
   const transformedRecommendations = Array.isArray(recommendations) ? recommendations.map((listing: ProductListing) => {

@@ -1,52 +1,113 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { useCart } from "../providers/CartProvider";
 import { useAuth } from "../hooks/useAuth";
 import { getCSRFToken } from "../utils/csrf";
+import paymongoService from "../api/paymongo";
+import { fetchUserInfo, UserData } from "../api/auth";
 import {
   MapPin,
   Phone,
   CreditCard,
-  Truck,
   CheckCircle,
   AlertCircle,
   ArrowLeft,
+  Banknote
 } from "lucide-react";
 
 interface CheckoutFormData {
   shipping_address: string;
   contact_number: string;
   notes: string;
+  payment_method: string;
 }
 
 function Checkout() {
   const { state: cart, actions } = useCart();
   const { user, isAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
+
+  // Check if this is a Buy Now flow
+  const buyNowData = location.state as { 
+    buyNow?: boolean; 
+    product?: any; 
+    quantity?: number;
+    productListing?: any;
+  } | null;
 
   const [formData, setFormData] = useState<CheckoutFormData>({
     shipping_address: "",
     contact_number: "",
     notes: "",
+    payment_method: "online_payment", // default to online payment
   });
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderId, setOrderId] = useState<number | null>(null);
+  const [userData, setUserData] = useState<UserData | null>(null);
+  const [userDataLoading, setUserDataLoading] = useState(true);
 
-  // Redirect if not authenticated or cart is empty
+  // Compute order items and totals (works for both cart and buy now)
+  const orderItems = buyNowData?.buyNow && buyNowData.product
+    ? [{
+        product: buyNowData.product,
+        quantity: buyNowData.quantity || 1,
+      }]
+    : cart?.items || [];
+
+  const totalItems = buyNowData?.buyNow && buyNowData.quantity
+    ? buyNowData.quantity
+    : cart?.totalItems || 0;
+
+  const totalPrice = buyNowData?.buyNow && buyNowData.product
+    ? parseFloat(buyNowData.product.price) * (buyNowData.quantity || 1)
+    : cart?.totalPrice || 0;
+
+  // Redirect if not authenticated or (cart is empty AND not buy now)
   useEffect(() => {
     if (!isAuthenticated) {
       navigate("/login");
       return;
     }
 
-    if (!cart || cart.items.length === 0) {
+    // Allow if Buy Now OR if cart has items
+    if (!buyNowData?.buyNow && (!cart || cart.items.length === 0)) {
       navigate("/cart");
       return;
     }
-  }, [isAuthenticated, cart, navigate]);
+  }, [isAuthenticated, cart, navigate, buyNowData]);
+
+  // Fetch user info and populate form
+  useEffect(() => {
+    const loadUserData = async () => {
+      if (!isAuthenticated) return;
+      
+      try {
+        setUserDataLoading(true);
+        const data = await fetchUserInfo();
+        setUserData(data);
+        
+        // Populate form with user info if available
+        if (data.user_info && data.user_info.length > 0) {
+          const userInfo = data.user_info[0];
+          setFormData(prev => ({
+            ...prev,
+            shipping_address: userInfo.address || "",
+            contact_number: userInfo.contact_number || "",
+          }));
+        }
+      } catch (error) {
+        console.error("Error fetching user info:", error);
+      } finally {
+        setUserDataLoading(false);
+      }
+    };
+
+    loadUserData();
+  }, [isAuthenticated]);
 
   const getApiBaseUrl = () => {
     const envUrl = import.meta.env.VITE_API_BASE_URL;
@@ -112,11 +173,25 @@ function Checkout() {
     setError(null);
 
     try {
-      const response = await fetch(`${getApiBaseUrl()}/api/cart/checkout/`, {
+      // Determine endpoint and payload based on buy now or cart checkout
+      const endpoint = buyNowData?.buyNow 
+        ? `${getApiBaseUrl()}/api/cart/buy-now-checkout/`
+        : `${getApiBaseUrl()}/api/cart/checkout/`;
+      
+      const payload = buyNowData?.buyNow
+        ? {
+            ...formData,
+            product_id: buyNowData.product.id,
+            quantity: buyNowData.quantity,
+          }
+        : formData;
+      
+      // First, create the order
+      const response = await fetch(endpoint, {
         method: "POST",
         credentials: "include",
         headers: getHeaders(),
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
@@ -128,10 +203,87 @@ function Checkout() {
 
       const orderData = await response.json();
       setOrderId(orderData.id);
-      setOrderSuccess(true);
 
-      // Refresh cart to clear it
-      actions.fetchCart();
+      // Check payment method
+      if (formData.payment_method === "cash_on_delivery") {
+        // For COD, backend already cleared the cart (if cart checkout)
+        setOrderSuccess(true);
+        
+        // Only refetch cart if it was a cart checkout (not buy now)
+        if (!buyNowData?.buyNow) {
+          await actions.fetchCart(); // Refetch cart to get empty cart from backend
+        }
+        
+        // Redirect to order detail page after a short delay
+        setTimeout(() => {
+          navigate(`/orders/${orderData.id}`);
+        }, 2000);
+      } else {
+        // Create PayMongo checkout session for online payments
+        try {
+          console.log('=== CREATING PAYMONGO CHECKOUT SESSION ===');
+          
+          // Prepare line items from cart or buyNow
+          const lineItems = buyNowData?.buyNow && buyNowData.product
+            ? [{
+                name: `${buyNowData.product.name}${buyNowData.product.variant_attribute ? ` - ${buyNowData.product.variant_attribute}` : ''}`,
+                amount: Math.round(parseFloat(buyNowData.product.price) * 100), // Convert to cents
+                quantity: buyNowData.quantity || 1,
+                currency: "PHP"
+              }]
+            : cart?.items.map(item => ({
+                name: `${item.product.name}${item.product.variant_attribute ? ` - ${item.product.variant_attribute}` : ''}`,
+                amount: Math.round(item.product.price * 100), // Convert to cents
+                quantity: item.quantity,
+                currency: "PHP"
+              })) || [];
+
+          // Prepare billing information
+          const billingInfo = {
+            name: `${userData?.first_name || ''} ${userData?.last_name || ''}`.trim() || 'Customer',
+            email: userData?.email || '',
+            phone: formData.contact_number,
+          };
+
+          // Create checkout session
+          const checkoutSession = await paymongoService.createPayMongoCheckoutSession({
+            orderId: orderData.id,
+            billing: billingInfo,
+            lineItems: lineItems,
+            sendEmailReceipt: true,
+          });
+
+          console.log('Checkout Session Response:', checkoutSession);
+          
+          // Store checkout session ID in the backend
+          try {
+            await fetch(`${getApiBaseUrl()}/api/orders/${orderData.id}/update-status/`, {
+              method: "PATCH",
+              credentials: "include",
+              headers: getHeaders(),
+              body: JSON.stringify({
+                paymongo_checkout_session_id: checkoutSession.data.id,
+              }),
+            });
+          } catch (storeError) {
+            console.warn('Failed to store checkout session ID:', storeError);
+            // Don't fail the checkout process if storing the session ID fails
+          }
+          
+          // Redirect to PayMongo checkout page
+          const checkoutUrl = checkoutSession.data.attributes.checkout_url;
+          if (checkoutUrl) {
+            console.log('🔄 Redirecting to PayMongo checkout...');
+            window.location.href = checkoutUrl;
+          } else {
+            setError('No checkout URL provided');
+          }
+          
+        } catch (paymentError) {
+          console.error("❌ Payment error:", paymentError);
+          setError("Failed to initialize payment. Please try again.");
+        }
+      }
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "Failed to place order";
@@ -170,12 +322,12 @@ function Checkout() {
             <div className="space-y-1 text-sm">
               <div className="flex justify-between">
                 <span>Items:</span>
-                <span>{cart?.totalItems || 0}</span>
+                <span>{totalItems}</span>
               </div>
               <div className="flex justify-between">
                 <span>Total:</span>
                 <span className="font-semibold">
-                  ${cart?.totalPrice.toFixed(2) || "0.00"}
+                  ₱{totalPrice.toFixed(2)}
                 </span>
               </div>
             </div>
@@ -234,6 +386,60 @@ function Checkout() {
           {/* Checkout Form */}
           <div className="lg:col-span-2">
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* User Information Display */}
+              {userDataLoading ? (
+                <div className="card bg-base-100 shadow-lg">
+                  <div className="card-body">
+                    <div className="flex items-center gap-3">
+                      <div className="loading loading-spinner loading-sm"></div>
+                      <span className="text-sm text-base-content/70">Loading account information...</span>
+                    </div>
+                  </div>
+                </div>
+              ) : userData ? (
+                <div className="card bg-base-100 shadow-lg">
+                  <div className="card-body">
+                    <h2 className="card-title mb-4">
+                      <CheckCircle className="h-5 w-5" />
+                      Account Information
+                    </h2>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm text-base-content/70">Name:</span>
+                          <span className="text-sm">{userData.first_name} {userData.last_name}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm text-base-content/70">Email:</span>
+                          <span className="text-sm">{userData.email}</span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold text-sm text-base-content/70">Username:</span>
+                          <span className="text-sm">{userData.username}</span>
+                        </div>
+                      </div>
+                      
+                      {userData.user_info && userData.user_info.length > 0 && (
+                        <div className="space-y-2">
+                          <div className="flex items-center gap-2">
+                            <MapPin className="h-4 w-4 text-base-content/70" />
+                            <span className="font-semibold text-sm text-base-content/70">Saved Address:</span>
+                          </div>
+                          <p className="text-sm ml-6">{userData.user_info[0].address}</p>
+                          
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 text-base-content/70" />
+                            <span className="font-semibold text-sm text-base-content/70">Saved Contact:</span>
+                          </div>
+                          <p className="text-sm ml-6">{userData.user_info[0].contact_number}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
+
               {/* Shipping Information */}
               <div className="card bg-base-100 shadow-lg">
                 <div className="card-body">
@@ -295,14 +501,91 @@ function Checkout() {
                 <div className="card-body">
                   <h2 className="card-title mb-4">
                     <CreditCard className="h-5 w-5" />
-                    Payment Information
+                    Payment Method
                   </h2>
 
-                  <div className="alert alert-info">
-                    <Truck className="h-4 w-4" />
-                    <span>
-                      Payment will be collected upon delivery (Cash on Delivery)
-                    </span>
+                  <div className="flex flex-col gap-2">
+                    {/* Online Payment Option */}
+                    <label className="cursor-pointer">
+                      <div className={`border rounded-lg p-4 transition-all ${
+                        formData.payment_method === "online_payment" 
+                          ? "border-primary bg-primary/5" 
+                          : "border-base-300 hover:border-base-400"
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <input
+                              type="radio"
+                              name="payment_method"
+                              value="online_payment"
+                              checked={formData.payment_method === "online_payment"}
+                              onChange={handleInputChange}
+                              className="radio radio-primary"
+                            />
+                            <div className="flex items-center space-x-2">
+                              <CreditCard className="h-5 w-5 text-primary" />
+                              <span className="font-medium text-lg">Secure Online Payment</span>
+                            </div>
+                          </div>
+                          <div className="badge badge-primary">Recommended</div>
+                        </div>
+                        {formData.payment_method === "online_payment" && (
+                          <>
+                            <p className="text-sm text-base-content/70 mt-3 ml-9">
+                              Pay securely with multiple payment options including:
+                            </p>
+                            <div className="flex flex-wrap gap-2 my-3 ml-9">
+                              <span className="badge badge-outline">Credit/Debit Cards</span>
+                              <span className="badge badge-outline">GCash</span>
+                              <span className="badge badge-outline">PayMaya</span>
+                              <span className="badge badge-outline">Online Banking</span>
+                              <span className="badge badge-outline">QR Ph</span>
+                            </div>
+                            {/* Payment Security Notice */}
+                            <div className="alert alert-info">
+                              <CheckCircle className="h-4 w-4" />
+                              <div>
+                                <div className="font-medium">Secure Payment Processing</div>
+                                <div className="text-sm">
+                                  Your payment is secured by PayMongo's 256-bit SSL encryption and PCI DSS compliance
+                                </div>
+                              </div>
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </label>
+
+                    {/* Cash on Delivery Option */}
+                    <label className="cursor-pointer">
+                      <div className={`border rounded-lg p-4 transition-all ${
+                        formData.payment_method === "cash_on_delivery" 
+                          ? "border-primary bg-primary/5" 
+                          : "border-base-300 hover:border-base-400"
+                      }`}>
+                        <div className="flex items-center space-x-3">
+                          <input
+                            type="radio"
+                            name="payment_method"
+                            value="cash_on_delivery"
+                            checked={formData.payment_method === "cash_on_delivery"}
+                            onChange={handleInputChange}
+                            className="radio radio-primary"
+                          />
+                          <div className="flex items-center space-x-2">
+                            <Banknote className="h-5 w-5 text-primary" />
+                            <span className="font-medium text-lg">Cash on Delivery</span>
+                          </div>
+                        </div>
+                        {formData.payment_method === "cash_on_delivery" && (
+                          <p className="text-sm text-base-content/70 mt-3 ml-9">
+                            Pay with cash when your order is delivered to your doorstep. Please prepare exact amount if possible.
+                          </p>
+                        )}
+                      </div>
+                    </label>
+
+
                   </div>
                 </div>
               </div>
@@ -324,12 +607,23 @@ function Checkout() {
                 {loading ? (
                   <>
                     <div className="loading loading-spinner loading-sm"></div>
-                    Processing Order...
+                    {formData.payment_method === "cash_on_delivery" 
+                      ? "Placing Order..." 
+                      : "Creating Order..."}
                   </>
                 ) : (
                   <>
-                    <CheckCircle className="h-5 w-5" />
-                    Place Order
+                    {formData.payment_method === "cash_on_delivery" ? (
+                      <>
+                        <CheckCircle className="h-5 w-5" />
+                        Place Order
+                      </>
+                    ) : (
+                      <>
+                        <CreditCard className="h-5 w-5" />
+                        Proceed to Payment
+                      </>
+                    )}
                   </>
                 )}
               </button>
@@ -342,11 +636,11 @@ function Checkout() {
               <div className="card-body">
                 <h2 className="card-title mb-4">Order Summary</h2>
 
-                {/* Cart Items */}
+                {/* Order Items */}
                 <div className="mb-4 space-y-3">
-                  {cart?.items.map((item) => (
+                  {orderItems.map((item, index) => (
                     <div
-                      key={`${item.product.id}-${item.product.sku}`}
+                      key={buyNowData?.buyNow ? `buynow-${item.product.id}` : `${item.product.id}-${item.product.sku}`}
                       className="flex items-center gap-3"
                     >
                       <div className="avatar">
@@ -359,6 +653,11 @@ function Checkout() {
                                 item.product.images[0].alt_text ||
                                 item.product.name
                               }
+                            />
+                          ) : buyNowData?.buyNow && buyNowData.productListing?.image ? (
+                            <img
+                              src={buyNowData.productListing.image}
+                              alt={buyNowData.productListing.name}
                             />
                           ) : (
                             <div className="bg-base-300 flex h-full w-full items-center justify-center">
@@ -378,7 +677,7 @@ function Checkout() {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium">
-                          ${(item.product.price * item.quantity).toFixed(2)}
+                          ₱{(parseFloat(item.product.price) * item.quantity).toFixed(2)}
                         </p>
                       </div>
                     </div>
@@ -391,7 +690,7 @@ function Checkout() {
                 <div className="space-y-2">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span>${cart?.totalPrice.toFixed(2) || "0.00"}</span>
+                    <span>₱{totalPrice.toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span>Shipping:</span>
@@ -401,7 +700,7 @@ function Checkout() {
                   <div className="flex justify-between text-lg font-bold">
                     <span>Total:</span>
                     <span className="text-primary">
-                      ${cart?.totalPrice.toFixed(2) || "0.00"}
+                      ₱{totalPrice.toFixed(2)}
                     </span>
                   </div>
                 </div>

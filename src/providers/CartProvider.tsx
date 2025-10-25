@@ -264,7 +264,12 @@ export const CartProvider = ({ children }: CartProviderProps) => {
         headers['X-CSRFToken'] = csrfToken;
       }
 
-      const response = await fetch(`${apiBaseUrl}/api/cart/clear/`, {
+      // Ensure we have a valid base URL
+      const baseUrl = apiBaseUrl && apiBaseUrl.includes('://') 
+        ? apiBaseUrl 
+        : `${window.location.protocol}//${window.location.hostname}:8000`;
+
+      const response = await fetch(`${baseUrl}/api/cart/clear/`, {
         method: 'DELETE',
         credentials: 'include',
         headers,

@@ -26,11 +26,11 @@ function Breadcrumbs({ items, category, productName }: BreadcrumbsProps) {
     if (category) {
       result.push({
         label: category.name,
-        path: `/category/${category.slug}`
+        path: `/${category.slug}`
       });
       
       // If we're on a product page, add the product name (non-clickable)
-      if (pathSegments.length === 2 && pathSegments[0] !== 'category') {
+      if (pathSegments.length === 2) {
         result.push({
           label: productName || 'Product',
           path: ""
@@ -39,13 +39,27 @@ function Breadcrumbs({ items, category, productName }: BreadcrumbsProps) {
     } else {
       // Fallback to path-based generation
       if (pathSegments.length > 0) {
-        if (pathSegments[0] === 'category' && pathSegments[1]) {
-          const categoryName = pathSegments[1].charAt(0).toUpperCase() + pathSegments[1].slice(1);
+        // Handle category pages (single segment) and product pages (two segments)
+        if (pathSegments.length === 1) {
+          // Category page
+          const categoryName = pathSegments[0].charAt(0).toUpperCase() + pathSegments[0].slice(1);
           result.push({
             label: categoryName,
             path: ""
           });
+        } else if (pathSegments.length === 2) {
+          // Product page - first segment is category, second is product
+          const categoryName = pathSegments[0].charAt(0).toUpperCase() + pathSegments[0].slice(1);
+          result.push({
+            label: categoryName,
+            path: `/${pathSegments[0]}`
+          });
+          result.push({
+            label: productName || pathSegments[1].charAt(0).toUpperCase() + pathSegments[1].slice(1),
+            path: ""
+          });
         } else {
+          // Other pages
           pathSegments.forEach((segment, index) => {
             const label = segment.charAt(0).toUpperCase() + segment.slice(1);
             const path = '/' + pathSegments.slice(0, index + 1).join('/');

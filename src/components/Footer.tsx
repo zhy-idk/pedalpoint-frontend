@@ -34,7 +34,7 @@ function Footer() {
       <nav>
         <h6 className="footer-title">Legal</h6>
         <Link to="/" className="link link-hover">Terms of use</Link>
-        <Link to="/" className="link link-hover">Privacy policy</Link>
+        <Link to="/privacy-policy" className="link link-hover">Privacy policy</Link>
         <Link to="/" className="link link-hover">Cookie policy</Link>
       </nav>
     </footer>

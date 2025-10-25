@@ -14,6 +14,8 @@ function StaffPOS() {
   const { csrfToken, fetchCSRFToken, isReady: csrfReady, error: csrfError } = useCSRF();
   const [searchQuery, setSearchQuery] = useState("");
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [showCashModal, setShowCashModal] = useState(false);
+  const [cashReceived, setCashReceived] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerContact, setCustomerContact] = useState("");
 
@@ -53,13 +55,28 @@ function StaffPOS() {
     setSearchQuery(e.target.value);
   };
 
-  const handlePayWithCash = async () => {
+  const handlePayWithCash = () => {
     if (state.cart.length === 0) {
       alert("Cart is empty!");
       return;
     }
     
+    setShowCashModal(true);
+  };
+
+  const handleConfirmCashPayment = async () => {
+    const cash = parseFloat(cashReceived);
+    
+    if (isNaN(cash) || cash < state.total) {
+      alert("Insufficient cash amount!");
+      return;
+    }
+    
     await processPayment('cash');
+    
+    // Reset cash modal
+    setCashReceived("");
+    setShowCashModal(false);
   };
 
   const handleOtherPayment = () => {
@@ -95,7 +112,7 @@ function StaffPOS() {
     const result = await processSale(saleData);
     
     if (result) {
-      alert(`Sale completed successfully!\nOrder #${result.order_id}\nTotal: ₱${result.total_amount.toFixed(2)}`);
+      alert(`Sale completed successfully!\nSale #${result.sale_id}\nTotal: ₱${result.total_amount.toFixed(2)}`);
       actions.clearCart();
       setCustomerName("");
       setCustomerContact("");
@@ -173,7 +190,7 @@ function StaffPOS() {
           </label>
         </div>
 
-        <div className="grid grid-cols-6 gap-2 overflow-y-auto p-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2 overflow-y-auto p-3">
           {filteredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
@@ -219,6 +236,80 @@ function StaffPOS() {
           </button>
         </div>
       </div>
+
+      {/* Cash Payment Modal */}
+      {showCashModal && (
+        <div className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg mb-4">Cash Payment</h3>
+            
+            <div className="mb-4">
+              <div className="bg-base-200 p-4 rounded-lg mb-4">
+                <p className="text-sm text-base-content/70 mb-1">Total Amount</p>
+                <p className="text-3xl font-bold text-primary">₱{state.total.toFixed(2)}</p>
+              </div>
+
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text font-medium">Cash Received</span>
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  className="input input-bordered input-lg text-right"
+                  value={cashReceived}
+                  onChange={(e) => setCashReceived(e.target.value)}
+                  placeholder="0.00"
+                  autoFocus
+                />
+              </div>
+
+              {cashReceived && !isNaN(parseFloat(cashReceived)) && (
+                <div className="bg-success/10 p-4 rounded-lg">
+                  <p className="text-sm text-base-content/70 mb-1">Change</p>
+                  <p className="text-3xl font-bold text-success">
+                    ₱{Math.max(0, parseFloat(cashReceived) - state.total).toFixed(2)}
+                  </p>
+                </div>
+              )}
+
+              {cashReceived && !isNaN(parseFloat(cashReceived)) && parseFloat(cashReceived) < state.total && (
+                <div className="alert alert-warning mt-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span>Insufficient amount! Need ₱{(state.total - parseFloat(cashReceived)).toFixed(2)} more.</span>
+                </div>
+              )}
+            </div>
+
+            <div className="modal-action">
+              <button
+                className="btn btn-primary"
+                onClick={handleConfirmCashPayment}
+                disabled={isProcessingSale || !cashReceived || isNaN(parseFloat(cashReceived)) || parseFloat(cashReceived) < state.total}
+              >
+                {isProcessingSale ? (
+                  <div className="loading loading-spinner loading-sm"></div>
+                ) : (
+                  'Confirm Payment'
+                )}
+              </button>
+              <button
+                className="btn btn-outline"
+                onClick={() => {
+                  setShowCashModal(false);
+                  setCashReceived("");
+                }}
+                disabled={isProcessingSale}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Payment Modal */}
       {showPaymentModal && (

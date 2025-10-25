@@ -1,419 +1,349 @@
-import { useState } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Bike, 
-  Settings, 
-  Palette, 
-  DollarSign, 
+  ChevronRight,
+  ChevronLeft,
   ShoppingCart,
-  RotateCcw,
   CheckCircle,
-  Star,
-  Search,
-  Filter
+  Info,
+  RotateCcw,
+  Star
 } from 'lucide-react';
-import { useBikeBuilder } from '../hooks/useBikeBuilder';
 import { useNavigate } from 'react-router-dom';
+import api from '../api';
+import { useCompatibility } from '../hooks/useCompatibility';
+import { useBikeBuilderProducts } from '../hooks/useBikeBuilderProducts';
+import { useCart } from '../providers/CartProvider';
+import type { Product, CompatibilityAttributeValue } from '../types/product';
 
-interface BikeComponent {
-  id: string;
-  name: string;
-  price: number;
-  image: string;
-  category: string;
-  rating: number;
-  brand: string;
-  description: string;
-  variants: ProductVariant[];
-}
-
-interface ProductVariant {
-  id: number;
-  name: string;
-  variant_attribute: string;
-  brand: number;
-  sku: string;
-  price: string;
-  stock: number;
-  product_images: {
-    image: string;
-    alt_text: string;
-  }[];
-  available: boolean;
-}
-
-interface BikeConfiguration {
-  frame: BikeComponent | null;
-  wheels: BikeComponent | null;
-  drivetrain: BikeComponent | null;
-  brakes: BikeComponent | null;
-  handlebars: BikeComponent | null;
-  saddle: BikeComponent | null;
-  selectedVariants: {
-    [key: string]: ProductVariant | null;
-  };
-}
-
-const mockComponents: BikeComponent[] = [
-  // Frames
-  { 
-    id: 'frame-1', 
-    name: 'Aluminum Road Frame', 
-    price: 299.99, 
-    image: '/src/assets/placeholder_img.jpg', 
-    category: 'frame', 
-    rating: 4.5,
-    brand: 'Brand A',
-    description: 'Lightweight aluminum frame for road cycling',
-    variants: [
-      { id: 1, name: 'Aluminum Road Frame', variant_attribute: 'Black', brand: 1, sku: 'ALUM-BLK', price: '299.99', stock: 5, product_images: [], available: true },
-      { id: 2, name: 'Aluminum Road Frame', variant_attribute: 'Red', brand: 1, sku: 'ALUM-RED', price: '299.99', stock: 3, product_images: [], available: true }
-    ]
+// Step configuration for the wizard
+const BUILDER_STEPS = [
+  {
+    id: 'intro',
+    title: 'Welcome',
+    description: 'Let\'s build your perfect bike!',
   },
-  { 
-    id: 'frame-2', 
-    name: 'Carbon Fiber Frame', 
-    price: 899.99, 
-    image: '/src/assets/placeholder_img.jpg', 
-    category: 'frame', 
-    rating: 4.8,
-    brand: 'Brand A',
-    description: 'High-performance carbon fiber frame',
-    variants: [
-      { id: 3, name: 'Carbon Fiber Frame', variant_attribute: 'Black', brand: 1, sku: 'CARB-BLK', price: '899.99', stock: 2, product_images: [], available: true },
-      { id: 4, name: 'Carbon Fiber Frame', variant_attribute: 'Blue', brand: 1, sku: 'CARB-BLU', price: '899.99', stock: 1, product_images: [], available: true }
-    ]
+  {
+    id: 'usage',
+    title: 'How will you use your bike?',
+    description: 'This helps us recommend the right components',
   },
-  { 
-    id: 'frame-3', 
-    name: 'Steel Touring Frame', 
-    price: 199.99, 
-    image: '/src/assets/placeholder_img.jpg', 
-    category: 'frame', 
-    rating: 4.2,
-    brand: 'Brand A',
-    description: 'Durable steel frame for touring',
-    variants: [
-      { id: 5, name: 'Steel Touring Frame', variant_attribute: 'Silver', brand: 1, sku: 'STEEL-SLV', price: '199.99', stock: 4, product_images: [], available: true }
-    ]
+  {
+    id: 'budget',
+    title: 'What\'s your budget?',
+    description: 'We\'ll recommend components in your price range',
   },
-  
-  // Wheels
-  { 
-    id: 'wheels-1', 
-    name: 'Alloy Road Wheels', 
-    price: 199.99, 
-    image: '/src/assets/placeholder_img.jpg', 
+  {
+    id: 'recommendations',
+    title: 'Your Recommended Build',
+    description: 'Based on your preferences, here\'s what we suggest',
+  },
+  {
+    id: 'frame',
+    title: 'Choose Your Frame',
+    description: 'The foundation of your bike',
+    category: 'frame',
+  },
+  {
+    id: 'wheels',
+    title: 'Choose Your Wheels',
+    description: 'Keep rolling smoothly',
     category: 'wheels', 
-    rating: 4.3,
-    brand: 'Brand A',
-    description: 'Lightweight alloy wheels for road bikes',
-    variants: [
-      { id: 6, name: 'Alloy Road Wheels', variant_attribute: 'Black', brand: 1, sku: 'WHEEL-BLK', price: '199.99', stock: 6, product_images: [], available: true }
-    ]
   },
-  { 
-    id: 'wheels-2', 
-    name: 'Carbon Aero Wheels', 
-    price: 599.99, 
-    image: '/src/assets/placeholder_img.jpg', 
-    category: 'wheels', 
-    rating: 4.7,
-    brand: 'Brand A',
-    description: 'Aerodynamic carbon wheels for racing',
-    variants: [
-      { id: 7, name: 'Carbon Aero Wheels', variant_attribute: 'Black', brand: 1, sku: 'AERO-BLK', price: '599.99', stock: 2, product_images: [], available: true },
-      { id: 8, name: 'Carbon Aero Wheels', variant_attribute: 'Red', brand: 1, sku: 'AERO-RED', price: '599.99', stock: 1, product_images: [], available: true }
-    ]
-  },
-  { 
-    id: 'wheels-3', 
-    name: 'Gravel Wheels', 
-    price: 299.99, 
-    image: '/src/assets/placeholder_img.jpg', 
-    category: 'wheels', 
-    rating: 4.4,
-    brand: 'Brand A',
-    description: 'Versatile wheels for gravel riding',
-    variants: [
-      { id: 9, name: 'Gravel Wheels', variant_attribute: 'Gray', brand: 1, sku: 'GRAVEL-GRY', price: '299.99', stock: 4, product_images: [], available: true }
-    ]
-  },
-  
-  // Drivetrain
-  { 
-    id: 'drivetrain-1', 
-    name: 'Shimano 105 Groupset', 
-    price: 399.99, 
-    image: '/src/assets/placeholder_img.jpg', 
+  {
+    id: 'drivetrain',
+    title: 'Choose Your Drivetrain',
+    description: 'Gears and shifting system',
     category: 'drivetrain', 
-    rating: 4.6,
-    brand: 'Shimano',
-    description: 'Reliable 11-speed groupset',
-    variants: [
-      { id: 10, name: 'Shimano 105 Groupset', variant_attribute: 'Black', brand: 1, sku: 'SHIM-105', price: '399.99', stock: 3, product_images: [], available: true }
-    ]
   },
-  { 
-    id: 'drivetrain-2', 
-    name: 'SRAM Rival Groupset', 
-    price: 449.99, 
-    image: '/src/assets/placeholder_img.jpg', 
-    category: 'drivetrain', 
-    rating: 4.5,
-    brand: 'SRAM',
-    description: 'Smooth shifting electronic groupset',
-    variants: [
-      { id: 11, name: 'SRAM Rival Groupset', variant_attribute: 'Black', brand: 1, sku: 'SRAM-RIV', price: '449.99', stock: 2, product_images: [], available: true }
-    ]
+  {
+    id: 'brakes',
+    title: 'Choose Your Brakes',
+    description: 'Stop safely and reliably',
+    category: 'brakes',
   },
-  { 
-    id: 'drivetrain-3', 
-    name: 'Campagnolo Chorus', 
-    price: 899.99, 
-    image: '/src/assets/placeholder_img.jpg', 
-    category: 'drivetrain', 
-    rating: 4.8,
-    brand: 'Campagnolo',
-    description: 'Premium Italian groupset',
-    variants: [
-      { id: 12, name: 'Campagnolo Chorus', variant_attribute: 'Silver', brand: 1, sku: 'CAMP-CHO', price: '899.99', stock: 1, product_images: [], available: true }
-    ]
+  {
+    id: 'handlebars',
+    title: 'Choose Your Handlebars',
+    description: 'Control and comfort',
+    category: 'handlebars',
   },
-  
-  // Brakes
-  { 
-    id: 'brakes-1', 
-    name: 'Rim Brakes', 
-    price: 89.99, 
-    image: '/src/assets/placeholder_img.jpg', 
-    category: 'brakes', 
-    rating: 4.1,
-    brand: 'Brand A',
-    description: 'Traditional rim brake system',
-    variants: [
-      { id: 13, name: 'Rim Brakes', variant_attribute: 'Black', brand: 1, sku: 'RIM-BLK', price: '89.99', stock: 8, product_images: [], available: true }
-    ]
+  {
+    id: 'saddle',
+    title: 'Choose Your Saddle',
+    description: 'Ride in comfort',
+    category: 'saddle',
   },
-  { 
-    id: 'brakes-2', 
-    name: 'Disc Brakes', 
-    price: 199.99, 
-    image: '/src/assets/placeholder_img.jpg', 
-    category: 'brakes', 
-    rating: 4.6,
-    brand: 'Brand A',
-    description: 'Powerful disc brake system',
-    variants: [
-      { id: 14, name: 'Disc Brakes', variant_attribute: 'Black', brand: 1, sku: 'DISC-BLK', price: '199.99', stock: 4, product_images: [], available: true },
-      { id: 15, name: 'Disc Brakes', variant_attribute: 'Red', brand: 1, sku: 'DISC-RED', price: '199.99', stock: 2, product_images: [], available: true }
-    ]
-  },
-  { 
-    id: 'brakes-3', 
-    name: 'Hydraulic Disc', 
-    price: 299.99, 
-    image: '/src/assets/placeholder_img.jpg', 
-    category: 'brakes', 
-    rating: 4.7,
-    brand: 'Brand A',
-    description: 'Advanced hydraulic disc brakes',
-    variants: [
-      { id: 16, name: 'Hydraulic Disc', variant_attribute: 'Black', brand: 1, sku: 'HYD-BLK', price: '299.99', stock: 3, product_images: [], available: true }
-    ]
-  },
-  
-  // Handlebars
-  { 
-    id: 'handlebars-1', 
-    name: 'Drop Bars', 
-    price: 49.99, 
-    image: '/src/assets/placeholder_img.jpg', 
-    category: 'handlebars', 
-    rating: 4.3,
-    brand: 'Brand A',
-    description: 'Classic drop handlebars for road bikes',
-    variants: [
-      { id: 17, name: 'Drop Bars', variant_attribute: 'Black', brand: 1, sku: 'DROP-BLK', price: '49.99', stock: 10, product_images: [], available: true }
-    ]
-  },
-  { 
-    id: 'handlebars-2', 
-    name: 'Flat Bars', 
-    price: 39.99, 
-    image: '/src/assets/placeholder_img.jpg', 
-    category: 'handlebars', 
-    rating: 4.2,
-    brand: 'Brand A',
-    description: 'Comfortable flat handlebars',
-    variants: [
-      { id: 18, name: 'Flat Bars', variant_attribute: 'Black', brand: 1, sku: 'FLAT-BLK', price: '39.99', stock: 12, product_images: [], available: true }
-    ]
-  },
-  { 
-    id: 'handlebars-3', 
-    name: 'Aero Bars', 
-    price: 129.99, 
-    image: '/src/assets/placeholder_img.jpg', 
-    category: 'handlebars', 
-    rating: 4.4,
-    brand: 'Brand A',
-    description: 'Aerodynamic time trial bars',
-    variants: [
-      { id: 19, name: 'Aero Bars', variant_attribute: 'Black', brand: 1, sku: 'AERO-BLK', price: '129.99', stock: 2, product_images: [], available: true }
-    ]
-  },
-  
-  // Saddles
-  { 
-    id: 'saddle-1', 
-    name: 'Comfort Saddle', 
-    price: 79.99, 
-    image: '/src/assets/placeholder_img.jpg', 
-    category: 'saddle', 
-    rating: 4.4,
-    brand: 'Brand A',
-    description: 'Comfortable saddle for long rides',
-    variants: [
-      { id: 20, name: 'Comfort Saddle', variant_attribute: 'Black', brand: 1, sku: 'COMF-BLK', price: '79.99', stock: 6, product_images: [], available: true },
-      { id: 21, name: 'Comfort Saddle', variant_attribute: 'Brown', brand: 1, sku: 'COMF-BRN', price: '79.99', stock: 3, product_images: [], available: true }
-    ]
-  },
-  { 
-    id: 'saddle-2', 
-    name: 'Racing Saddle', 
-    price: 149.99, 
-    image: '/src/assets/placeholder_img.jpg', 
-    category: 'saddle', 
-    rating: 4.6,
-    brand: 'Brand A',
-    description: 'Lightweight racing saddle',
-    variants: [
-      { id: 22, name: 'Racing Saddle', variant_attribute: 'Black', brand: 1, sku: 'RACE-BLK', price: '149.99', stock: 4, product_images: [], available: true }
-    ]
-  },
-  { 
-    id: 'saddle-3', 
-    name: 'Gel Saddle', 
-    price: 99.99, 
-    image: '/src/assets/placeholder_img.jpg', 
-    category: 'saddle', 
-    rating: 4.3,
-    brand: 'Brand A',
-    description: 'Gel-filled comfort saddle',
-    variants: [
-      { id: 23, name: 'Gel Saddle', variant_attribute: 'Black', brand: 1, sku: 'GEL-BLK', price: '99.99', stock: 5, product_images: [], available: true }
-    ]
+  {
+    id: 'review',
+    title: 'Review Your Build',
+    description: 'Check everything before adding to cart',
   },
 ];
 
+// Bike usage types with simple explanations
+const BIKE_USAGE_OPTIONS = [
+  {
+    id: 'city',
+    title: 'City Commuting',
+    description: 'Daily rides to work or school, mostly on roads',
+    icon: '🏙️',
+  },
+  {
+    id: 'trail',
+    title: 'Trail Riding',
+    description: 'Off-road adventures on dirt trails',
+    icon: '🏔️',
+  },
+  {
+    id: 'casual',
+    title: 'Casual Recreation',
+    description: 'Easy rides around the neighborhood',
+    icon: '🚴',
+  },
+];
+
+// Budget options
+const BUDGET_OPTIONS = [
+  {
+    id: 'budget',
+    title: 'Budget',
+    description: 'Up to ₱25,000 - Great starter options',
+    icon: '💵',
+    range: '₱0 - ₱25,000',
+  },
+  {
+    id: 'mid',
+    title: 'Mid-Range',
+    description: '₱25,000 - ₱75,000 - Best value for quality',
+    icon: '💰',
+    range: '₱25,000 - ₱75,000',
+  },
+  {
+    id: 'premium',
+    title: 'Premium',
+    description: '₱75,000+ - Top performance gear',
+    icon: '💎',
+    range: '₱75,000+',
+  },
+];
+
+interface BikeConfiguration {
+  usage: string | null;
+  budget: string | null;
+  frame: Product | null;
+  wheels: Product | null;
+  drivetrain: Product | null;
+  brakes: Product | null;
+  handlebars: Product | null;
+  saddle: Product | null;
+  selectedVariants: {
+    [key: string]: Product['products'][0] | null;
+  };
+}
+
 function Builder() {
+  const navigate = useNavigate();
+  const { actions } = useCart();
+  const { values: compatibilityValues, loading: compatibilityLoading } = useCompatibility();
+
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [configuration, setConfiguration] = useState<BikeConfiguration>({
+    usage: null,
+    budget: null,
     frame: null,
     wheels: null,
     drivetrain: null,
     brakes: null,
     handlebars: null,
     saddle: null,
-    selectedVariants: {}
+    selectedVariants: {},
   });
-
-  const [selectedCategory, setSelectedCategory] = useState('frame');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [priceRange, setPriceRange] = useState([0, 1000]);
   const [isAddingToCart, setIsAddingToCart] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
 
-  const { addBikeToCart } = useBikeBuilder();
-  const navigate = useNavigate();
+  const currentStep = BUILDER_STEPS[currentStepIndex];
+
+  // Get currently selected compatibility attributes from all selected products
+  const selectedCompatibilityIds = useMemo(() => {
+    const ids: number[] = [];
+    
+    // Collect all compatibility_attributes from selected products
+    Object.values(configuration).forEach((value) => {
+      if (value && typeof value === 'object' && 'compatibility_attributes' in value) {
+        const product = value as Product;
+        product.compatibility_attributes?.forEach(attr => {
+          if (!ids.includes(attr.id)) {
+            ids.push(attr.id);
+          }
+        });
+      }
+    });
+    
+    return ids;
+  }, [configuration]);
+
+  // Fetch products for current category with compatibility filtering
+  const { 
+    products: availableProducts, 
+    loading: productsLoading,
+    refresh: refreshProducts 
+  } = useBikeBuilderProducts({
+    builderCategory: currentStep.category,
+    compatibilityIds: selectedCompatibilityIds.length > 0 ? selectedCompatibilityIds : undefined,
+    autoFetch: !!currentStep.category,
+  });
 
   const getTotalPrice = () => {
     let total = 0;
-    
-    // Add component prices
-    Object.values(configuration).forEach(component => {
-      if (component && typeof component === 'object' && 'price' in component) {
-        total += (component as BikeComponent).price;
+    Object.entries(configuration).forEach(([key, value]) => {
+      if (key !== 'usage' && key !== 'selectedVariants' && value) {
+        total += Number((value as Product).price) || 0;
       }
     });
-
     return total;
   };
 
-  const isConfigurationComplete = () => {
-    return configuration.frame && configuration.wheels && configuration.drivetrain && 
-           configuration.brakes && configuration.handlebars && configuration.saddle;
+  const handleNext = async () => {
+    // If moving from budget step to recommendations, apply recommendations
+    if (currentStep.id === 'budget' && configuration.usage && configuration.budget) {
+      setCurrentStepIndex(currentStepIndex + 1);
+      // Apply recommendations after moving to the next step
+      setTimeout(() => applyRecommendations(), 100);
+    } else if (currentStepIndex < BUILDER_STEPS.length - 1) {
+      setCurrentStepIndex(currentStepIndex + 1);
+    }
   };
 
-  const handleComponentSelect = (component: BikeComponent) => {
+  const handleBack = () => {
+    if (currentStepIndex > 0) {
+      setCurrentStepIndex(currentStepIndex - 1);
+    }
+  };
+
+  const handleUsageSelect = (usageId: string) => {
+    setConfiguration(prev => ({ ...prev, usage: usageId }));
+  };
+
+  const handleBudgetSelect = (budgetId: string) => {
+    setConfiguration(prev => ({ ...prev, budget: budgetId }));
+  };
+
+  // Auto-select recommended products based on usage and budget
+  const applyRecommendations = async () => {
+    if (!configuration.usage || !configuration.budget) return;
+
+    setIsLoadingRecommendations(true);
+    
+    try {
+      // Fetch all builder products
+      const categories = ['frame', 'wheels', 'drivetrain', 'brakes', 'handlebars', 'saddle'];
+      const newConfig = { ...configuration };
+      
+      for (const category of categories) {
+        const response = await api.get<Product[]>(`/api/bike-builder/products/?builder_category=${category}`);
+        const products = response.data;
+        
+        // Filter by usage and budget from compatibility attributes
+        const matchingProducts = products.filter(product => {
+          const hasUsageMatch = product.compatibility_attributes?.some(
+            attr => attr.value === configuration.usage
+          );
+          const hasBudgetMatch = product.compatibility_attributes?.some(
+            attr => attr.value === configuration.budget
+          );
+          
+          // Prefer products that match both, but fallback to budget match only
+          return (hasUsageMatch && hasBudgetMatch) || (!hasUsageMatch && hasBudgetMatch);
+        });
+
+        // Select the highest priority product
+        if (matchingProducts.length > 0) {
+          const sortedProducts = matchingProducts.sort((a, b) => 
+            (b.builder_priority || 0) - (a.builder_priority || 0)
+          );
+          const selectedProduct = sortedProducts[0];
+          
+          newConfig[category as keyof BikeConfiguration] = selectedProduct as any;
+          newConfig.selectedVariants[category] = selectedProduct.products?.[0] || null;
+        }
+      }
+      
+      setConfiguration(newConfig);
+    } catch (error) {
+      console.error('Error fetching recommendations:', error);
+    } finally {
+      setIsLoadingRecommendations(false);
+    }
+  };
+
+  const handleProductSelect = (product: Product) => {
+    if (!currentStep.category) return;
+
     setConfiguration(prev => ({
       ...prev,
-      [component.category]: component,
+      [currentStep.category!]: product,
       selectedVariants: {
         ...prev.selectedVariants,
-        [component.category]: component.variants[0] // Select first variant by default
-      }
+        [currentStep.category!]: product.products?.[0] || null,
+      },
     }));
   };
 
-  const handleVariantSelect = (category: string, variant: ProductVariant) => {
+  const handleVariantSelect = (category: string, variant: Product['products'][0]) => {
     setConfiguration(prev => ({
       ...prev,
       selectedVariants: {
         ...prev.selectedVariants,
-        [category]: variant
-      }
+        [category]: variant,
+      },
     }));
   };
 
   const resetConfiguration = () => {
     setConfiguration({
+      usage: null,
+      budget: null,
       frame: null,
       wheels: null,
       drivetrain: null,
       brakes: null,
       handlebars: null,
       saddle: null,
-      selectedVariants: {}
+      selectedVariants: {},
     });
+    setCurrentStepIndex(0);
   };
-
-  const getComponentsByCategory = (category: string) => {
-    return mockComponents.filter(component => component.category === category);
-  };
-
-  const getCategoryIcon = (category: string) => {
-    switch (category) {
-      case 'frame': return '🚲';
-      case 'wheels': return '⚫';
-      case 'drivetrain': return '⚙️';
-      case 'brakes': return '🛑';
-      case 'handlebars': return '🔄';
-      case 'saddle': return '🪑';
-      default: return '🔧';
-    }
-  };
-
-  const filteredComponents = getComponentsByCategory(selectedCategory).filter(component => {
-    const matchesSearch = component.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         component.brand.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesPrice = component.price >= priceRange[0] && component.price <= priceRange[1];
-    return matchesSearch && matchesPrice;
-  });
 
   const handleAddToCart = async () => {
-    if (!isConfigurationComplete()) return;
-
     setIsAddingToCart(true);
     
     try {
-      const success = addBikeToCart(configuration);
-      
-      if (success) {
+      // Add each selected component to cart
+      const components = [
+        configuration.frame,
+        configuration.wheels,
+        configuration.drivetrain,
+        configuration.brakes,
+        configuration.handlebars,
+        configuration.saddle,
+      ].filter(Boolean) as Product[];
+
+      let addedCount = 0;
+      for (const component of components) {
+        const variant = configuration.selectedVariants[component.builder_category!];
+        if (variant) {
+          await actions.addItem(variant.id, 1);
+          addedCount += 1;
+        }
+      }
+
+      if (addedCount > 0) {
         setShowSuccess(true);
         setTimeout(() => {
-          setShowSuccess(false);
           navigate('/cart');
-        }, 2000);
+        }, 1500);
       }
     } catch (error) {
       console.error('Error adding bike to cart:', error);
@@ -422,225 +352,484 @@ function Builder() {
     }
   };
 
-  return (
-    <div className="min-h-screen bg-base-100">
-      {/* Header */}
-      <div className="bg-primary text-primary-content p-6">
-        <div className="container mx-auto">
-          <div className="flex items-center gap-3 mb-4">
-            <Bike className="w-8 h-8" />
-            <h1 className="text-3xl font-bold">Bike Builder</h1>
-          </div>
-          <p className="text-lg opacity-90">Customize your perfect ride with our interactive builder</p>
-        </div>
-      </div>
+  const canProceed = () => {
+    if (currentStep.id === 'intro') return true;
+    if (currentStep.id === 'usage') return configuration.usage !== null;
+    if (currentStep.id === 'budget') return configuration.budget !== null;
+    if (currentStep.id === 'recommendations') return true;
+    if (currentStep.id === 'review') return true;
+    if (currentStep.category) {
+      return configuration[currentStep.category as keyof BikeConfiguration] !== null;
+    }
+    return false;
+  };
 
-      <div className="container mx-auto p-6">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          
-          {/* Left Panel - Component Selection */}
-          <div className="lg:col-span-1">
-            <div className="card bg-base-200 shadow-xl">
+  const isConfigurationComplete = () => {
+    return (
+      configuration.frame &&
+      configuration.wheels &&
+      configuration.drivetrain &&
+      configuration.brakes &&
+      configuration.handlebars &&
+      configuration.saddle
+    );
+  };
+
+  // Render different content based on current step
+  const renderStepContent = () => {
+    // Intro step
+    if (currentStep.id === 'intro') {
+  return (
+        <div className="text-center py-12">
+          <div className="text-8xl mb-6">🚴</div>
+          <h2 className="text-4xl font-bold mb-4">Build Your Dream Bike</h2>
+          <p className="text-xl text-base-content/70 mb-8 max-w-2xl mx-auto">
+            Our wizard will guide you through selecting compatible components to build the perfect bike for your needs.
+            Don't worry if you're not familiar with bike parts - we'll explain everything!
+          </p>
+          <div className="bg-info/10 p-6 rounded-lg max-w-2xl mx-auto">
+            <div className="flex items-start gap-3 text-left">
+              <Info className="w-6 h-6 text-info flex-shrink-0 mt-1" />
+              <div>
+                <h3 className="font-semibold text-info mb-2">How it works:</h3>
+                <ul className="space-y-2 text-sm text-info/80">
+                  <li>• We'll ask you a few simple questions</li>
+                  <li>• Choose components one at a time</li>
+                  <li>• We automatically filter compatible parts</li>
+                  <li>• Review and add everything to your cart</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Usage selection step
+    if (currentStep.id === 'usage') {
+      return (
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold mb-3">How will you use your bike?</h2>
+            <p className="text-base-content/70">
+              This helps us recommend the right type of components for your riding style
+            </p>
+      </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {BIKE_USAGE_OPTIONS.map((option) => (
+              <button
+                key={option.id}
+                onClick={() => handleUsageSelect(option.id)}
+                className={`card bg-base-200 hover:shadow-lg transition-all cursor-pointer ${
+                  configuration.usage === option.id ? 'ring-2 ring-primary' : ''
+                }`}
+              >
               <div className="card-body">
-                <h2 className="card-title text-xl mb-4">
-                  <Settings className="w-5 h-5" />
-                  Components
-                </h2>
-                
-                {/* Category Tabs */}
-                <div className="tabs tabs-boxed mb-4">
-                  {['frame', 'wheels', 'drivetrain', 'brakes', 'handlebars', 'saddle'].map((category) => (
+                  <div className="text-6xl mb-4">{option.icon}</div>
+                  <h3 className="card-title">{option.title}</h3>
+                  <p className="text-base-content/70">{option.description}</p>
+                  {configuration.usage === option.id && (
+                    <div className="flex items-center gap-2 text-success mt-2">
+                      <CheckCircle className="w-5 h-5" />
+                      <span className="font-semibold">Selected</span>
+                    </div>
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // Budget selection step
+    if (currentStep.id === 'budget') {
+      return (
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold mb-3">What's your budget?</h2>
+            <p className="text-base-content/70">
+              We'll recommend components that match your budget range
+            </p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {BUDGET_OPTIONS.map((option) => (
                     <button
-                      key={category}
-                      className={`tab ${selectedCategory === category ? 'tab-active' : ''}`}
-                      onClick={() => setSelectedCategory(category)}
-                    >
-                      <span className="mr-2">{getCategoryIcon(category)}</span>
-                      {category.charAt(0).toUpperCase() + category.slice(1)}
+                key={option.id}
+                onClick={() => handleBudgetSelect(option.id)}
+                className={`card bg-base-200 hover:shadow-lg transition-all cursor-pointer ${
+                  configuration.budget === option.id ? 'ring-2 ring-primary' : ''
+                }`}
+              >
+                <div className="card-body">
+                  <div className="text-6xl mb-4">{option.icon}</div>
+                  <h3 className="card-title">{option.title}</h3>
+                  <p className="text-sm font-semibold text-primary mb-2">{option.range}</p>
+                  <p className="text-base-content/70">{option.description}</p>
+                  {configuration.budget === option.id && (
+                    <div className="flex items-center gap-2 text-success mt-2">
+                      <CheckCircle className="w-5 h-5" />
+                      <span className="font-semibold">Selected</span>
+                    </div>
+                  )}
+                </div>
                     </button>
                   ))}
                 </div>
+        </div>
+      );
+    }
 
-                {/* Search and Filters */}
-                <div className="space-y-3 mb-4">
-                  <div className="join w-full">
-                    <input
-                      type="text"
-                      placeholder="Search components..."
-                      className="input input-bordered join-item flex-1"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                    <button className="btn join-item">
-                      <Search className="w-4 h-4" />
-                    </button>
-                  </div>
-                  
-                  <div className="flex items-center gap-2">
-                    <Filter className="w-4 h-4" />
-                    <span className="text-sm">Price Range:</span>
-                    <input
-                      type="range"
-                      min="0"
-                      max="1000"
-                      value={priceRange[1]}
-                      onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value)])}
-                      className="range range-xs range-primary flex-1"
-                    />
-                    <span className="text-sm">${priceRange[1]}</span>
-                  </div>
-                </div>
+    // Recommendations step
+    if (currentStep.id === 'recommendations') {
+      const selectedUsage = BIKE_USAGE_OPTIONS.find(o => o.id === configuration.usage);
+      const selectedBudget = BUDGET_OPTIONS.find(o => o.id === configuration.budget);
+      
+      return (
+        <div className="max-w-5xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold mb-3">Your Recommended Build</h2>
+            <p className="text-base-content/70 mb-4">
+              Based on your {selectedUsage?.title} needs and {selectedBudget?.title} budget, 
+              we've pre-selected these components. You can customize them in the next steps!
+            </p>
+            <div className="flex justify-center gap-4 mb-6">
+              <div className="badge badge-lg badge-primary">{selectedUsage?.icon} {selectedUsage?.title}</div>
+              <div className="badge badge-lg badge-secondary">{selectedBudget?.icon} {selectedBudget?.title}</div>
+            </div>
+          </div>
 
-                {/* Component List */}
-                <div className="space-y-3 max-h-96 overflow-y-auto">
-                  {filteredComponents.map((component) => (
-                    <div
-                      key={component.id}
-                      className={`card bg-base-100 cursor-pointer transition-all hover:shadow-md ${
-                        (configuration[component.category as keyof BikeConfiguration] as BikeComponent | null)?.id === component.id
-                          ? 'ring-2 ring-primary'
-                          : ''
-                      }`}
-                      onClick={() => handleComponentSelect(component)}
-                    >
-                      <div className="card-body p-4">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={component.image}
-                            alt={component.name}
-                            className="w-16 h-16 object-cover rounded-lg"
-                          />
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-sm">{component.name}</h3>
-                            <p className="text-xs text-base-content/70 mb-1">{component.brand}</p>
-                            <div className="flex items-center gap-2 mt-1">
-                              <div className="flex items-center gap-1">
-                                <Star className="w-3 h-3 fill-current text-yellow-400" />
-                                <span className="text-xs">{component.rating}</span>
-                              </div>
-                              <span className="text-primary font-bold">${component.price}</span>
-                            </div>
-                            {component.variants.length > 1 && (
-                              <p className="text-xs text-info mt-1">
-                                {component.variants.length} variants available
-                              </p>
-                            )}
-                          </div>
-                          {(configuration[component.category as keyof BikeConfiguration] as BikeComponent | null)?.id === component.id && (
-                            <CheckCircle className="w-5 h-5 text-success" />
+          {isLoadingRecommendations ? (
+            <div className="flex flex-col items-center justify-center py-12">
+              <div className="loading loading-spinner loading-lg mb-4"></div>
+              <p className="text-lg">Finding the perfect components for you...</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {/* Show preview of recommended items */}
+              {['frame', 'wheels', 'drivetrain', 'brakes', 'handlebars', 'saddle'].map((category) => {
+                const product = configuration[category as keyof BikeConfiguration] as Product | null;
+                const variant = product ? configuration.selectedVariants[category] : null;
+
+                return (
+                  <div key={category} className="card bg-base-200">
+                    <div className="card-body p-4">
+                      <div className="flex items-center gap-4">
+                        <div className="w-20 h-20 bg-base-300 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {product?.image ? (
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-3xl">{category === 'frame' ? '🚲' : category === 'wheels' ? '⚫' : category === 'drivetrain' ? '⚙️' : category === 'brakes' ? '🛑' : category === 'handlebars' ? '🔄' : '🪑'}</span>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-xs text-base-content/70 uppercase font-semibold mb-1">{category}</div>
+                          {product ? (
+                            <>
+                              <h4 className="font-semibold text-lg">{product.name}</h4>
+                              <p className="text-sm text-base-content/70">{product.brand?.name}</p>
+                              {variant && (
+                                <p className="text-xs text-info mt-1">Variant: {variant.variant_attribute}</p>
+                              )}
+                            </>
+                          ) : (
+                            <p className="text-base-content/50">No recommendation found</p>
+                          )}
+                        </div>
+                        <div className="text-right">
+                          {product && (
+                            <p className="text-xl font-bold text-primary">
+                              ₱{Number(product.price).toFixed(2)}
+                            </p>
                           )}
                         </div>
                       </div>
                     </div>
-                  ))}
-                  
-                  {filteredComponents.length === 0 && (
-                    <div className="text-center py-8 text-base-content/50">
-                      <Search className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                      <p>No components found</p>
-                      <p className="text-sm">Try adjusting your search or filters</p>
+                  </div>
+                );
+              })}
+
+              <div className="card bg-primary text-primary-content mt-6">
+                <div className="card-body">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h3 className="text-xl font-bold">Estimated Total</h3>
+                      <p className="opacity-90">You can customize any component in the next steps</p>
                     </div>
-                  )}
+                    <div className="text-3xl font-bold">
+                      ₱{getTotalPrice().toFixed(2)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="alert alert-info">
+                <Info className="w-5 h-5" />
+                <div>
+                  <p className="font-semibold">These are just recommendations!</p>
+                  <p className="text-sm">In the next steps, you can change any component to customize your perfect bike.</p>
                 </div>
               </div>
             </div>
+          )}
+        </div>
+      );
+    }
+
+    // Component selection step
+    if (currentStep.category) {
+      const selectedProduct = configuration[currentStep.category as keyof BikeConfiguration] as Product | null;
+      const selectedVariant = selectedProduct ? configuration.selectedVariants[currentStep.category] : null;
+
+      return (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Products List */}
+          <div className="lg:col-span-2">
+            <div className="mb-6">
+              <h2 className="text-2xl font-bold mb-2">{currentStep.title}</h2>
+              <p className="text-base-content/70">{currentStep.description}</p>
+                </div>
+
+            {productsLoading ? (
+              <div className="flex justify-center items-center py-12">
+                <div className="loading loading-spinner loading-lg"></div>
+              </div>
+            ) : availableProducts.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="text-6xl mb-4">📦</div>
+                <h3 className="text-xl font-semibold mb-2">No compatible products found</h3>
+                <p className="text-base-content/70">
+                  There are no products in this category that are compatible with your current selections.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {availableProducts.map((product) => (
+                  <div
+                    key={product.id}
+                    onClick={() => handleProductSelect(product)}
+                    className={`card bg-base-200 cursor-pointer transition-all hover:shadow-lg ${
+                      selectedProduct?.id === product.id ? 'ring-2 ring-primary' : ''
+                    }`}
+                    >
+                      <div className="card-body p-4">
+                      <div className="flex gap-4">
+                        {/* Product Image */}
+                        <div className="w-24 h-24 bg-base-300 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
+                          {product.image ? (
+                            <img
+                              src={product.image}
+                              alt={product.name}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span className="text-base-content/50 text-xs">No Image</span>
+                          )}
+                        </div>
+
+                        {/* Product Info */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-start justify-between gap-2">
+                          <div className="flex-1">
+                              <h3 className="font-semibold text-lg mb-1">{product.name}</h3>
+                              <p className="text-sm text-base-content/70 mb-2">
+                                {product.brand?.name || 'Unknown Brand'}
+                              </p>
+                            </div>
+                            {selectedProduct?.id === product.id && (
+                              <CheckCircle className="w-6 h-6 text-success flex-shrink-0" />
+                            )}
+                          </div>
+
+                          {/* Price and Stock */}
+                          <div className="flex items-center gap-4 mb-2">
+                            <span className="text-2xl font-bold text-primary">
+                              ₱{Number(product.price).toFixed(2)}
+                            </span>
+                            {product.products && product.products.length > 1 && (
+                              <span className="text-sm text-info">
+                                {product.products.length} variants available
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Description preview */}
+                          {product.description && (
+                            <p className="text-sm text-base-content/60 line-clamp-2">
+                              {product.description.replace(/<[^>]*>/g, '')}
+                            </p>
+                          )}
+
+                          {/* Compatibility badges */}
+                          {product.compatibility_attributes && product.compatibility_attributes.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {product.compatibility_attributes.slice(0, 3).map((attr) => (
+                                <span key={attr.id} className="badge badge-sm badge-outline">
+                                  {attr.display_name}
+                                </span>
+                              ))}
+                              {product.compatibility_attributes.length > 3 && (
+                                <span className="badge badge-sm badge-outline">
+                                  +{product.compatibility_attributes.length - 3} more
+                                </span>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                    </div>
+                  )}
+                </div>
+
+          {/* Variant Selection Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="card bg-base-200 sticky top-6">
+              <div className="card-body">
+                <h3 className="card-title text-lg mb-4">Selected Component</h3>
+
+                {selectedProduct ? (
+                  <div className="space-y-4">
+                    <div>
+                      <p className="font-semibold">{selectedProduct.name}</p>
+                      <p className="text-sm text-base-content/70">{selectedProduct.brand?.name}</p>
+            </div>
 
             {/* Variant Selection */}
-            {configuration[selectedCategory as keyof BikeConfiguration] && (
-              <div className="card bg-base-200 shadow-xl mt-6">
-                <div className="card-body">
-                  <h3 className="card-title text-lg mb-4">
-                    <Palette className="w-5 h-5" />
-                    Variants
-                  </h3>
+                    {selectedProduct.products && selectedProduct.products.length > 0 && (
+                      <div>
+                        <label className="label">
+                          <span className="label-text font-medium">Select Variant</span>
+                        </label>
                   <div className="space-y-2">
-                    {(configuration[selectedCategory as keyof BikeConfiguration] as BikeComponent)?.variants.map((variant) => (
+                          {selectedProduct.products.map((variant) => (
                       <button
                         key={variant.id}
+                              onClick={() => handleVariantSelect(currentStep.category!, variant)}
                         className={`w-full text-left p-3 rounded-lg border-2 transition-all ${
-                          configuration.selectedVariants[selectedCategory]?.id === variant.id
+                                selectedVariant?.id === variant.id
                             ? 'border-primary bg-primary/10'
                             : 'border-base-300 hover:border-primary/50'
                         }`}
-                        onClick={() => handleVariantSelect(selectedCategory, variant)}
                       >
-                        <div className="flex justify-between items-center">
+                              <div className="flex justify-between items-center mb-1">
                           <span className="font-medium">{variant.variant_attribute}</span>
-                          <span className="text-sm text-base-content/70">SKU: {variant.sku}</span>
+                                {!variant.available && (
+                                  <span className="badge badge-error badge-sm">Out of Stock</span>
+                                )}
                         </div>
-                        <div className="flex justify-between items-center mt-1">
-                          <span className="text-xs text-base-content/60">Stock: {variant.stock}</span>
-                          <span className="text-xs text-success">${variant.price}</span>
+                              <div className="flex justify-between items-center text-sm">
+                                <span className="text-base-content/60">Stock: {variant.stock}</span>
+                                <span className="text-primary font-semibold">₱{Number(variant.price).toFixed(2)}</span>
                         </div>
                       </button>
                     ))}
                   </div>
                 </div>
+                    )}
+
+                    {/* Product Details */}
+                    {selectedProduct.description && (
+                      <div>
+                        <p className="label-text font-medium mb-2">Description</p>
+                        <div 
+                          className="text-sm text-base-content/70 prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{ __html: selectedProduct.description }}
+                        />
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <div className="text-center py-8 text-base-content/50">
+                    <p>Select a {currentStep.category} from the list</p>
+                  </div>
+                )}
               </div>
-            )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // Review step
+    if (currentStep.id === 'review') {
+      return (
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold mb-3">Review Your Build</h2>
+            <p className="text-base-content/70">
+              Make sure everything looks good before adding to your cart
+            </p>
           </div>
 
-          {/* Center Panel - Configuration Summary */}
-          <div className="lg:col-span-1">
-            <div className="card bg-base-200 shadow-xl h-fit">
+          {/* Configuration Summary */}
+          <div className="card bg-base-200 mb-6">
               <div className="card-body">
-                <h2 className="card-title text-xl mb-4">
-                  <Bike className="w-5 h-5" />
-                  Configuration
-                </h2>
-                
-                {/* Configuration Summary */}
-                <div className="space-y-2 mt-4">
-                  {Object.entries(configuration).map(([key, value]) => {
-                    if (key === 'selectedVariants') return null;
-                    const component = value as BikeComponent | null;
-                    const selectedVariant = component ? configuration.selectedVariants[component.category] : null;
+              <h3 className="card-title mb-4">Your Bike Components</h3>
+              <div className="space-y-4">
+                {[
+                  { key: 'frame', label: 'Frame' },
+                  { key: 'wheels', label: 'Wheels' },
+                  { key: 'drivetrain', label: 'Drivetrain' },
+                  { key: 'brakes', label: 'Brakes' },
+                  { key: 'handlebars', label: 'Handlebars' },
+                  { key: 'saddle', label: 'Saddle' },
+                ].map(({ key, label }) => {
+                  const product = configuration[key as keyof BikeConfiguration] as Product | null;
+                  const variant = product ? configuration.selectedVariants[key] : null;
                     
                     return (
-                      <div key={key} className="space-y-1">
-                        <div className="flex justify-between text-sm">
-                          <span className="capitalize font-medium">{key}:</span>
-                          <span className={component ? 'text-success' : 'text-error'}>
-                            {component ? component.name : 'Not selected'}
-                          </span>
-                        </div>
-                        {component && selectedVariant && (
-                          <div className="flex justify-between text-xs text-base-content/70 ml-4">
-                            <span>Variant:</span>
-                            <span>{selectedVariant.variant_attribute}</span>
-                          </div>
+                    <div key={key} className="flex items-start gap-4 p-4 bg-base-100 rounded-lg">
+                      <div className="w-16 h-16 bg-base-300 rounded flex items-center justify-center overflow-hidden flex-shrink-0">
+                        {product?.image ? (
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-xs text-base-content/50">No Image</span>
                         )}
+                        </div>
+                      <div className="flex-1">
+                        <p className="text-sm text-base-content/70 mb-1">{label}</p>
+                        <p className="font-semibold">{product?.name || 'Not selected'}</p>
+                        {variant && (
+                          <p className="text-sm text-base-content/70">Variant: {variant.variant_attribute}</p>
+                        )}
+                      </div>
+                      <div className="text-right">
+                        <p className="font-bold text-lg text-primary">
+                          ₱{product ? Number(product.price).toFixed(2) : '0.00'}
+                        </p>
+                      </div>
                       </div>
                     );
                   })}
                 </div>
+
+              {/* Total Price */}
+              <div className="divider"></div>
+              <div className="flex justify-between items-center text-2xl font-bold">
+                <span>Total:</span>
+                <span className="text-primary">₱{getTotalPrice().toFixed(2)}</span>
               </div>
             </div>
           </div>
 
-          {/* Right Panel - Pricing & Actions */}
-          <div className="lg:col-span-1">
-            <div className="card bg-base-200 shadow-xl h-fit">
+          {/* Actions */}
+          <div className="card bg-base-200">
               <div className="card-body">
-                <h2 className="card-title text-xl mb-4">
-                  <DollarSign className="w-5 h-5" />
-                  Summary
-                </h2>
-                
-                {/* Total Price */}
-                <div className="bg-primary text-primary-content p-4 rounded-lg mb-4">
-                  <div className="text-center">
-                    <p className="text-sm opacity-90">Total Price</p>
-                    <p className="text-3xl font-bold">${getTotalPrice().toFixed(2)}</p>
-                  </div>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="space-y-3">
                   <button
-                    className={`btn btn-primary btn-block ${showSuccess ? 'btn-success' : ''}`}
+                onClick={handleAddToCart}
                     disabled={!isConfigurationComplete() || isAddingToCart}
-                    onClick={handleAddToCart}
+                className={`btn btn-primary btn-lg w-full ${showSuccess ? 'btn-success' : ''}`}
                   >
                     {isAddingToCart ? (
                       <>
@@ -649,61 +838,105 @@ function Builder() {
                       </>
                     ) : showSuccess ? (
                       <>
-                        <CheckCircle className="w-4 h-4" />
+                    <CheckCircle className="w-5 h-5" />
                         Added to Cart!
                       </>
                     ) : (
                       <>
-                        <ShoppingCart className="w-4 h-4" />
-                        Add to Cart
+                    <ShoppingCart className="w-5 h-5" />
+                    Add All Components to Cart
                       </>
                     )}
                   </button>
                   
+              {!isConfigurationComplete() && (
+                <div className="alert alert-warning mt-4">
+                  <Info className="w-5 h-5" />
+                  <span>Please complete all component selections before adding to cart</span>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  };
+
+  return (
+    <div className="min-h-screen bg-base-100">
+      {/* Header */}
+      <div className="bg-gradient-to-r from-primary to-secondary text-primary-content p-6">
+        <div className="container mx-auto">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <Bike className="w-8 h-8" />
+              <h1 className="text-3xl font-bold">Bike Builder Wizard</h1>
+            </div>
                   <button
-                    className="btn btn-outline btn-block"
                     onClick={resetConfiguration}
+              className="btn btn-ghost btn-sm"
                     disabled={isAddingToCart}
                   >
-                    <RotateCcw className="w-4 h-4" />
-                    Reset Builder
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Start Over
                   </button>
                 </div>
 
-                {/* Success Message */}
-                {showSuccess && (
-                  <div className="alert alert-success mt-4">
-                    <CheckCircle className="w-4 h-4" />
-                    <span>Your custom bike has been added to cart! Redirecting...</span>
-                  </div>
-                )}
-
-                {/* Progress Indicator */}
-                <div className="mt-6">
-                  <div className="flex justify-between text-sm mb-2">
-                    <span>Configuration Progress</span>
-                    <span>{Object.values(configuration).filter(v => v && typeof v === 'object' && 'price' in v).length}/6</span>
-                  </div>
-                  <progress 
-                    className="progress progress-primary w-full" 
-                    value={Object.values(configuration).filter(v => v && typeof v === 'object' && 'price' in v).length * 16.67} 
-                    max="100"
+          {/* Progress Bar */}
+          <div className="flex items-center gap-2 mb-2">
+            {BUILDER_STEPS.map((step, index) => (
+              <div key={step.id} className="flex items-center flex-1">
+                <div
+                  className={`h-2 rounded-full flex-1 transition-all ${
+                    index <= currentStepIndex ? 'bg-primary-content' : 'bg-primary-content/30'
+                  }`}
                   />
                 </div>
-
-                {/* Tips */}
-                <div className="mt-6 p-4 bg-info/10 rounded-lg">
-                  <h4 className="font-semibold text-info mb-2">💡 Pro Tips</h4>
-                  <ul className="text-sm space-y-1 text-info/80">
-                    <li>• Start with the frame - it's the foundation</li>
-                    <li>• Match wheel type to your riding style</li>
-                    <li>• Consider brake type for your terrain</li>
-                    <li>• Choose variants that match your style</li>
-                  </ul>
+            ))}
+          </div>
+          <p className="text-sm opacity-90">
+            Step {currentStepIndex + 1} of {BUILDER_STEPS.length}
+          </p>
                 </div>
               </div>
+
+      {/* Main Content */}
+      <div className="container mx-auto p-6">
+        <div className="min-h-[60vh]">
+          {renderStepContent()}
             </div>
+
+        {/* Navigation Buttons */}
+        <div className="flex justify-between items-center mt-8">
+          <button
+            onClick={handleBack}
+            disabled={currentStepIndex === 0 || isAddingToCart}
+            className="btn btn-outline"
+          >
+            <ChevronLeft className="w-4 h-4 mr-2" />
+            Back
+          </button>
+
+          <div className="text-center">
+            <p className="text-sm text-base-content/70">
+              {currentStepIndex + 1} / {BUILDER_STEPS.length}
+            </p>
           </div>
+
+          {currentStepIndex < BUILDER_STEPS.length - 1 ? (
+            <button
+              onClick={handleNext}
+              disabled={!canProceed() || isAddingToCart}
+              className="btn btn-primary"
+            >
+              Next
+              <ChevronRight className="w-4 h-4 ml-2" />
+            </button>
+          ) : (
+            <div className="w-24" /> // Spacer for layout balance
+          )}
         </div>
       </div>
     </div>

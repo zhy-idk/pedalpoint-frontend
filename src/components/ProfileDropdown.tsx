@@ -38,9 +38,9 @@ function ProfileDropdown(){
         {isAuthenticated ? (
           <ul
             tabIndex={0}
-            className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow">
+            className="menu menu-sm dropdown-content bg-base-100 rounded-box z-[55] mt-3 w-52 p-2 shadow">
             <li><Link to="/profile" className="justify-between">Profile</Link></li>
-            <li><Link to="/purchases">Purchases</Link></li>
+            <li><Link to="/orders">Orders</Link></li>
             {(user?.is_staff || user?.is_superuser) && (
               <li><Link to="/manage">Manage</Link></li>
             )}
@@ -61,7 +61,7 @@ function ProfileDropdown(){
         ) : (
           <ul
             tabIndex={0}
-            className="menu menu-sm dropdown-content bg-base-100 rounded-box z-1 mt-3 w-52 p-2 shadow">
+            className="menu menu-sm dropdown-content bg-base-100 rounded-box z-[55] mt-3 w-52 p-2 shadow">
             <li>
               <Link to="/login" className="justify-between">
                 Login
@@ -74,7 +74,7 @@ function ProfileDropdown(){
         )}
       </div>
 
-      <dialog id="my_modal_1" className="modal">
+      <dialog id="my_modal_1" className="modal z-[70]">
         <div className="modal-box">
           <h3 className="font-bold text-lg">Logout</h3>
           <p className="py-4">Are you sure you want to logout?</p>

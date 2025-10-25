@@ -1,9 +1,9 @@
 import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useOrders } from "../../hooks/useOrders";
+import { Order } from "../../types/order";
 import { 
   Eye, 
-  MoreVertical, 
   AlertCircle,
   RefreshCw,
   Package,
@@ -27,19 +27,6 @@ interface OrderItem {
   quantity: number;
 }
 
-interface Order {
-  id: number;
-  user: {
-    username: string;
-  };
-  created_at: string;
-  status: 'to_pay' | 'to_ship' | 'to_deliver' | 'completed' | 'cancelled' | 'returned';
-  shipping_address?: string;
-  contact_number?: string;
-  notes?: string;
-  items: OrderItem[];
-}
-
 function StaffOrders() {
   const { user } = useAuth();
   const { orders, loading, error, refresh, updateOrderStatus } = useOrders();
@@ -49,6 +36,9 @@ function StaffOrders() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [updatingStatus, setUpdatingStatus] = useState<number | null>(null);
+  const [newStatus, setNewStatus] = useState<string>("");
+  const [newPaymentStatus, setNewPaymentStatus] = useState<string>("");
+  const [statusReason, setStatusReason] = useState<string>("");
 
   const getStatusBadge = (status: string) => {
     const statusClasses = {
@@ -93,6 +83,22 @@ function StaffOrders() {
     return items.reduce((total, item) => total + item.quantity, 0);
   };
 
+  const formatPaymentMethod = (method: string) => {
+    const methods: { [key: string]: string } = {
+      'cash_on_delivery': 'Cash on Delivery',
+      'online_payment': 'Online Payment',
+      'gcash': 'GCash',
+      'paymaya': 'PayMaya',
+      'card': 'Card',
+      'cash': 'Cash',
+      'bank_transfer': 'Bank Transfer',
+      'dob': 'Digital Banking',
+      'qrph': 'QR Ph',
+      'grab_pay': 'GrabPay',
+    };
+    return methods[method] || method.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  };
+
   const filteredOrders = orders.filter((order) => {
     const matchesSearch =
       order.user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -103,16 +109,31 @@ function StaffOrders() {
     return matchesSearch && matchesStatus;
   });
 
-  const handleUpdateOrderStatus = async (orderId: number, newStatus: string) => {
-    setUpdatingStatus(orderId);
-    const success = await updateOrderStatus(orderId, newStatus);
+  const handleUpdateOrderStatus = async () => {
+    if (!selectedOrder) return;
+    
+    // Check if at least one field has changed
+    const statusChanged = newStatus && newStatus !== selectedOrder.status;
+    const paymentStatusChanged = newPaymentStatus && newPaymentStatus !== selectedOrder.payment_status;
+    
+    if (!statusChanged && !paymentStatusChanged) return;
+    
+    setUpdatingStatus(selectedOrder.id);
+    const success = await updateOrderStatus(
+      selectedOrder.id, 
+      statusChanged ? newStatus : undefined,
+      statusReason || undefined,
+      paymentStatusChanged ? newPaymentStatus : undefined
+    );
     setUpdatingStatus(null);
     
     if (success) {
-      // Update the selected order if it's the one being updated
-      if (selectedOrder && selectedOrder.id === orderId) {
-        setSelectedOrder({ ...selectedOrder, status: newStatus as Order['status'] });
-      }
+      // Refresh to get updated order data
+      await refresh();
+      setSelectedOrder(null);
+      setNewStatus("");
+      setNewPaymentStatus("");
+      setStatusReason("");
     }
   };
 
@@ -263,6 +284,7 @@ function StaffOrders() {
                 <th>Items</th>
                 {isSuperuser && <th>Total</th>}
                 <th>Status</th>
+                <th>Payment Method</th>
                 <th>Contact</th>
                 <th>Date</th>
                 <th>Actions</th>
@@ -302,6 +324,18 @@ function StaffOrders() {
                     </span>
                   </td>
                   <td>
+                    <div className="text-sm">
+                      {formatPaymentMethod(order.payment_method)}
+                    </div>
+                    <div className={`badge badge-xs ${
+                      order.payment_status === 'paid' ? 'badge-success' : 
+                      order.payment_status === 'failed' ? 'badge-error' : 
+                      'badge-warning'
+                    }`}>
+                      {order.payment_status}
+                    </div>
+                  </td>
+                  <td>
                     {order.contact_number ? (
                       <span className="text-sm">{order.contact_number}</span>
                     ) : (
@@ -310,104 +344,18 @@ function StaffOrders() {
                   </td>
                   <td>{formatDate(order.created_at)}</td>
                   <td>
-                    <div className="flex gap-2">
-                      <button
-                        className="btn btn-sm btn-ghost"
-                        onClick={() => setSelectedOrder(order)}
-                      >
-                        <Eye className="h-4 w-4" />
-                        View
-                      </button>
-                      <div className="dropdown dropdown-end">
-                        <div
-                          tabIndex={0}
-                          role="button"
-                          className="btn btn-sm btn-ghost"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </div>
-                        <ul
-                          tabIndex={0}
-                          className="dropdown-content menu bg-base-100 rounded-box z-[1] w-52 p-2 shadow"
-                        >
-                          {order.status !== "to_ship" && (
-                            <li>
-                              <button
-                                onClick={() =>
-                                  handleUpdateOrderStatus(order.id, "to_ship")
-                                }
-                                disabled={updatingStatus === order.id}
-                                className="w-full text-left"
-                              >
-                                {updatingStatus === order.id ? (
-                                  <div className="loading loading-spinner loading-xs"></div>
-                                ) : (
-                                  "Mark as To Ship"
-                                )}
-                              </button>
-                            </li>
-                          )}
-                          {order.status !== "to_deliver" && (
-                            <li>
-                              <button
-                                onClick={() =>
-                                  handleUpdateOrderStatus(order.id, "to_deliver")
-                                }
-                                disabled={updatingStatus === order.id}
-                                className="w-full text-left"
-                              >
-                                {updatingStatus === order.id ? (
-                                  <div className="loading loading-spinner loading-xs"></div>
-                                ) : (
-                                  "Mark as To Deliver"
-                                )}
-                              </button>
-                            </li>
-                          )}
-                          {order.status !== "completed" && (
-                            <li>
-                              <button
-                                onClick={() =>
-                                  handleUpdateOrderStatus(order.id, "completed")
-                                }
-                                disabled={updatingStatus === order.id}
-                                className="w-full text-left"
-                              >
-                                {updatingStatus === order.id ? (
-                                  <div className="loading loading-spinner loading-xs"></div>
-                                ) : (
-                                  "Mark as Completed"
-                                )}
-                              </button>
-                            </li>
-                          )}
-                          {(order.status === "to_pay" || order.status === "to_ship") && (
-                            <li>
-                              <button
-                                onClick={() =>
-                                  handleUpdateOrderStatus(order.id, "cancelled")
-                                }
-                                disabled={updatingStatus === order.id}
-                                className="w-full text-left text-error"
-                              >
-                                Cancel Order
-                              </button>
-                            </li>
-                          )}
-                          <li>
-                            <button
-                              onClick={() =>
-                                handleUpdateOrderStatus(order.id, "returned")
-                              }
-                              disabled={updatingStatus === order.id}
-                              className="w-full text-left"
-                            >
-                              Mark as Returned
-                            </button>
-                          </li>
-                        </ul>
-                      </div>
-                    </div>
+                    <button
+                      className="btn btn-sm btn-ghost"
+                      onClick={() => {
+                        setSelectedOrder(order);
+                        setNewStatus(order.status);
+                        setNewPaymentStatus(order.payment_status);
+                        setStatusReason("");
+                      }}
+                    >
+                      <Eye className="h-4 w-4" />
+                      View
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -440,7 +388,7 @@ function StaffOrders() {
       {/* Order Detail Modal */}
       {selectedOrder && (
         <div className="modal modal-open">
-          <div className="modal-box max-w-2xl">
+          <div className="modal-box max-w-full md:max-w-2xl max-h-[90vh] overflow-y-auto">
             <form method="dialog">
               <button
                 className="btn btn-sm btn-circle btn-ghost absolute top-2 right-2"
@@ -490,6 +438,19 @@ function StaffOrders() {
                 <p>
                   <strong>Date:</strong> {formatDate(selectedOrder.created_at)}
                 </p>
+                <p>
+                  <strong>Payment Method:</strong> {formatPaymentMethod(selectedOrder.payment_method)}
+                </p>
+                <p className="flex items-center gap-2">
+                  <strong>Payment Status:</strong>
+                  <span className={`badge badge-sm ${
+                    selectedOrder.payment_status === 'paid' ? 'badge-success' : 
+                    selectedOrder.payment_status === 'failed' ? 'badge-error' : 
+                    'badge-warning'
+                  }`}>
+                    {selectedOrder.payment_status}
+                  </span>
+                </p>
                 <div className="mt-2">
                   <span className={`${getStatusBadge(selectedOrder.status)} flex items-center gap-1 w-fit`}>
                     {getStatusIcon(selectedOrder.status)}
@@ -532,27 +493,92 @@ function StaffOrders() {
               </div>
             )}
 
-            <div className="modal-action">
-              <select
-                className="select select-bordered mr-4"
-                value={selectedOrder.status}
-                onChange={(e) =>
-                  handleUpdateOrderStatus(selectedOrder.id, e.target.value)
-                }
-                disabled={updatingStatus === selectedOrder.id}
-              >
-                <option value="to_pay">To Pay</option>
-                <option value="to_ship">To Ship</option>
-                <option value="to_deliver">To Deliver</option>
-                <option value="completed">Completed</option>
-                {(selectedOrder.status === "to_pay" || selectedOrder.status === "to_ship") && (
+            <div className="bg-base-200 mb-4 rounded-lg p-4">
+              <h4 className="mb-3 font-semibold">Update Order Status</h4>
+              
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text font-medium">Order Status</span>
+                </label>
+                <select
+                  className="select select-bordered w-full"
+                  value={newStatus}
+                  onChange={(e) => setNewStatus(e.target.value)}
+                  disabled={updatingStatus === selectedOrder.id}
+                >
+                  <option value="to_pay">To Pay</option>
+                  <option value="to_ship">To Ship</option>
+                  <option value="to_deliver">To Deliver</option>
+                  <option value="completed">Completed</option>
                   <option value="cancelled">Cancelled</option>
-                )}
-                <option value="returned">Returned</option>
-              </select>
+                  <option value="returned">Returned</option>
+                </select>
+              </div>
+
+              <div className="form-control mb-4">
+                <label className="label">
+                  <span className="label-text font-medium">Payment Status</span>
+                </label>
+                <select
+                  className="select select-bordered w-full"
+                  value={newPaymentStatus}
+                  onChange={(e) => setNewPaymentStatus(e.target.value)}
+                  disabled={updatingStatus === selectedOrder.id}
+                >
+                  <option value="pending">Pending</option>
+                  <option value="paid">Paid</option>
+                  <option value="failed">Failed</option>
+                  <option value="refunded">Refunded</option>
+                </select>
+              </div>
+
+              {/* Show reason box for cancelled or returned */}
+              {(newStatus === "cancelled" || newStatus === "returned") && (
+                <div className="form-control mb-4">
+                  <label className="label">
+                    <span className="label-text font-medium">
+                      {newStatus === "cancelled" ? 'Cancellation Reason' : 'Return Reason'}
+                      {newStatus === "returned" && selectedOrder.return_reason ? ' (Read-only - from customer)' : ''}
+                    </span>
+                  </label>
+                  {newStatus === "returned" && selectedOrder.return_reason ? (
+                    <div className="bg-base-100 p-3 rounded border border-base-300">
+                      {selectedOrder.return_reason}
+                    </div>
+                  ) : newStatus === "cancelled" && selectedOrder.cancel_reason ? (
+                    <div className="bg-base-100 p-3 rounded border border-base-300">
+                      {selectedOrder.cancel_reason}
+                    </div>
+                  ) : (
+                    <textarea
+                      className="textarea textarea-bordered w-full"
+                      rows={3}
+                      value={statusReason}
+                      onChange={(e) => setStatusReason(e.target.value)}
+                      placeholder={
+                        newStatus === "returned" 
+                          ? "Leave empty to auto-fill: Order status override by staff [username]"
+                          : "Enter reason for cancellation"
+                      }
+                      disabled={updatingStatus === selectedOrder.id}
+                    />
+                  )}
+                  {newStatus === "returned" && !selectedOrder.return_reason && (
+                    <label className="label">
+                      <span className="label-text-alt text-warning">
+                        ⚠️ Staff override: Will be recorded as "Order status override by staff {user?.username}"
+                      </span>
+                    </label>
+                  )}
+                </div>
+              )}
+            </div>
+
+            <div className="modal-action">
               <button 
                 className="btn btn-primary"
-                disabled={updatingStatus === selectedOrder.id}
+                onClick={handleUpdateOrderStatus}
+                disabled={updatingStatus === selectedOrder.id || (newStatus === selectedOrder.status && newPaymentStatus === selectedOrder.payment_status)}
               >
                 {updatingStatus === selectedOrder.id ? (
                   <>
@@ -563,7 +589,16 @@ function StaffOrders() {
                   "Update Status"
                 )}
               </button>
-              <button className="btn" onClick={() => setSelectedOrder(null)}>
+              <button 
+                className="btn" 
+                onClick={() => {
+                  setSelectedOrder(null);
+                  setNewStatus("");
+                  setNewPaymentStatus("");
+                  setStatusReason("");
+                }}
+                disabled={updatingStatus === selectedOrder.id}
+              >
                 Close
               </button>
             </div>

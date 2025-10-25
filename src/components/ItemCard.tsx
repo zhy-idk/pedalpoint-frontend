@@ -26,9 +26,14 @@ function ItemCard({ product } : ItemCardProps) {
     return `${apiBaseUrl}${product.image}`;
   })();
 
+  // Handle null/undefined category or brand
+  const categorySlug = product.category?.slug || 'uncategorized';
+  const categoryName = product.category?.name || 'Uncategorized';
+  const brandName = product.brand?.name || 'Unknown Brand';
+
   return (
     <div className="card bg-base-100 card-border w-full shadow-md"> 
-      <Link to={`/${product.category.slug}/${product.slug}`}>
+      <Link to={`/${categorySlug}/${product.slug}`}>
         <figure className="aspect-square overflow-hidden rounded-lg shadow-sm bg-white">
           <img
             src={imageSrc}
@@ -39,10 +44,10 @@ function ItemCard({ product } : ItemCardProps) {
           <h1 className="font-normal card-title text-[10px] line-clamp-2 xs:text-xs md:text-sm">{product.name}</h1>
           <div className="card-actions flex flex-wrap">
             <div className="badge badge-soft badge-outline badge-xs px-1 py-0.5 text-[9px] xs:text-[10px] md:badge-sm">
-              {product.category.name}
+              {categoryName}
             </div>
             <div className="badge badge-soft badge-outline badge-xs px-1 py-0.5 text-[9px] xs:text-[10px] md:badge-sm">
-              {product.brand.name}
+              {brandName}
             </div>
           </div>
           <PesoAmount className='font-medium text-[10px] xs:text-xs md:text-sm' amount={product.price}/>

@@ -1,4 +1,9 @@
-function ChatSearch() {
+interface ChatSearchProps {
+  value: string;
+  onChange: (value: string) => void;
+}
+
+function ChatSearch({ value, onChange }: ChatSearchProps) {
   return (
     <>
       <label className="input w-full rounded-2xl">
@@ -18,7 +23,12 @@ function ChatSearch() {
             <path d="m21 21-4.3-4.3"></path>
           </g>
         </svg>
-        <input type="search" required placeholder="Search users" />
+        <input 
+          type="search" 
+          placeholder="Search users" 
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+        />
       </label>
     </>
   );

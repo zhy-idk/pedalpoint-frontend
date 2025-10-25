@@ -1,3 +1,27 @@
+// Compatibility Types
+export interface CompatibilityGroup {
+  id: number;
+  name: string;
+  slug: string;
+  description?: string;
+}
+
+export interface CompatibilityAttribute {
+  id: number;
+  name: string;
+  group: CompatibilityGroup;
+  attribute_type: 'text' | 'number' | 'boolean' | 'choice';
+  is_required: boolean;
+}
+
+export interface CompatibilityAttributeValue {
+  id: number;
+  value: string;
+  display_name: string;
+  description?: string;
+  attribute: CompatibilityAttribute;
+}
+
 export interface Product {
   id: number;
   name: string;
@@ -6,6 +30,9 @@ export interface Product {
   image: string;
   slug: string;
   available: boolean;
+  bike_builder_enabled?: boolean;
+  builder_category?: 'frame' | 'fork' | 'wheels' | 'drivetrain' | 'brakes' | 'handlebars' | 'saddle' | 'pedals' | 'accessories';
+  builder_priority?: number;
   brand: {
     name: string;
     slug: string;
@@ -39,9 +66,8 @@ export interface Product {
       username: string;
     };
   }[];
-  compatibility: {
-    name: string;
-  }[];
+  compatibility_attributes?: CompatibilityAttributeValue[];
+  compatible_with?: CompatibilityAttributeValue[];
 }
 
 export interface ProductState {

@@ -20,6 +20,8 @@ function Repair() {
   const [error, setError] = useState<string | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [userId, setUserId] = useState<string | null>(null);
+  const [hasPendingServices, setHasPendingServices] = useState(false);
+  const [pendingServicesLoading, setPendingServicesLoading] = useState(false);
 
   // Get CSRF token using the same method as CartProvider
   const getCSRFToken = () => {
@@ -77,10 +79,46 @@ function Repair() {
     }
   };
 
+  // Check for pending services
+  const checkPendingServices = async () => {
+    if (!isAuthenticated) return;
+    
+    setPendingServicesLoading(true);
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/queue/check-pending/`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "X-CSRFToken": getCSRFToken() || "",
+        },
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        setHasPendingServices(data.has_pending_services);
+      } else {
+        console.error("Error checking pending services");
+        setHasPendingServices(false);
+      }
+    } catch (error) {
+      console.error("Error checking pending services:", error);
+      setHasPendingServices(false);
+    } finally {
+      setPendingServicesLoading(false);
+    }
+  };
+
   // Check auth on component mount
   useEffect(() => {
     checkAuthStatus();
   }, []);
+
+  // Check pending services when user is authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      checkPendingServices();
+    }
+  }, [isAuthenticated]);
 
   const disabledDays = [
     { before: new Date() },
@@ -280,13 +318,27 @@ function Repair() {
                   </div>
                 </div>
               </div>
+            ) : hasPendingServices ? (
+              <div className="alert alert-warning mb-6">
+                <div>
+                  <div className="font-bold">Service Already Pending</div>
+                  <div className="text-sm">
+                    You already have a pending service request. Please wait for it to be completed before scheduling another repair.
+                  </div>
+                </div>
+              </div>
             ) : (
               <button
                 onClick={handleSubmit}
-                disabled={!date || !issue.trim() || isSubmitted || isLoading}
-                className={`btn btn-primary w-full ${isSubmitted ? "btn-success" : ""} ${!date || !issue.trim() ? "btn-disabled" : ""}`}
+                disabled={!date || !issue.trim() || isSubmitted || isLoading || pendingServicesLoading}
+                className={`btn btn-primary w-full ${isSubmitted ? "btn-success" : ""} ${!date || !issue.trim() || pendingServicesLoading ? "btn-disabled" : ""}`}
               >
-                {isLoading ? (
+                {pendingServicesLoading ? (
+                  <>
+                    <Loader2 size={20} className="animate-spin" />
+                    Checking...
+                  </>
+                ) : isLoading ? (
                   <>
                     <Loader2 size={20} className="animate-spin" />
                     Scheduling...

@@ -1,3 +1,4 @@
+import { useState, useEffect } from "react";
 import Breadcrumbs from "../components/Breadcrumbs";
 import ImageCarousel from "../components/ImageCarousel";
 import QuantityInput from "../components/QuantityInput";
@@ -7,6 +8,8 @@ import CartLogo from "../assets/add_shopping_cart_24dp.svg";
 import ChatButton from "../components/Chat";
 import parse from "html-react-parser";
 import PesoAmount from "../components/PesoAmount";
+import { useAuth } from "../hooks/useAuth";
+import api from "../api";
 
 // Import the context system we created
 import { ProductProvider } from "../providers/ProductProvider";
@@ -34,14 +37,84 @@ function ProductDetailContent() {
   const currentPrice = useCurrentPrice();       // Get current price (variant or product)
   const currentStock = useCurrentStock();       // Get current stock
   const filteredReviews = useFilteredReviews(); // Get filtered reviews
+  const { isAuthenticated } = useAuth();        // Get authentication state
   
   // Get the functions we can call
   const { setVariant, addToCart, buyNow } = useProductActions();
+  
+  // Reservation state
+  const [reservationData, setReservationData] = useState<any>(null);
+  const [loadingReservation, setLoadingReservation] = useState(false);
+  const [reservationError, setReservationError] = useState<string | null>(null);
 
-  // Get recommendations based on product category
-  const { recommendations, isLoading: recommendationsLoading, error: recommendationsError } = useRecommendations(product?.category?.slug || "");
+  // Get recommendations based on product category, excluding the current product
+  const { recommendations, isLoading: recommendationsLoading, error: recommendationsError } = useRecommendations(product?.category?.slug || "", product?.id);
 
   const desc = parse(product?.description || "");
+  
+  // Fetch reservation status when variant changes
+  useEffect(() => {
+    if (selectedVariant && isAuthenticated) {
+      checkReservationStatus();
+    }
+  }, [selectedVariant?.id, isAuthenticated]);
+  
+  const checkReservationStatus = async () => {
+    if (!selectedVariant) return;
+    
+    try {
+      const response = await api.get(`/api/reservations/product/${selectedVariant.id}/check/`);
+      setReservationData(response.data);
+    } catch (error) {
+      console.error('Failed to check reservation status:', error);
+    }
+  };
+  
+  const handleReserve = async () => {
+    if (!selectedVariant) return;
+    
+    setLoadingReservation(true);
+    setReservationError(null);
+    
+    try {
+      const response = await api.post('/api/reservations/create/', {
+        product_id: selectedVariant.id
+      });
+      
+      // Refresh reservation status
+      await checkReservationStatus();
+      
+      alert(`Reservation successful! We'll notify you via email when this product is back in stock.`);
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.error || 'Failed to create reservation';
+      setReservationError(errorMsg);
+      alert(errorMsg);
+    } finally {
+      setLoadingReservation(false);
+    }
+  };
+  
+  const handleCancelReservation = async () => {
+    if (!reservationData?.user_reservation?.id) return;
+    
+    if (!confirm('Are you sure you want to cancel this reservation?')) return;
+    
+    setLoadingReservation(true);
+    
+    try {
+      await api.post(`/api/reservations/${reservationData.user_reservation.id}/cancel/`);
+      
+      // Refresh reservation status
+      await checkReservationStatus();
+      
+      alert('Reservation cancelled successfully');
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.error || 'Failed to cancel reservation';
+      alert(errorMsg);
+    } finally {
+      setLoadingReservation(false);
+    }
+  };
 
   // Show loading spinner while fetching
   if (loading) {
@@ -78,7 +151,7 @@ function ProductDetailContent() {
   return (
     <div className="bg-base-100 p-3 mx-3 rounded-sm xs:mx-[clamp(0.75rem,6vw,7.5rem)] lg:mx-30 shadow-xl">
       {/* Breadcrumbs Section */}
-      <Breadcrumbs category={product.category} productName={product.name} />
+      <Breadcrumbs category={product.category} productName={product.name || 'Unknown Product'} />
 
       {/* Product Image Carousel Section */}
       <div className="flex flex-col border-b-1 border-gray-600 mb-2 xl:pb-4 xl:flex-row">
@@ -92,7 +165,7 @@ function ProductDetailContent() {
           {/* Product Title and Price Section */}
           <div>
             <h1 className="text-xl font-bold md:text-2xl xl:text-3xl">
-              {product.name}
+              {product.name || 'Unknown Product'}
             </h1>
             {/* Price now comes from our hook - it automatically picks variant price or product price */}
             <PesoAmount
@@ -104,10 +177,10 @@ function ProductDetailContent() {
           {/* Category tags section */}
           <div className="flex gap-2 my-2">
             <div className="badge badge-soft badge-outline badge-sm sm:badge-md">
-              {product.category.name}
+              {product.category?.name || 'Uncategorized'}
             </div>
             <div className="badge badge-soft badge-outline badge-sm sm:badge-md">
-              {product.brand.name}
+              {product.brand?.name || 'Unknown Brand'}
             </div>
           </div>
 
@@ -147,10 +220,10 @@ function ProductDetailContent() {
                 )}
                 
                 {/* Show selected variant info when there's only one variant */}
-                {product.products.length === 1 && (
+                {product.products && product.products.length === 1 && (
                   <div className="flex items-center">
                     <label className="mr-2">Variant:</label>
-                    <span className="badge badge-neutral">{product.products[0].variant_attribute}</span>
+                    <span className="badge badge-neutral">{product.products[0]?.variant_attribute || 'N/A'}</span>
                   </div>
                 )}
               </div>
@@ -165,23 +238,111 @@ function ProductDetailContent() {
               </div>
             </div>
 
+            {/* Reservation Status */}
+            {isAuthenticated && selectedVariant && reservationData && (
+              <div className="mb-4">
+                {reservationData.user_reservation && reservationData.user_reservation.status === 'active' && (
+                  <div className="alert alert-success">
+                    <div>
+                      <div className="font-semibold">Your reservation is active!</div>
+                      <div className="text-sm">
+                        You have {reservationData.user_reservation.time_remaining?.days || 0} days and {reservationData.user_reservation.time_remaining?.hours || 0} hours remaining to purchase.
+                      </div>
+                    </div>
+                  </div>
+                )}
+                {reservationData.user_reservation && reservationData.user_reservation.status === 'waiting' && (
+                  <div className="alert alert-info">
+                    <div className="flex-1">
+                      <div className="font-semibold">Your reservation is in the queue</div>
+                      <div className="text-sm mt-1">
+                        We'll send you an email notification when this item is back in stock and available for you to purchase.
+                      </div>
+                      <button 
+                        className="btn btn-sm btn-error btn-outline mt-3"
+                        onClick={handleCancelReservation}
+                        disabled={loadingReservation}
+                      >
+                        Cancel Reservation
+                      </button>
+                    </div>
+                  </div>
+                )}
+                {!reservationData.user_reservation && reservationData.has_reservations && currentStock === 0 && (
+                  <div className="alert alert-warning">
+                    <div className="flex-1">
+                      <div className="font-semibold">Product is out of stock</div>
+                      <div className="text-sm mb-2">
+                        {reservationData.total_in_queue} {reservationData.total_in_queue === 1 ? 'person is' : 'people are'} in the reservation queue
+                      </div>
+                      <button 
+                        className="btn btn-sm btn-accent btn-outline"
+                        onClick={handleReserve}
+                        disabled={loadingReservation}
+                      >
+                        {loadingReservation ? "Joining Queue..." : "Join Reservation Queue"}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Action Buttons Section - now connected to real functions */}
             <div className="max-w-screen">
-              <button 
-                className="btn btn-primary w-full my-1"
-                onClick={addToCart}
-                disabled={!selectedVariant || currentStock === 0}
-              >
-                <img src={CartLogo} alt="Cart Logo" />
-                {!selectedVariant ? "Select Variant First" : currentStock === 0 ? "Out of Stock" : "Add to Cart"}
-              </button>
-              <button 
-                className="btn btn-secondary w-full my-1"
-                onClick={buyNow}
-                disabled={!selectedVariant || currentStock === 0}
-              >
-                {!selectedVariant ? "Select Variant First" : currentStock === 0 ? "Out of Stock" : "Buy Now"}
-              </button>
+              {/* Show Add to Cart / Buy Now if product is available OR user has active reservation */}
+              {(currentStock > 0 && (!reservationData?.has_reservations || reservationData?.user_reservation?.status === 'active')) ? (
+                <>
+                  <button 
+                    className="btn btn-primary w-full my-1"
+                    onClick={addToCart}
+                    disabled={!selectedVariant || !isAuthenticated || !reservationData?.product_available}
+                  >
+                    <img src={CartLogo} alt="Cart Logo" />
+                    {!isAuthenticated ? "Login Required" : !selectedVariant ? "Select Variant First" : "Add to Cart"}
+                  </button>
+                  <button 
+                    className="btn btn-secondary w-full my-1"
+                    onClick={buyNow}
+                    disabled={!selectedVariant || !isAuthenticated || !reservationData?.product_available}
+                  >
+                    {!isAuthenticated ? "Login Required" : !selectedVariant ? "Select Variant First" : "Buy Now"}
+                  </button>
+                </>
+              ) : (
+                <>
+                  {/* Show Reserve button if out of stock and no reservations yet */}
+                  {isAuthenticated && selectedVariant && currentStock === 0 && !reservationData?.user_reservation && !reservationData?.has_reservations && (
+                    <button 
+                      className="btn btn-accent w-full my-1"
+                      onClick={handleReserve}
+                      disabled={loadingReservation}
+                    >
+                      {loadingReservation ? "Reserving..." : "Reserve Product"}
+                    </button>
+                  )}
+                  
+                  {/* Show out of stock message for non-authenticated users */}
+                  {!isAuthenticated && currentStock === 0 && (
+                    <button 
+                      className="btn btn-disabled w-full my-1"
+                      disabled
+                    >
+                      Out of Stock - Login to Reserve
+                    </button>
+                  )}
+                  
+                  {/* Show reserved by others message */}
+                  {isAuthenticated && currentStock > 0 && reservationData?.has_reservations && !reservationData?.product_available && (
+                    <button 
+                      className="btn btn-disabled w-full my-1"
+                      disabled
+                    >
+                      Reserved for Another Customer
+                    </button>
+                  )}
+                </>
+              )}
             </div>
           </div>
         </div>

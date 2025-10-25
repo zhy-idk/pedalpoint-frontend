@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { getCSRFToken } from '../utils/csrf';
+import { Order } from '../types/order';
 
 interface OrderItem {
   id: number;
@@ -17,25 +18,12 @@ interface OrderItem {
   quantity: number;
 }
 
-interface Order {
-  id: number;
-  user: {
-    username: string;
-  };
-  created_at: string;
-  status: 'pending' | 'completed' | 'cancelled' | 'returned';
-  shipping_address?: string;
-  contact_number?: string;
-  notes?: string;
-  items: OrderItem[];
-}
-
 interface UseOrdersReturn {
   orders: Order[];
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
-  updateOrderStatus: (orderId: number, newStatus: string) => Promise<boolean>;
+  updateOrderStatus: (orderId: number, newStatus?: string, reason?: string, paymentStatus?: string) => Promise<boolean>;
 }
 
 const getApiBaseUrl = () => {
@@ -97,31 +85,44 @@ export const useOrders = (): UseOrdersReturn => {
     }
   }, [isAuthenticated, user?.is_staff]);
 
-  const updateOrderStatus = useCallback(async (orderId: number, newStatus: string): Promise<boolean> => {
+  const updateOrderStatus = useCallback(async (orderId: number, newStatus?: string, reason?: string, paymentStatus?: string): Promise<boolean> => {
     try {
+      const body: { status?: string; reason?: string; payment_status?: string } = {};
+      if (newStatus) {
+        body.status = newStatus;
+      }
+      if (reason) {
+        body.reason = reason;
+      }
+      if (paymentStatus) {
+        body.payment_status = paymentStatus;
+      }
+
       const response = await fetch(`${getApiBaseUrl()}/api/orders/${orderId}/update-status/`, {
         method: 'PATCH',
         credentials: 'include',
         headers: getHeaders(),
-        body: JSON.stringify({ status: newStatus })
+        body: JSON.stringify(body)
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to update order status: ${response.statusText}`);
+        throw new Error(`Failed to update order: ${response.statusText}`);
       }
 
-      // Update local state
+      const updatedOrder = await response.json();
+
+      // Update local state with the full updated order data
       setOrders(prevOrders => 
         prevOrders.map(order => 
           order.id === orderId 
-            ? { ...order, status: newStatus as Order['status'] }
+            ? updatedOrder
             : order
         )
       );
 
       return true;
     } catch (err) {
-      console.error('Order status update error:', err);
+      console.error('Order update error:', err);
       return false;
     }
   }, []);

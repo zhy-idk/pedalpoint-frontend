@@ -28,7 +28,7 @@ function Home() {
       const transformedProduct = {
         id: listing.id,
         name: listing.name,
-        price: parseFloat(listing.price),
+        price: listing.price ? parseFloat(listing.price) : 0,
         description: listing.description,
         image: defaultImage,
         slug: listing.slug,
@@ -40,8 +40,8 @@ function Home() {
           id: variant.id,
           name: variant.name,
           sku: variant.sku,
-          price: parseFloat(variant.price),
-          stock: variant.stock,
+          price: variant.price ? parseFloat(variant.price) : 0,
+          stock: variant.stock || 0,
           available: variant.available,
           variant_images: variant.product_images,
         })),
@@ -51,6 +51,9 @@ function Home() {
 
       console.log("Transformed product:", transformedProduct);
       return transformedProduct;
+    }).filter((product: Product) => {
+      // Filter out products with missing essential data
+      return product.id && product.name && product.slug;
     }) || [];
 
   // Show loading skeletons while fetching data

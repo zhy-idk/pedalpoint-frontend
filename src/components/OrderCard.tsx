@@ -1,34 +1,149 @@
 import { Link } from 'react-router-dom';
+import { useState } from 'react';
+import type { Order } from '../types/order';
+import PlaceholderImg from '../assets/placeholder_img.jpg';
 
-function OrderCard(){
-  return(
-    <div className=''>
-      <div className="card card-side card-xs flex-row bg-base-100 shadow-sm" >
-      <div>
-        <figure className="w-full">
-          <img
-            src="https://contents.mediadecathlon.com/p1619234/k$a9d1d702aa04c055f076e193675f3615/rcr-900-af-road-bike-105-van-rysel-8560890.jpg?f=1920x0&format=auto"
-            className="bg-white w-[clamp(5.625rem,20vw,8rem)] h-full object-contain rounded-lg border-1 border-base-300"
-            alt="Movie"
-          />
-        </figure>
-      </div>
-
-      <div className="card-body flex-col">
-        <div className="flex flex-col basis-4/5">
-          <div className="grow">
-            <h2 className="text-[clamp(0.688rem,2.5vw,1rem)] font-bold ">This bike has an incredibly long name because I need to see what it looks like if an item has an unusually long name</h2>
-          </div>
-
-            <span className="font-medium text-[10px] xs:text-xs md:text-sm">₱100.00</span>
-
-        </div>
-        <div className="flex flex-col basis-1/5 items-center justify-center">
-          
-        </div>
-      </div>
-    </div>
-    </div>
-  )
+interface OrderCardProps {
+  order: Order;
 }
-export default OrderCard
+
+function OrderCard({ order }: OrderCardProps) {
+  const [imageErrors, setImageErrors] = useState<{ [key: number]: boolean }>({});
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'to_pay':
+        return 'badge-warning';
+      case 'to_ship':
+        return 'badge-info';
+      case 'to_deliver':
+        return 'badge-primary';
+      case 'completed':
+        return 'badge-success';
+      case 'cancelled':
+        return 'badge-error';
+      case 'returned':
+        return 'badge-secondary';
+      default:
+        return 'badge-neutral';
+    }
+  };
+
+  const getStatusText = (status: string) => {
+    switch (status) {
+      case 'to_pay':
+        return 'To Pay';
+      case 'to_ship':
+        return 'To Ship';
+      case 'to_deliver':
+        return 'To Deliver';
+      case 'completed':
+        return 'Completed';
+      case 'cancelled':
+        return 'Cancelled';
+      case 'returned':
+        return 'Returned';
+      default:
+        return status;
+    }
+  };
+
+  const handleImageError = (itemId: number) => {
+    setImageErrors(prev => ({ ...prev, [itemId]: true }));
+  };
+
+  const getImageSrc = (itemId: number, imageUrl: string) => {
+    if (imageErrors[itemId]) {
+      return PlaceholderImg;
+    }
+    return imageUrl ? `http://127.0.0.1:8000${imageUrl}` : PlaceholderImg;
+  };
+
+  return (
+    <div className="card bg-base-100 shadow-sm border border-base-300">
+      <div className="card-body">
+        <div className="flex justify-between items-start mb-4">
+          <h2 className="text-lg font-bold">Order #{order.id}</h2>
+          <div className={`badge ${getStatusColor(order.status)}`}>
+            {getStatusText(order.status)}
+          </div>
+        </div>
+
+        {/* Order Items */}
+        <div className="space-y-3 mb-4">
+          {order.items.map((item) => (
+            <div key={item.id} className="flex gap-3 p-2 rounded hover:bg-base-200 transition-colors">
+              {/* Product Image - Clickable */}
+              <Link 
+                to={`/${item.product.product_listing.category?.slug || 'uncategorized'}/${item.product.product_listing.slug || ''}`}
+                className="flex-shrink-0"
+              >
+                <div className="w-16 h-16 hover:opacity-80 transition-opacity">
+                  <img
+                    src={getImageSrc(item.id, item.product.product_listing.image)}
+                    className="bg-white w-full h-full object-contain rounded border border-base-300"
+                    alt={item.product.product_listing.name || 'Product'}
+                    onError={() => handleImageError(item.id)}
+                  />
+                </div>
+              </Link>
+
+              {/* Product Info - Text Only (Not Clickable) */}
+              <div className="flex-1 min-w-0">
+                <h3 className="text-sm font-medium text-base-content/90">
+                  {item.product.product_listing.name}
+                </h3>
+                {item.product.variant_attribute && (
+                  <p className="text-xs text-base-content/60">
+                    {item.product.variant_attribute}
+                  </p>
+                )}
+                <p className="text-xs text-base-content/60 mt-1">
+                  Qty: {item.quantity} × ₱{parseFloat(item.product.price).toFixed(2)}
+                </p>
+              </div>
+
+              {/* Item Subtotal */}
+              <div className="text-right flex-shrink-0">
+                <p className="text-sm font-medium">
+                  ₱{(parseFloat(item.product.price) * item.quantity).toFixed(2)}
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Order Footer */}
+        <div className="border-t border-base-300 pt-3">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm text-base-content/60">
+              Ordered: {formatDate(order.created_at)}
+            </span>
+            <span className="text-lg font-bold">
+              Total: ₱{order.total_amount.toFixed(2)}
+            </span>
+          </div>
+          
+          <div className="flex justify-end">
+            <Link 
+              to={`/orders/${order.id}`}
+              className="btn btn-sm btn-outline"
+            >
+              View Details
+            </Link>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default OrderCard;
