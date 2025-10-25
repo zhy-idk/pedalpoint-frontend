@@ -14,39 +14,49 @@ import ReserveSVG from "../../assets/bookmarks_24dp.svg?react";
 import SalesSVG from "../../assets/finance_24dp.svg?react";
 import SupplierSVG from "../../assets/pallet_24dp.svg?react";
 import { useAuth } from "../../hooks/useAuth";
+import { usePermissions } from "../../hooks/usePermissions";
 
 function StaffSidebar() {
   const { user } = useAuth();
-  const isSuperuser = user?.is_superuser;
+  const permissions = usePermissions();
   const [isOpen, setIsOpen] = useState(false);
 
   const navItems = (
     <ul className="menu rounded-box flex-1 gap-1">
-        <li>
-          <NavLink
-            to="/manage"
-            className={({ isActive, isPending }) =>
-              `tooltip tooltip-right flex items-center justify-center ${isActive && !isPending ? "bg-neutral-400/15" : ""}`
-            }
-            end
-            data-tip="Dashboard"
-          >
-            <DashboardSVG width={35} height={35} />
-          </NavLink>
-        </li>
-        <li>
-          <NavLink
-            to="/manage/sales"
-            className={({ isActive, isPending }) =>
-              `tooltip tooltip-right flex items-center justify-center ${isActive && !isPending ? "bg-neutral-400/15" : ""}`
-            }
-            end
-            data-tip="Sales"
-          >
-            <SalesSVG width={35} height={35} />
-          </NavLink>
-        </li>
-        {isSuperuser && (
+        {/* Dashboard - Always visible to all staff */}
+        {permissions.canAccessDashboard && (
+          <li>
+            <NavLink
+              to="/manage"
+              className={({ isActive, isPending }) =>
+                `tooltip tooltip-right flex items-center justify-center ${isActive && !isPending ? "bg-neutral-400/15" : ""}`
+              }
+              end
+              data-tip="Dashboard"
+            >
+              <DashboardSVG width={35} height={35} />
+            </NavLink>
+          </li>
+        )}
+        
+        {/* Sales - Superuser only */}
+        {permissions.canAccessSales && (
+          <li>
+            <NavLink
+              to="/manage/sales"
+              className={({ isActive, isPending }) =>
+                `tooltip tooltip-right flex items-center justify-center ${isActive && !isPending ? "bg-neutral-400/15" : ""}`
+              }
+              end
+              data-tip="Sales"
+            >
+              <SalesSVG width={35} height={35} />
+            </NavLink>
+          </li>
+        )}
+        
+        {/* POS */}
+        {permissions.canAccessPOS && (
           <li>
             <NavLink
               to="/manage/pos"
@@ -59,90 +69,120 @@ function StaffSidebar() {
             </NavLink>
           </li>
         )}
-        <li>
-          <NavLink
-            to="/manage/chats"
-            className={({ isActive }) =>
-              `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
-            }
-            data-tip="Chats"
-          >
-            <ChatsSVG width={35} height={35} />
-          </NavLink>
-        </li>
-        <li>
-          <NavLink
-            to="/manage/orders"
-            className={({ isActive }) =>
-              `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
-            }
-            data-tip="Orders"
-          >
-            <OrdersSVG width={35} height={35} />
-          </NavLink>
-        </li>
-        <li>
-          <NavLink
-            to="/manage/listings"
-            className={({ isActive }) =>
-              `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
-            }
-            data-tip="Product Listings"
-          >
-            <ListingsSVG width={35} height={35} />
-          </NavLink>
-        </li>
-        <li>
-          <NavLink
-            to="/manage/inventory"
-            className={({ isActive }) =>
-              `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
-            }
-            data-tip="Inventory"
-          >
-            <InventorySVG width={35} height={35} />
-          </NavLink>
-        </li>
-        <li>
-          <NavLink
-            to="/manage/suppliers"
-            className={({ isActive }) =>
-              `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
-            }
-            data-tip="Suppliers"
-          >
-            <SupplierSVG width={35} height={35} />
-          </NavLink>
-        </li>
-        <li>
-          <NavLink
-            to="/manage/reservations"
-            className={({ isActive }) =>
-              `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
-            }
-            data-tip="Reservations"
-          >
-            <ReserveSVG width={35} height={35} />
-          </NavLink>
-        </li>
-        <li>
-          <NavLink
-            to="/manage/queueing"
-            className={({ isActive }) =>
-              `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
-            }
-            data-tip="Service Queue"
-          >
-            <QueueSVG
-              width={35}
-              height={35}
-              fill="#e3e3e3"
-              stroke="#e3e3e3"
-              strokeWidth={5}
-            />
-          </NavLink>
-        </li>
-        {isSuperuser && (
+        
+        {/* Chats */}
+        {permissions.canAccessChats && (
+          <li>
+            <NavLink
+              to="/manage/chats"
+              className={({ isActive }) =>
+                `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
+              }
+              data-tip="Chats"
+            >
+              <ChatsSVG width={35} height={35} />
+            </NavLink>
+          </li>
+        )}
+        
+        {/* Orders */}
+        {permissions.canAccessOrders && (
+          <li>
+            <NavLink
+              to="/manage/orders"
+              className={({ isActive }) =>
+                `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
+              }
+              data-tip="Orders"
+            >
+              <OrdersSVG width={35} height={35} />
+            </NavLink>
+          </li>
+        )}
+        
+        {/* Listings */}
+        {permissions.canAccessListings && (
+          <li>
+            <NavLink
+              to="/manage/listings"
+              className={({ isActive }) =>
+                `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
+              }
+              data-tip="Product Listings"
+            >
+              <ListingsSVG width={35} height={35} />
+            </NavLink>
+          </li>
+        )}
+        
+        {/* Inventory */}
+        {permissions.canAccessInventory && (
+          <li>
+            <NavLink
+              to="/manage/inventory"
+              className={({ isActive }) =>
+                `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
+              }
+              data-tip="Inventory"
+            >
+              <InventorySVG width={35} height={35} />
+            </NavLink>
+          </li>
+        )}
+        
+        {/* Suppliers */}
+        {permissions.canAccessSuppliers && (
+          <li>
+            <NavLink
+              to="/manage/suppliers"
+              className={({ isActive }) =>
+                `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
+              }
+              data-tip="Suppliers"
+            >
+              <SupplierSVG width={35} height={35} />
+            </NavLink>
+          </li>
+        )}
+        
+        {/* Reservations */}
+        {permissions.canAccessReservations && (
+          <li>
+            <NavLink
+              to="/manage/reservations"
+              className={({ isActive }) =>
+                `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
+              }
+              data-tip="Reservations"
+            >
+              <ReserveSVG width={35} height={35} />
+            </NavLink>
+          </li>
+        )}
+        
+        {/* Service Queue */}
+        {permissions.canAccessQueueing && (
+          <li>
+            <NavLink
+              to="/manage/queueing"
+              className={({ isActive }) =>
+                `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
+              }
+              data-tip="Service Queue"
+            >
+              <QueueSVG
+                width={35}
+                height={35}
+                fill="#e3e3e3"
+                stroke="#e3e3e3"
+                strokeWidth={5}
+              />
+            </NavLink>
+          </li>
+        )}
+        
+        {/* User Management - Superuser only */}
+        {permissions.canAccessUserManagement && (
           <li>
             <NavLink
               to="/manage/users"
@@ -161,6 +201,8 @@ function StaffSidebar() {
             </NavLink>
           </li>
         )}
+        
+        {/* Return to Customer UI - Always visible */}
         <li>
           <NavLink
             to="/"

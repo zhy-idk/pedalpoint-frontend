@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { getCSRFToken } from '../utils/csrf';
+import { apiBaseUrl } from '../api/index';
 
 interface DashboardData {
   new_chats: number;
@@ -17,15 +18,6 @@ interface UseDashboardDataReturn {
   error: string | null;
   refresh: () => Promise<void>;
 }
-
-const getApiBaseUrl = () => {
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envUrl) return envUrl;
-  
-  const currentHost = window.location.hostname;
-  const protocol = window.location.protocol;
-  return `${protocol}//${currentHost}:8000`;
-};
 
 const getHeaders = () => {
   const csrfToken = getCSRFToken();
@@ -56,7 +48,7 @@ export const useDashboardData = (): UseDashboardDataReturn => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${getApiBaseUrl()}/api/dashboard/`, {
+      const response = await fetch(`${apiBaseUrl}/api/dashboard/`, {
         method: 'GET',
         credentials: 'include',
         headers: getHeaders(),

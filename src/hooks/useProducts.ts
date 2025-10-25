@@ -1,14 +1,24 @@
-// This is likely what your original useProducts hook looked like
-// Please replace this with your actual implementation
-
 import { useQuery } from '@tanstack/react-query';
 import api from '../api/index';
 
+interface PaginatedResponse {
+  results: any[];
+  count: number;
+  total_pages: number;
+  current_page: number;
+  has_next: boolean;
+  has_previous: boolean;
+}
+
 // Hook to fetch all products (for home page, product listings, etc.)
-export const useProducts = () => {
+export const useProducts = (page?: number, pageSize?: number) => {
   return useQuery({
-    queryKey: ['products'],
+    queryKey: ['products', page, pageSize],
     queryFn: async () => {
+      if (page && pageSize) {
+        const response = await api.get(`/api/listings/?page=${page}&page_size=${pageSize}`);
+        return response.data as PaginatedResponse;
+      }
       const response = await api.get('/api/listings/');
       return response.data;
     },

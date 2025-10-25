@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import {
   Mail,
@@ -8,12 +8,23 @@ import {
   Edit,
   Camera,
   UserCheck,
+  Loader2,
+  AlertCircle,
+  Check,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
+import api, { apiBaseUrl } from "../api";
+import PlaceholderProfile from "../assets/placeholder_profile.png";
 
 function Profile() {
-  const { user, isAuthenticated } = useAuth();
+  const { user, isAuthenticated, checkAuth } = useAuth();
   const [isEditing, setIsEditing] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [phoneError, setPhoneError] = useState("");
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  
   const [userInfo, setUserInfo] = useState({
     username: user?.username || "user",
     email: user?.email || "",
@@ -21,9 +32,9 @@ function Profile() {
     lastName: user?.last_name || "",
     phone: user?.primaryUserInfo?.contact_number || "",
     address: user?.primaryUserInfo?.address || "",
-    profilePicture:
-      user?.primaryUserInfo?.image ||
-      "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
+    profilePicture: user?.primaryUserInfo?.image 
+      ? `${apiBaseUrl}${user.primaryUserInfo.image}`
+      : PlaceholderProfile,
   });
 
   const [editInfo, setEditInfo] = useState(userInfo);
@@ -38,14 +49,62 @@ function Profile() {
         lastName: user.last_name || "",
         phone: user.primaryUserInfo?.contact_number || "",
         address: user.primaryUserInfo?.address || "",
-        profilePicture:
-          user.primaryUserInfo?.image ||
-          "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=400&h=400&fit=crop&crop=face",
+        profilePicture: user.primaryUserInfo?.image 
+          ? `${apiBaseUrl}${user.primaryUserInfo.image}`
+          : PlaceholderProfile,
       };
       setUserInfo(updatedUserInfo);
       setEditInfo(updatedUserInfo);
+      setImagePreview(null);
+      setSelectedImage(null);
     }
   }, [user]);
+
+  // Validate phone number
+  const validatePhone = (phone: string): boolean => {
+    if (!phone) {
+      setPhoneError("");
+      return true; // Phone is optional
+    }
+
+    // Remove any spaces or dashes
+    const cleanPhone = phone.replace(/[\s-]/g, '');
+    
+    // Check if it's exactly 11 digits and starts with 09
+    if (!/^09\d{9}$/.test(cleanPhone)) {
+      setPhoneError("Phone must be 11 digits starting with 09");
+      return false;
+    }
+    
+    setPhoneError("");
+    return true;
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        alert('Please select a valid image file');
+        return;
+      }
+      
+      // Validate file size (max 5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert('Image must be less than 5MB');
+        return;
+      }
+
+      setSelectedImage(file);
+      
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   // Redirect if not authenticated
   if (!isAuthenticated) {
@@ -63,14 +122,54 @@ function Profile() {
     );
   }
 
-  const handleSave = () => {
-    setUserInfo(editInfo);
-    setIsEditing(false);
+  const handleSave = async () => {
+    // Validate phone before saving
+    if (!validatePhone(editInfo.phone)) {
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const formData = new FormData();
+      formData.append('first_name', editInfo.firstName);
+      formData.append('last_name', editInfo.lastName);
+      formData.append('contact_number', editInfo.phone);
+      formData.append('address', editInfo.address);
+      
+      // Add image if selected
+      if (selectedImage) {
+        formData.append('image', selectedImage);
+      }
+
+      const response = await api.put(`/api/user/profile/update/`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+
+      if (response.status === 200) {
+        alert('Profile updated successfully!');
+        setUserInfo(editInfo);
+        setIsEditing(false);
+        setSelectedImage(null);
+        setImagePreview(null);
+        // Refresh auth to get updated user data
+        await checkAuth();
+      }
+    } catch (error: any) {
+      console.error('Failed to update profile:', error);
+      alert(error.response?.data?.error || 'Failed to update profile');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   const handleCancel = () => {
     setEditInfo(userInfo);
     setIsEditing(false);
+    setPhoneError("");
+    setSelectedImage(null);
+    setImagePreview(null);
   };
 
   const handleInputChange = (field: string, value: string) => {
@@ -78,6 +177,11 @@ function Profile() {
       ...prev,
       [field]: value,
     }));
+    
+    // Validate phone on change
+    if (field === 'phone') {
+      validatePhone(value);
+    }
   };
 
   return (
@@ -95,13 +199,41 @@ function Profile() {
               <div className="flex flex-col items-center lg:items-start">
                 <div className="avatar relative">
                   <div className="ring-primary ring-offset-base-100 w-24 sm:w-28 md:w-32 rounded-full ring ring-offset-2">
-                    <img src={userInfo.profilePicture} alt="Profile" />
+                    <img 
+                      src={imagePreview || userInfo.profilePicture} 
+                      alt="Profile"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = PlaceholderProfile;
+                      }}
+                    />
                   </div>
-                  <button className="btn btn-circle btn-primary btn-xs sm:btn-sm absolute right-0 bottom-0">
-                    <Camera size={14} className="sm:hidden" />
-                    <Camera size={16} className="hidden sm:block" />
-                  </button>
+                  {isEditing && (
+                    <>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        onChange={handleImageSelect}
+                        className="hidden"
+                      />
+                      <button 
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="btn btn-circle btn-primary btn-xs sm:btn-sm absolute right-0 bottom-0"
+                      >
+                        <Camera size={14} className="sm:hidden" />
+                        <Camera size={16} className="hidden sm:block" />
+                      </button>
+                    </>
+                  )}
                 </div>
+                {isEditing && selectedImage && (
+                  <div className="mt-2 text-xs text-success">
+                    <Check className="h-3 w-3 inline mr-1" />
+                    New image selected
+                  </div>
+                )}
                 <div className="mt-3 sm:mt-4 text-center lg:text-left w-full">
                   <div className="mb-2 flex flex-col sm:flex-row items-center gap-1 sm:gap-2 justify-center lg:justify-start">
                     <UserCheck className="text-primary hidden sm:block" size={20} />
@@ -171,12 +303,21 @@ function Profile() {
                     <button
                       onClick={handleSave}
                       className="btn btn-success btn-sm sm:btn-md gap-1 sm:gap-2 flex-1"
+                      disabled={isSaving || !!phoneError}
                     >
-                      <span className="text-xs sm:text-sm md:text-base">Save</span>
+                      {isSaving ? (
+                        <>
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                          <span className="text-xs sm:text-sm md:text-base">Saving...</span>
+                        </>
+                      ) : (
+                        <span className="text-xs sm:text-sm md:text-base">Save</span>
+                      )}
                     </button>
                     <button
                       onClick={handleCancel}
                       className="btn btn-ghost btn-sm sm:btn-md gap-1 sm:gap-2 flex-1"
+                      disabled={isSaving}
                     >
                       <span className="text-xs sm:text-sm md:text-base">Cancel</span>
                     </button>
@@ -223,15 +364,29 @@ function Profile() {
                     <h3 className="card-title text-sm sm:text-base">Phone</h3>
                   </div>
                   {isEditing ? (
-                    <input
-                      type="tel"
-                      placeholder="Enter your phone number"
-                      value={editInfo.phone}
-                      onChange={(e) =>
-                        handleInputChange("phone", e.target.value)
-                      }
-                      className="input input-bordered input-xs sm:input-sm w-full text-xs sm:text-sm"
-                    />
+                    <div className="w-full">
+                      <input
+                        type="tel"
+                        placeholder="09XXXXXXXXX"
+                        value={editInfo.phone}
+                        onChange={(e) =>
+                          handleInputChange("phone", e.target.value)
+                        }
+                        className={`input input-bordered input-xs sm:input-sm w-full text-xs sm:text-sm ${
+                          phoneError ? 'input-error' : ''
+                        }`}
+                        maxLength={11}
+                      />
+                      {phoneError && (
+                        <div className="text-error text-xs mt-1 flex items-center gap-1">
+                          <AlertCircle className="h-3 w-3" />
+                          {phoneError}
+                        </div>
+                      )}
+                      <div className="text-base-content/60 text-xs mt-1">
+                        Format: 09XXXXXXXXX (11 digits)
+                      </div>
+                    </div>
                   ) : (
                     <div className="badge badge-outline badge-sm sm:badge-md md:badge-lg text-xs sm:text-sm">
                       {userInfo.phone || "Not provided"}
@@ -284,10 +439,7 @@ function Profile() {
             {/* Action Buttons */}
             <div className="divider my-3 sm:my-4"></div>
             <div className="flex flex-col sm:flex-row flex-wrap justify-center gap-2 sm:gap-4 px-2 sm:px-0">
-              <button className="btn btn-outline btn-sm sm:btn-md gap-1 sm:gap-2 w-full sm:w-auto">
-                <span className="text-xs sm:text-sm md:text-base">Privacy Settings</span>
-              </button>
-              <Link to="/account-settings/" className="btn btn-outline btn-sm sm:btn-md gap-1 sm:gap-2 w-full sm:w-auto">
+              <Link to="/account-settings/" className="btn btn-primary btn-sm sm:btn-md gap-1 sm:gap-2 w-full sm:w-auto">
                 <span className="text-xs sm:text-sm md:text-base">Account Settings</span>
               </Link>
             </div>

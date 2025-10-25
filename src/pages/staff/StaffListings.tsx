@@ -1,9 +1,9 @@
 import { useState, useMemo, useEffect } from 'react';
 import { useProductListings, type ProductListing } from '../../hooks/useProductListings';
-import { useCategories } from '../../hooks/useCategories.js';
+import { useCategories, type Category } from '../../hooks/useCategories.js';
 import { useBrands } from '../../hooks/useBrands.js';
 import ListingFormModal from '../../components/staff/ListingFormModal';
-import { Plus, Edit2, Trash2, ChevronDown, ChevronRight, Settings } from 'lucide-react';
+import { Plus, Edit2, Trash2, ChevronDown, ChevronRight, Settings, FolderPlus, Folder } from 'lucide-react';
 import api from '../../api';
 import type { CompatibilityGroup, CompatibilityAttribute, CompatibilityAttributeValue } from '../../types/product';
 
@@ -200,6 +200,13 @@ function StaffListings() {
   const [sortBy, setSortBy] = useState<string>('name');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
 
+  // Category Management State
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
+  const [newCategoryParent, setNewCategoryParent] = useState<number | null>(null);
+  const [newCategoryIsComponent, setNewCategoryIsComponent] = useState(false);
+  const [savingCategory, setSavingCategory] = useState(false);
+
   // Compatibility Management State
   const [showCompatibilitySection, setShowCompatibilitySection] = useState(false);
   const [groups, setGroups] = useState<CompatibilityGroup[]>([]);
@@ -314,6 +321,42 @@ function StaffListings() {
     }
   };
 
+  // Category Management Functions
+  const handleOpenCategoryModal = () => {
+    setNewCategoryName('');
+    setNewCategoryParent(null);
+    setNewCategoryIsComponent(false);
+    setShowCategoryModal(true);
+  };
+
+  const handleCreateCategory = async () => {
+    if (!newCategoryName.trim()) {
+      alert('Please enter a category name');
+      return;
+    }
+
+    setSavingCategory(true);
+    try {
+      const response = await api.post('/api/categories/create/', {
+        name: newCategoryName,
+        parent: newCategoryParent,
+        is_component: newCategoryIsComponent,
+      });
+
+      if (response.status === 201 || response.status === 200) {
+        alert('Category created successfully!');
+        setShowCategoryModal(false);
+        // Refresh page to reload categories
+        window.location.reload();
+      }
+    } catch (error: any) {
+      console.error('Failed to create category:', error);
+      alert(error.response?.data?.error || 'Failed to create category');
+    } finally {
+      setSavingCategory(false);
+    }
+  };
+
   // Compatibility Management Functions
   useEffect(() => {
     if (showCompatibilitySection) {
@@ -325,9 +368,11 @@ function StaffListings() {
     setLoadingGroups(true);
     try {
       const response = await api.get('/api/compatibility/groups/');
+      console.log('Compatibility groups response:', response.data);
       setGroups(response.data);
     } catch (error) {
       console.error('Failed to fetch compatibility groups:', error);
+      alert('Failed to load compatibility groups. Please check console for details.');
     } finally {
       setLoadingGroups(false);
     }
@@ -505,6 +550,13 @@ function StaffListings() {
           >
             <Settings className="w-4 h-4 mr-2" />
             Compatibility
+          </button>
+          <button
+            className="btn btn-accent"
+            onClick={handleOpenCategoryModal}
+          >
+            <FolderPlus className="w-4 h-4 mr-2" />
+            Add Category
           </button>
           <button className="btn btn-primary" onClick={handleAddNew}>
             <Plus className="w-4 h-4 mr-2" />
@@ -819,6 +871,118 @@ function StaffListings() {
         categories={categories}
         brands={brands}
       />
+
+      {/* Category Creation Modal */}
+      {showCategoryModal && (
+        <dialog open className="modal">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg mb-4">
+              <FolderPlus className="inline mr-2 h-5 w-5" />
+              Create New Category
+            </h3>
+            
+            <div className="space-y-4">
+              {/* Category Name */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Category Name *</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. Bikes, Components, Frames"
+                  className="input input-bordered"
+                  value={newCategoryName}
+                  onChange={(e) => setNewCategoryName(e.target.value)}
+                  required
+                />
+              </div>
+
+              {/* Parent Category (Optional) */}
+              <div className="form-control">
+                <label className="label">
+                  <span className="label-text">Parent Category (Optional)</span>
+                </label>
+                <select
+                  className="select select-bordered"
+                  value={newCategoryParent || ''}
+                  onChange={(e) => setNewCategoryParent(e.target.value ? Number(e.target.value) : null)}
+                >
+                  <option value="">None (Top-level category)</option>
+                  {(categories as Category[])
+                    .filter(cat => !cat.parent) // Only show top-level categories as parent options
+                    .map((category) => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))
+                  }
+                </select>
+                <label className="label">
+                  <span className="label-text-alt text-base-content/60">
+                    Leave blank for main categories (Bikes, Components, Miscellaneous)
+                  </span>
+                </label>
+              </div>
+
+              {/* Is Component */}
+              <div className="form-control">
+                <label className="label cursor-pointer justify-start gap-3">
+                  <input
+                    type="checkbox"
+                    className="checkbox checkbox-primary"
+                    checked={newCategoryIsComponent}
+                    onChange={(e) => setNewCategoryIsComponent(e.target.checked)}
+                  />
+                  <div>
+                    <span className="label-text font-medium">Is Component Category</span>
+                    <p className="text-xs text-base-content/60">
+                      Check if this category is for bike components (frames, wheels, etc.)
+                    </p>
+                  </div>
+                </label>
+              </div>
+
+              {/* Info Alert */}
+              <div className="alert alert-info">
+                <Folder className="h-4 w-4" />
+                <div className="text-sm">
+                  <p className="font-semibold mb-1">Category Structure:</p>
+                  <p>• Main: Bikes, Components, Miscellaneous</p>
+                  <p>• Subcategories: Frames, Wheels, etc. (under Components)</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-action">
+              <button 
+                className="btn"
+                onClick={() => setShowCategoryModal(false)}
+                disabled={savingCategory}
+              >
+                Cancel
+              </button>
+              <button 
+                className="btn btn-primary"
+                onClick={handleCreateCategory}
+                disabled={savingCategory || !newCategoryName.trim()}
+              >
+                {savingCategory ? (
+                  <>
+                    <span className="loading loading-spinner loading-sm"></span>
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <FolderPlus className="h-4 w-4" />
+                    Create Category
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+          <div className="modal-backdrop" onClick={() => !savingCategory && setShowCategoryModal(false)}></div>
+        </dialog>
+      )}
 
       {/* Group Modal */}
       {showGroupModal && (

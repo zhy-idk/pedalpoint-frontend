@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { getCSRFToken } from '../utils/csrf';
+import { apiBaseUrl } from '../api/index';
 
 interface SalesItem {
   id: number;
@@ -47,15 +48,6 @@ interface UseSalesReturn {
   fetchTopProducts: () => Promise<TopProduct[]>;
 }
 
-const getApiBaseUrl = () => {
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envUrl) return envUrl;
-  
-  const currentHost = window.location.hostname;
-  const protocol = window.location.protocol;
-  return `${protocol}//${currentHost}:8000`;
-};
-
 const getHeaders = () => {
   const csrfToken = getCSRFToken();
   const headers: Record<string, string> = {
@@ -79,7 +71,7 @@ export const useSales = (): UseSalesReturn => {
     setError(null);
 
     try {
-      const response = await fetch(`${getApiBaseUrl()}/api/sales/`, {
+      const response = await fetch(`${apiBaseUrl}/api/sales/`, {
         method: 'GET',
         credentials: 'include',
         headers: getHeaders(),
@@ -101,7 +93,7 @@ export const useSales = (): UseSalesReturn => {
 
   const fetchTopProducts = useCallback(async (): Promise<TopProduct[]> => {
     try {
-      const response = await fetch(`${getApiBaseUrl()}/api/sales/top-products/`, {
+      const response = await fetch(`${apiBaseUrl}/api/sales/top-products/`, {
         method: 'GET',
         credentials: 'include',
         headers: getHeaders(),

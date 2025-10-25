@@ -369,9 +369,9 @@ function PrivacyPolicy() {
               If you have any questions about this Privacy Policy or our privacy practices, please contact us:
             </p>
             <div className="space-y-2">
-              <p><strong>Email:</strong> privacy@pedalpoint.com</p>
-              <p><strong>Phone:</strong> +63 XXX XXX XXXX</p>
-              <p><strong>Address:</strong> [Your Business Address]</p>
+              <p><strong>Email:</strong> pedal.point01@gmail.com</p>
+              <p><strong>Phone:</strong> +63 912 345 6789</p>
+              <p><strong>Address:</strong> 9074 J.P Rizal St, Poblacion, Pandi, 3014 Bulacan, Philippines</p>
             </div>
           </div>
         </div>

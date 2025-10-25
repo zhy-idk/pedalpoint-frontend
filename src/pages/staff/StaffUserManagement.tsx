@@ -11,16 +11,30 @@ import {
   ShieldCheck,
   Loader2,
   AlertCircle,
+  Lock,
 } from "lucide-react";
 import { useAuth } from "../../hooks/useAuth";
 import { useUsers, type User } from "../../hooks/useUsers";
+import api from "../../api";
 
 function StaffUserManagement() {
+  const { user: currentUser } = useAuth();
   const { users, loading, error, refresh, updateUser, deleteUser } = useUsers();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [staffPermissions, setStaffPermissions] = useState({
+    can_access_pos: true,
+    can_access_chats: true,
+    can_access_orders: true,
+    can_access_listings: true,
+    can_access_inventory: true,
+    can_access_queueing: true,
+    can_access_reservations: true,
+    can_access_suppliers: true,
+  });
+  const [savingPermissions, setSavingPermissions] = useState(false);
   const [newUser, setNewUser] = useState({
     email: "",
     firstName: "",
@@ -71,10 +85,53 @@ function StaffUserManagement() {
 
   const openEditModal = (user: User) => {
     setSelectedUser(user);
+    // Load user's permissions if they're a staff member
+    if (user.is_staff && user.staff_permissions) {
+      setStaffPermissions({
+        can_access_pos: user.staff_permissions.can_access_pos ?? true,
+        can_access_chats: user.staff_permissions.can_access_chats ?? true,
+        can_access_orders: user.staff_permissions.can_access_orders ?? true,
+        can_access_listings: user.staff_permissions.can_access_listings ?? true,
+        can_access_inventory: user.staff_permissions.can_access_inventory ?? true,
+        can_access_queueing: user.staff_permissions.can_access_queueing ?? true,
+        can_access_reservations: user.staff_permissions.can_access_reservations ?? true,
+        can_access_suppliers: user.staff_permissions.can_access_suppliers ?? true,
+      });
+    } else {
+      // Reset to defaults for non-staff
+      setStaffPermissions({
+        can_access_pos: true,
+        can_access_chats: true,
+        can_access_orders: true,
+        can_access_listings: true,
+        can_access_inventory: true,
+        can_access_queueing: true,
+        can_access_reservations: true,
+        can_access_suppliers: true,
+      });
+    }
     const dialog = document.getElementById(
       "edit_user_modal",
     ) as HTMLDialogElement;
     dialog?.showModal();
+  };
+
+  const handleSavePermissions = async () => {
+    if (!selectedUser || !selectedUser.is_staff) return;
+
+    setSavingPermissions(true);
+    try {
+      const response = await api.put(`/api/users/${selectedUser.id}/permissions/`, staffPermissions);
+      if (response.status === 200) {
+        alert('Permissions updated successfully!');
+        await refresh(); // Refresh user list
+      }
+    } catch (error) {
+      console.error('Failed to update permissions:', error);
+      alert('Failed to update permissions');
+    } finally {
+      setSavingPermissions(false);
+    }
   };
 
   const openCreateModal = () => {
@@ -583,6 +640,178 @@ function StaffUserManagement() {
                   />
                 </label>
               </div>
+
+              {/* Staff Permissions - Only shown for staff members */}
+              {selectedUser.is_staff && !selectedUser.is_superuser && (
+                <>
+                  <div className="divider">
+                    <Lock className="h-4 w-4 inline mr-2" />
+                    Staff Permissions
+                  </div>
+                  
+                  <div className="alert alert-info text-sm">
+                    <AlertCircle className="h-4 w-4" />
+                    <span>Sales and User Management are restricted to superusers only.</span>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="form-control">
+                      <label className="label cursor-pointer justify-start gap-3">
+                        <input
+                          type="checkbox"
+                          className="toggle toggle-sm toggle-primary"
+                          checked={staffPermissions.can_access_pos}
+                          onChange={(e) =>
+                            setStaffPermissions({
+                              ...staffPermissions,
+                              can_access_pos: e.target.checked,
+                            })
+                          }
+                        />
+                        <span className="label-text text-sm">POS</span>
+                      </label>
+                    </div>
+
+                    <div className="form-control">
+                      <label className="label cursor-pointer justify-start gap-3">
+                        <input
+                          type="checkbox"
+                          className="toggle toggle-sm toggle-primary"
+                          checked={staffPermissions.can_access_chats}
+                          onChange={(e) =>
+                            setStaffPermissions({
+                              ...staffPermissions,
+                              can_access_chats: e.target.checked,
+                            })
+                          }
+                        />
+                        <span className="label-text text-sm">Chats</span>
+                      </label>
+                    </div>
+
+                    <div className="form-control">
+                      <label className="label cursor-pointer justify-start gap-3">
+                        <input
+                          type="checkbox"
+                          className="toggle toggle-sm toggle-primary"
+                          checked={staffPermissions.can_access_orders}
+                          onChange={(e) =>
+                            setStaffPermissions({
+                              ...staffPermissions,
+                              can_access_orders: e.target.checked,
+                            })
+                          }
+                        />
+                        <span className="label-text text-sm">Orders</span>
+                      </label>
+                    </div>
+
+                    <div className="form-control">
+                      <label className="label cursor-pointer justify-start gap-3">
+                        <input
+                          type="checkbox"
+                          className="toggle toggle-sm toggle-primary"
+                          checked={staffPermissions.can_access_listings}
+                          onChange={(e) =>
+                            setStaffPermissions({
+                              ...staffPermissions,
+                              can_access_listings: e.target.checked,
+                            })
+                          }
+                        />
+                        <span className="label-text text-sm">Listings</span>
+                      </label>
+                    </div>
+
+                    <div className="form-control">
+                      <label className="label cursor-pointer justify-start gap-3">
+                        <input
+                          type="checkbox"
+                          className="toggle toggle-sm toggle-primary"
+                          checked={staffPermissions.can_access_inventory}
+                          onChange={(e) =>
+                            setStaffPermissions({
+                              ...staffPermissions,
+                              can_access_inventory: e.target.checked,
+                            })
+                          }
+                        />
+                        <span className="label-text text-sm">Inventory</span>
+                      </label>
+                    </div>
+
+                    <div className="form-control">
+                      <label className="label cursor-pointer justify-start gap-3">
+                        <input
+                          type="checkbox"
+                          className="toggle toggle-sm toggle-primary"
+                          checked={staffPermissions.can_access_queueing}
+                          onChange={(e) =>
+                            setStaffPermissions({
+                              ...staffPermissions,
+                              can_access_queueing: e.target.checked,
+                            })
+                          }
+                        />
+                        <span className="label-text text-sm">Service Queue</span>
+                      </label>
+                    </div>
+
+                    <div className="form-control">
+                      <label className="label cursor-pointer justify-start gap-3">
+                        <input
+                          type="checkbox"
+                          className="toggle toggle-sm toggle-primary"
+                          checked={staffPermissions.can_access_reservations}
+                          onChange={(e) =>
+                            setStaffPermissions({
+                              ...staffPermissions,
+                              can_access_reservations: e.target.checked,
+                            })
+                          }
+                        />
+                        <span className="label-text text-sm">Reservations</span>
+                      </label>
+                    </div>
+
+                    <div className="form-control">
+                      <label className="label cursor-pointer justify-start gap-3">
+                        <input
+                          type="checkbox"
+                          className="toggle toggle-sm toggle-primary"
+                          checked={staffPermissions.can_access_suppliers}
+                          onChange={(e) =>
+                            setStaffPermissions({
+                              ...staffPermissions,
+                              can_access_suppliers: e.target.checked,
+                            })
+                          }
+                        />
+                        <span className="label-text text-sm">Suppliers</span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn btn-sm btn-accent w-full mt-2"
+                    onClick={handleSavePermissions}
+                    disabled={savingPermissions}
+                  >
+                    {savingPermissions ? (
+                      <>
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="h-4 w-4" />
+                        Save Permissions
+                      </>
+                    )}
+                  </button>
+                </>
+              )}
 
               <div className="modal-action">
                 <button

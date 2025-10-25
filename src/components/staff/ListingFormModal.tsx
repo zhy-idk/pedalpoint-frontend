@@ -366,11 +366,14 @@ function ListingFormModal({
   const valuesByGroup = useMemo(() => {
     const grouped: Record<number, CompatibilityAttributeValue[]> = {};
     compatibilityValues.forEach(value => {
-      const groupId = value.attribute.group.id;
-      if (!grouped[groupId]) {
-        grouped[groupId] = [];
+      // Check if value has the nested attribute.group structure
+      if (value.attribute && value.attribute.group && value.attribute.group.id) {
+        const groupId = value.attribute.group.id;
+        if (!grouped[groupId]) {
+          grouped[groupId] = [];
+        }
+        grouped[groupId].push(value);
       }
-      grouped[groupId].push(value);
     });
     return grouped;
   }, [compatibilityValues]);

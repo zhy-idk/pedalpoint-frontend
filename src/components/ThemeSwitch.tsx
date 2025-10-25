@@ -1,15 +1,16 @@
-import LightIcon from "../assets/light_mode_24dp.svg?react";
-import DarkIcon from "../assets/dark_mode_24dp.svg?react";
-
 import { useTheme } from "../hooks/useTheme";
 
 function ThemeSwitch() {
-  const dimension = 18;
   const { theme, toggleTheme } = useTheme();
   return (
     <div>
       <label className="toggle text-base-content">
-        <input type="checkbox" value="synthwave" className="theme-controller" />
+        <input 
+          type="checkbox" 
+          className="theme-controller" 
+          checked={theme === 'dark'}
+          onChange={toggleTheme}
+        />
 
         <svg
           aria-label="sun"

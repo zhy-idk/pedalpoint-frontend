@@ -13,7 +13,7 @@ import {
 import { useInventoryWebSocket } from "../../hooks/useInventoryWebSocket";
 import { useInventoryAPI } from "../../hooks/useInventoryAPI";
 import { useSuppliers } from "../../hooks/useSuppliers";
-import api from "../../api/index";
+import api, { apiBaseUrl } from "../../api/index";
 
 interface ProductImage {
   id: number;
@@ -236,7 +236,7 @@ function StaffInventory() {
         // Fallback to direct fetch
         try {
           console.log("Trying direct fetch as fallback...");
-          const response = await fetch("/api/brands/", {
+          const response = await fetch(`${apiBaseUrl}/api/brands/`, {
             method: "GET",
             headers: {
               "Content-Type": "application/json",
@@ -1511,7 +1511,7 @@ function StaffInventory() {
                       {selectedItem.product_images.map((image) => (
                         <div key={image.id} className="group relative">
                           <img
-                            src={`http://127.0.0.1:8000${image.image}`}
+                            src={`${apiBaseUrl}${image.image}`}
                             alt={image.alt_text}
                             className="border-base-300 h-24 w-full rounded border object-cover"
                           />

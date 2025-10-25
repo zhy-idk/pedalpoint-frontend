@@ -18,3 +18,76 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
+
+/* DaisyUI Calendar Styles */
+.react-day-picker {
+  @apply bg-base-100 p-4 rounded-lg shadow-lg border border-base-300;
+  --rdp-accent-color: oklch(var(--p));
+  --rdp-background-color: oklch(var(--b1));
+  --rdp-accent-background-color: oklch(var(--p));
+  font-size: 0.875rem;
+}
+
+.react-day-picker .rdp-month {
+  @apply w-full;
+}
+
+.react-day-picker .rdp-month_caption {
+  @apply flex justify-center items-center mb-4 font-bold text-base;
+}
+
+.react-day-picker .rdp-nav {
+  @apply absolute inset-x-0 flex justify-between px-2;
+}
+
+.react-day-picker .rdp-button {
+  @apply btn btn-sm btn-ghost;
+}
+
+.react-day-picker .rdp-button:hover:not([disabled]) {
+  @apply bg-base-200;
+}
+
+.react-day-picker .rdp-day_button {
+  @apply w-10 h-10 rounded-lg transition-colors;
+}
+
+.react-day-picker .rdp-day_button:hover:not([disabled]) {
+  @apply bg-base-200;
+}
+
+.react-day-picker .rdp-day_button:disabled {
+  @apply opacity-50 cursor-not-allowed;
+}
+
+.react-day-picker .rdp-selected .rdp-day_button {
+  @apply bg-primary text-primary-content;
+}
+
+.react-day-picker .rdp-selected .rdp-day_button:hover {
+  @apply bg-primary brightness-110;
+}
+
+.react-day-picker .rdp-today .rdp-day_button:not(.rdp-selected) {
+  @apply font-bold text-accent border border-accent;
+}
+
+.react-day-picker .rdp-outside {
+  @apply opacity-30;
+}
+
+.react-day-picker .rdp-weekday {
+  @apply text-base-content/60 font-semibold text-xs;
+}
+
+.react-day-picker .rdp-weekdays {
+  @apply border-b border-base-300 pb-2 mb-2;
+}
+
+/* Popover positioning for calendar */
+[popover] {
+  @apply m-0 p-0 border-0;
+  background: transparent;
+}
+
+

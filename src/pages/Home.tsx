@@ -1,13 +1,29 @@
 import ItemCard from "../components/ItemCard";
 import Hero from "../components/Hero";
-import Breadcrumbs from "../components/Breadcrumbs";
 import { useProducts } from "../hooks/useProducts";
 import ItemCardSkeleton from "../components/ItemCardSkeleton";
-import type { ProductListing, Product } from "../types/product";
+import type { Product } from "../types/product";
 import PlaceholderIMG from "../assets/placeholder_img.jpg";
+import { useState, useEffect } from "react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 function Home() {
-  const { data: productListings, isLoading, error } = useProducts();
+  const [currentPage, setCurrentPage] = useState(1);
+  const pageSize = 18;
+  
+  const { data, isLoading, error } = useProducts(currentPage, pageSize);
+  
+  // Handle both paginated and non-paginated responses
+  const productListings = data?.results || data || [];
+  const totalPages = data?.total_pages || 1;
+  const hasNext = data?.has_next || false;
+  const hasPrevious = data?.has_previous || false;
+  const totalCount = data?.count || productListings.length;
+
+  // Scroll to top when page changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage]);
 
   // Transform ProductListing to Product format for ItemCard compatibility
   const transformedProducts: Product[] =
@@ -69,8 +85,8 @@ function Home() {
             </p>
           </div>
           <div className="xs:grid-cols-3 grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-            {/* Show 6 skeleton cards while loading */}
-            {Array.from({ length: 6 }).map((_, index) => (
+            {/* Show 18 skeleton cards while loading (matching page size) */}
+            {Array.from({ length: 18 }).map((_, index) => (
               <ItemCardSkeleton key={index} />
             ))}
           </div>
@@ -108,12 +124,77 @@ function Home() {
           <p className="text-base-content/70">
             Browse our complete collection
           </p>
+          {totalCount > 0 && (
+            <p className="text-sm text-base-content/60 mt-1">
+              Showing {((currentPage - 1) * pageSize) + 1}-{Math.min(currentPage * pageSize, totalCount)} of {totalCount} products
+            </p>
+          )}
         </div>
+        
         <div className="xs:grid-cols-3 grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
           {transformedProducts.map((product: Product, index: number) => (
             <ItemCard key={product.id || index} product={product} />
           ))}
         </div>
+
+        {/* Pagination Controls */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-2 mt-8 mb-4">
+            <button
+              onClick={() => setCurrentPage(prev => prev - 1)}
+              disabled={!hasPrevious}
+              className="btn btn-outline btn-sm"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              Previous
+            </button>
+
+            {/* Page numbers */}
+            <div className="flex gap-1">
+              {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                // Show first page, last page, current page, and pages around current
+                let pageNum;
+                if (totalPages <= 5) {
+                  pageNum = i + 1;
+                } else if (currentPage <= 3) {
+                  pageNum = i + 1;
+                } else if (currentPage >= totalPages - 2) {
+                  pageNum = totalPages - 4 + i;
+                } else {
+                  pageNum = currentPage - 2 + i;
+                }
+
+                return (
+                  <button
+                    key={pageNum}
+                    onClick={() => setCurrentPage(pageNum)}
+                    className={`btn btn-sm ${
+                      currentPage === pageNum ? 'btn-primary' : 'btn-outline'
+                    }`}
+                  >
+                    {pageNum}
+                  </button>
+                );
+              })}
+            </div>
+
+            <button
+              onClick={() => setCurrentPage(prev => prev + 1)}
+              disabled={!hasNext}
+              className="btn btn-outline btn-sm"
+            >
+              Next
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        )}
+
+        {/* Page Info */}
+        {totalPages > 1 && (
+          <div className="text-center text-sm text-base-content/60 mb-4">
+            Page {currentPage} of {totalPages}
+          </div>
+        )}
       </div>
     </>
   );

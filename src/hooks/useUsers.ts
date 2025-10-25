@@ -1,6 +1,17 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiBaseUrl } from '../api/index';
 
+export interface StaffPermissions {
+  can_access_pos: boolean;
+  can_access_chats: boolean;
+  can_access_orders: boolean;
+  can_access_listings: boolean;
+  can_access_inventory: boolean;
+  can_access_queueing: boolean;
+  can_access_reservations: boolean;
+  can_access_suppliers: boolean;
+}
+
 export interface User {
   id: number;
   username: string;
@@ -13,6 +24,7 @@ export interface User {
   is_active: boolean;
   date_joined: string;
   last_login: string | null;
+  staff_permissions?: StaffPermissions;
 }
 
 interface UseUsersReturn {

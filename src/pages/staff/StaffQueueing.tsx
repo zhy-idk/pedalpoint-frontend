@@ -1,6 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
 import { DayPicker } from "react-day-picker";
-import "react-day-picker/dist/style.css";
 import {
   useServiceQueue,
   type ServiceQueueItem,
@@ -204,16 +203,43 @@ function StaffQueueing() {
               <div className="card-body">
                 <h2 className="card-title mb-4">Select Date</h2>
                 <div className="flex justify-center">
-                  <DayPicker
-                    mode="single"
-                    selected={selectedDate}
-                    onSelect={(date) => date && setSelectedDate(date)}
-                    disabled={[
-                      { dayOfWeek: [0, 6] }, // Disable weekends
-                      { before: new Date() }, // Disable past dates
-                    ]}
-                    className="bg-base-100 rounded-lg border p-4"
-                  />
+                  <button
+                    popoverTarget="rdp-popover"
+                    className="input input-bordered w-full max-w-md text-left"
+                    style={{ anchorName: "--rdp" } as React.CSSProperties}
+                  >
+                    📅{" "}
+                    {selectedDate.toLocaleDateString("en-US", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </button>
+                  <div
+                    popover="auto"
+                    id="rdp-popover"
+                    className="dropdown"
+                    style={{ positionAnchor: "--rdp" } as React.CSSProperties}
+                  >
+                    <DayPicker
+                      className="react-day-picker"
+                      mode="single"
+                      selected={selectedDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          setSelectedDate(date);
+                          // Close the popover after selection
+                          const popover = document.getElementById(
+                            "rdp-popover",
+                          ) as (HTMLElement & { hidePopover?: () => void }) | null;
+                          if (popover && popover.hidePopover) {
+                            popover.hidePopover();
+                          }
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
                 <div className="text-base-content/70 mt-4 text-center text-sm">
                   Showing queue for{" "}

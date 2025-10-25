@@ -1,6 +1,7 @@
 import { useState, useCallback } from 'react';
 import { getCSRFToken } from '../utils/csrf';
 import { useCSRF } from './useCSRF';
+import { apiBaseUrl } from '../api/index';
 
 interface InventoryItem {
   id: number;
@@ -57,19 +58,6 @@ interface UseInventoryAPIReturn {
   deleteItem: (id: number) => Promise<void>;
   bulkUpdate: (updates: BulkUpdateItem[]) => Promise<{ updated_count: number }>;
 }
-
-// Determine API base URL dynamically
-const getApiBaseUrl = () => {
-  const envUrl = import.meta.env.VITE_API_URL;
-  if (envUrl) return envUrl;
-  
-  // If no env var, use same host as current page but port 8000
-  const currentHost = window.location.hostname;
-  const protocol = window.location.protocol;
-  return `${protocol}//${currentHost}:8000/api`;
-};
-
-const API_BASE_URL = getApiBaseUrl();
 
 export const useInventoryAPI = (): UseInventoryAPIReturn => {
   const [loading, setLoading] = useState(false);
@@ -129,7 +117,7 @@ export const useInventoryAPI = (): UseInventoryAPIReturn => {
 
   const fetchInventory = useCallback(async (): Promise<InventoryItem[]> => {
     return handleRequest<InventoryItem[]>(() =>
-      fetch(`${API_BASE_URL}/inventory/`, {
+      fetch(`${apiBaseUrl}/api/inventory/`, {
         method: 'GET',
         credentials: 'include',
         headers: getHeaders(),
@@ -139,7 +127,7 @@ export const useInventoryAPI = (): UseInventoryAPIReturn => {
 
   const createItem = useCallback(async (data: CreateInventoryItemData): Promise<InventoryItem> => {
     return handleRequest<InventoryItem>(() =>
-      fetch(`${API_BASE_URL}/inventory/create/`, {
+      fetch(`${apiBaseUrl}/api/inventory/create/`, {
         method: 'POST',
         credentials: 'include',
         headers: getHeaders(),
@@ -150,7 +138,7 @@ export const useInventoryAPI = (): UseInventoryAPIReturn => {
 
   const updateItem = useCallback(async (id: number, data: UpdateInventoryItemData): Promise<InventoryItem> => {
     return handleRequest<InventoryItem>(() =>
-      fetch(`${API_BASE_URL}/inventory/${id}/update/`, {
+      fetch(`${apiBaseUrl}/api/inventory/${id}/update/`, {
         method: 'PUT',
         credentials: 'include',
         headers: getHeaders(),
@@ -161,7 +149,7 @@ export const useInventoryAPI = (): UseInventoryAPIReturn => {
 
   const deleteItem = useCallback(async (id: number): Promise<void> => {
     return handleRequest<void>(() =>
-      fetch(`${API_BASE_URL}/inventory/${id}/delete/`, {
+      fetch(`${apiBaseUrl}/api/inventory/${id}/delete/`, {
         method: 'DELETE',
         credentials: 'include',
         headers: getHeaders(),
@@ -171,7 +159,7 @@ export const useInventoryAPI = (): UseInventoryAPIReturn => {
 
   const bulkUpdate = useCallback(async (updates: BulkUpdateItem[]): Promise<{ updated_count: number }> => {
     return handleRequest<{ updated_count: number }>(() =>
-      fetch(`${API_BASE_URL}/inventory/bulk-update/`, {
+      fetch(`${apiBaseUrl}/api/inventory/bulk-update/`, {
         method: 'PUT',
         credentials: 'include',
         headers: getHeaders(),

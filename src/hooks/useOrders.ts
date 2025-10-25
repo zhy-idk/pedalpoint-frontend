@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { getCSRFToken } from '../utils/csrf';
 import { Order } from '../types/order';
+import { apiBaseUrl } from '../api/index';
 
 interface OrderItem {
   id: number;
@@ -25,15 +26,6 @@ interface UseOrdersReturn {
   refresh: () => Promise<void>;
   updateOrderStatus: (orderId: number, newStatus?: string, reason?: string, paymentStatus?: string) => Promise<boolean>;
 }
-
-const getApiBaseUrl = () => {
-  const envUrl = import.meta.env.VITE_API_BASE_URL;
-  if (envUrl) return envUrl;
-  
-  const currentHost = window.location.hostname;
-  const protocol = window.location.protocol;
-  return `${protocol}//${currentHost}:8000`;
-};
 
 const getHeaders = () => {
   const csrfToken = getCSRFToken();
@@ -64,7 +56,7 @@ export const useOrders = (): UseOrdersReturn => {
       setLoading(true);
       setError(null);
 
-      const response = await fetch(`${getApiBaseUrl()}/api/orders/`, {
+      const response = await fetch(`${apiBaseUrl}/api/orders/`, {
         method: 'GET',
         credentials: 'include',
         headers: getHeaders(),
@@ -98,7 +90,7 @@ export const useOrders = (): UseOrdersReturn => {
         body.payment_status = paymentStatus;
       }
 
-      const response = await fetch(`${getApiBaseUrl()}/api/orders/${orderId}/update-status/`, {
+      const response = await fetch(`${apiBaseUrl}/api/orders/${orderId}/update-status/`, {
         method: 'PATCH',
         credentials: 'include',
         headers: getHeaders(),

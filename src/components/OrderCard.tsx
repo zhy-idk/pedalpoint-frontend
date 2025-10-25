@@ -2,6 +2,7 @@ import { Link } from 'react-router-dom';
 import { useState } from 'react';
 import type { Order } from '../types/order';
 import PlaceholderImg from '../assets/placeholder_img.jpg';
+import { apiBaseUrl } from '../api/index';
 
 interface OrderCardProps {
   order: Order;
@@ -64,7 +65,7 @@ function OrderCard({ order }: OrderCardProps) {
     if (imageErrors[itemId]) {
       return PlaceholderImg;
     }
-    return imageUrl ? `http://127.0.0.1:8000${imageUrl}` : PlaceholderImg;
+    return imageUrl ? `${apiBaseUrl}${imageUrl}` : PlaceholderImg;
   };
 
   return (

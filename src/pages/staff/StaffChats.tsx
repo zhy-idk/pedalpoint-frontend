@@ -5,6 +5,8 @@ import SendSVG from "../../assets/send_24dp.svg?react";
 import SupportAgentSVG from "../../assets/support_agent_24dp.svg?react";
 import { useChatWebSocket } from "../../hooks/useChatWebSocket";
 import { useAuth } from "../../hooks/useAuth";
+import { apiBaseUrl } from "../../api/index";
+import PlaceholderProfile from "../../assets/placeholder_profile.png";
 
 interface ChatRoom {
   id: string;
@@ -30,7 +32,6 @@ function StaffChats() {
   // Fetch all active chat rooms from the backend
   const fetchChatRooms = useCallback(async () => {
     try {
-      const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       const response = await fetch(`${apiBaseUrl}/api/chat/rooms/`, {
         method: 'GET',
         credentials: 'include',
@@ -62,7 +63,11 @@ function StaffChats() {
             customerId: room.customer_id ?? null,
             lastMessage: room.last_message || '',
             timestamp: room.formatted_timestamp || room.timestamp || '',
-            avatar: room.customer_avatar || room.user_avatar || 'https://img.daisyui.com/images/profile/demo/yellingcat@192.webp',
+            avatar: room.customer_avatar || room.user_avatar 
+              ? (room.customer_avatar?.startsWith('/') || room.user_avatar?.startsWith('/') 
+                  ? `${apiBaseUrl}${room.customer_avatar || room.user_avatar}`
+                  : room.customer_avatar || room.user_avatar)
+              : PlaceholderProfile,
             unreadCount: room.unread_count ?? 0,
             isOnline: room.is_online ?? true,
             messageCount: room.message_count ?? 0,

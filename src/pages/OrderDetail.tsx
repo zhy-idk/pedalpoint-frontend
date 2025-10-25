@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useOrderDetail } from '../hooks/useOrderDetail';
 import BackIcon from '../assets/undo_24dp.svg?react';
 import PlaceholderImg from '../assets/placeholder_img.jpg';
-import api from '../api';
+import api, { apiBaseUrl } from '../api';
 
 function OrderDetail() {
   const { id } = useParams<{ id: string }>();
@@ -70,7 +70,7 @@ function OrderDetail() {
     if (imageErrors[itemId]) {
       return PlaceholderImg;
     }
-    return imageUrl ? `http://127.0.0.1:8000${imageUrl}` : PlaceholderImg;
+    return imageUrl ? `${apiBaseUrl}${imageUrl}` : PlaceholderImg;
   };
 
   const handleOpenCancelModal = () => {

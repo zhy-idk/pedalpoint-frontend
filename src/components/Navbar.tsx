@@ -3,6 +3,7 @@ import Menu from "./Menu";
 import Searchbar from "./Searchbar";
 import ProfileDropdown from "./ProfileDropdown";
 import CartIcon from "../assets/shopping_cart_24dp.svg?react";
+import PedalPointLogo from "../assets/pedalpoint_logo.png";
 import { useTheme } from "../hooks/useTheme";
 import { useCart } from "../providers/CartProvider";
 
@@ -40,7 +41,10 @@ function NavBar() {
 
       {/* Logo and Title */}
       <div className="flex items-center justify-center flex-1 ml-12  md:flex-none md:m-0">
-        <Link to="/" className="text-xl font-medium mx-2 rounded-sm md:flex-none">PedalPoint</Link>
+        <Link to="/" className="flex items-center gap-2 mx-2 rounded-sm md:flex-none">
+          <img src={PedalPointLogo} alt="PedalPoint" className="h-8 w-auto" />
+          <span className="text-xl font-medium hidden xs:inline">PedalPoint</span>
+        </Link>
       </div>
 
       {/* Searchbar - Hidden on mobile, shown on desktop */}

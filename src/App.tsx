@@ -20,6 +20,8 @@ import AccountSettings from './pages/AccountSettings'
 import PaymentSuccess from './pages/PaymentSuccess'
 import PaymentCancel from './pages/PaymentCancel'
 import PrivacyPolicy from './pages/PrivacyPolicy'
+import CookiePolicy from './pages/CookiePolicy'
+import TermsOfUse from './pages/TermsOfUse'
 import Error from './pages/Error'
 import Footer from './components/Footer';
 import ScrollToTopButton from "./components/ScrollToTopButton";
@@ -30,7 +32,7 @@ import { Routes, Route } from "react-router-dom";
 
 // Staff components
 import ProtectedStaffRoute from './components/ProtectedStaffRoute';
-import ProtectedSuperuserRoute from './components/ProtectedSuperuserRoute';
+import ProtectedModuleRoute from './components/ProtectedModuleRoute';
 import StaffLayout from './components/staff/StaffLayout';
 import StaffDashboard from './pages/staff/StaffDashboard';
 import StaffPOS from './pages/staff/StaffPOS';
@@ -55,23 +57,57 @@ function App() {
           </ProtectedStaffRoute>
         }>
           <Route index element={<StaffDashboard />} />
-          <Route path="sales" element={<StaffSales />} />
-          <Route path="pos" element={
-            <POSProvider>
-              <StaffPOS />
-            </POSProvider>
+          <Route path="sales" element={
+            <ProtectedModuleRoute module="sales">
+              <StaffSales />
+            </ProtectedModuleRoute>
           } />
-          <Route path="chats" element={<StaffChats />} />
-          <Route path="orders" element={<StaffOrders />} />
-          <Route path="listings" element={<StaffListings />} />
-          <Route path="inventory" element={<StaffInventory />} />
-          <Route path="suppliers" element={<StaffSuppliers />} />
-          <Route path="reservations" element={<StaffReservations />} />
-          <Route path="queueing" element={<StaffQueueing />} />
+          <Route path="pos" element={
+            <ProtectedModuleRoute module="pos">
+              <POSProvider>
+                <StaffPOS />
+              </POSProvider>
+            </ProtectedModuleRoute>
+          } />
+          <Route path="chats" element={
+            <ProtectedModuleRoute module="chats">
+              <StaffChats />
+            </ProtectedModuleRoute>
+          } />
+          <Route path="orders" element={
+            <ProtectedModuleRoute module="orders">
+              <StaffOrders />
+            </ProtectedModuleRoute>
+          } />
+          <Route path="listings" element={
+            <ProtectedModuleRoute module="listings">
+              <StaffListings />
+            </ProtectedModuleRoute>
+          } />
+          <Route path="inventory" element={
+            <ProtectedModuleRoute module="inventory">
+              <StaffInventory />
+            </ProtectedModuleRoute>
+          } />
+          <Route path="suppliers" element={
+            <ProtectedModuleRoute module="suppliers">
+              <StaffSuppliers />
+            </ProtectedModuleRoute>
+          } />
+          <Route path="reservations" element={
+            <ProtectedModuleRoute module="reservations">
+              <StaffReservations />
+            </ProtectedModuleRoute>
+          } />
+          <Route path="queueing" element={
+            <ProtectedModuleRoute module="queueing">
+              <StaffQueueing />
+            </ProtectedModuleRoute>
+          } />
           <Route path="users" element={
-            <ProtectedSuperuserRoute>
+            <ProtectedModuleRoute module="users">
               <StaffUserManagement />
-            </ProtectedSuperuserRoute>
+            </ProtectedModuleRoute>
           } />
         </Route>
 
@@ -94,6 +130,8 @@ function App() {
                 <Route path="about/" element={<About />} />
                 <Route path="contact/" element={<Contact />} />
                 <Route path="privacy-policy/" element={<PrivacyPolicy />} />
+                <Route path="cookie-policy/" element={<CookiePolicy />} />
+                <Route path="terms-of-use/" element={<TermsOfUse />} />
                 <Route path="profile/" element={<Profile />} />
                 <Route path="account-settings/" element={<AccountSettings />} />
                 <Route path="orders/" element={<Purchases />} />

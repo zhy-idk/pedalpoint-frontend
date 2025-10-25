@@ -6,6 +6,10 @@ export interface Category {
   name: string;
   slug: string;
   description?: string;
+  parent: number | null;
+  is_component: boolean;
+  component_type: string | null;
+  subcategories: Category[];
 }
 
 interface UseCategoriesReturn {

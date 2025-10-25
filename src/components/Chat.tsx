@@ -6,6 +6,8 @@ import SendIcon from "../assets/send_24dp.svg?react";
 import CloseIcon from "../assets/close_24dp.svg?react";
 import { useChatWebSocket } from "../hooks/useChatWebSocket";
 import { useAuth } from "../hooks/useAuth";
+import { apiBaseUrl } from "../api";
+import PlaceholderProfile from "../assets/placeholder_profile.png";
 
 const ai = new GoogleGenAI({ apiKey: import.meta.env.VITE_GEMINI_API_KEY });
 
@@ -302,20 +304,37 @@ Keep responses concise and easy to read. Use line breaks between sections for be
                         {activeTab === 'ai_assistant' ? (
                           isMyMessage ? (
                             <img
-                              alt="Avatar"
-                              src="https://img.daisyui.com/images/profile/demo/anakeen@192.webp"
+                              alt="User Avatar"
+                              src={
+                                user?.primaryUserInfo?.image
+                                  ? `${apiBaseUrl}${user.primaryUserInfo.image}`
+                                  : PlaceholderProfile
+                              }
                               className="w-full h-full object-cover"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = PlaceholderProfile;
+                              }}
                             />
                           ) : (
                             <AgentIcon className="w-5 h-5 sm:w-7 sm:h-7" />
                           )
                         ) : isMyMessage ? (
                           <img
-                            alt="Avatar"
-                            src="https://img.daisyui.com/images/profile/demo/anakeen@192.webp"
+                            alt="User Avatar"
+                            src={
+                              user?.primaryUserInfo?.image
+                                ? `${apiBaseUrl}${user.primaryUserInfo.image}`
+                                : PlaceholderProfile
+                            }
                             className="w-full h-full object-cover"
+                            onError={(e) => {
+                              const target = e.target as HTMLImageElement;
+                              target.src = PlaceholderProfile;
+                            }}
                           />
                         ) : (
+                          // Staff messages always show support agent icon
                           <AgentIcon className="w-5 h-5 sm:w-7 sm:h-7" />
                         )}
                       </div>

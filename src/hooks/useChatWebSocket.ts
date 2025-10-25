@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { apiBaseUrl } from '../api/index';
 
 export interface ChatMessage {
   id: number;
@@ -44,9 +45,6 @@ export const useChatWebSocket = (roomId: string, isStaffInterface: boolean = fal
   useEffect(() => {
     isStaffInterfaceRef.current = isStaffInterface;
   }, [isStaffInterface]);
-
-  // Get API base URL
-  const apiBaseUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
   const connect = useCallback(() => {
     // Don't connect if roomId is empty or invalid (including 'invalid' placeholder)
@@ -153,9 +151,21 @@ export const useChatWebSocket = (roomId: string, isStaffInterface: boolean = fal
       ws.onclose = (event) => {
         console.log('WebSocket closed:', event.code, event.reason);
         setIsConnected(false);
+        
+        // Provide user-friendly error messages
+        if (event.code === 4001) {
+          setConnectionError('Authentication required. Please log in.');
+          console.error('WebSocket rejected: User not authenticated');
+        } else if (event.code === 4000) {
+          setConnectionError('Invalid room ID');
+          console.error('WebSocket rejected: Invalid room ID');
+        } else if (event.code === 1006) {
+          setConnectionError('Cannot connect to server. Is the backend running?');
+          console.error('WebSocket connection failed - backend may not be running');
+        }
 
         // Auto-reconnect after 3 seconds if not intentionally closed
-        if (event.code !== 1000) {
+        if (event.code !== 1000 && event.code !== 4001 && event.code !== 4000) {
           setTimeout(() => {
             console.log('Attempting to reconnect...');
             // Reconnect only for the same roomId

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import BackIcon from '../assets/undo_24dp.svg?react';
-import api from '../api/index';
+import api, { apiBaseUrl } from '../api/index';
 
 
 function AccountSettings() {
@@ -424,7 +424,7 @@ function AccountSettings() {
                             {totpSetupData.meta.totp_svg_url && (
                               <div className="flex justify-center p-4 bg-white rounded-lg">
                                 <img 
-                                  src={`http://127.0.0.1:8000${totpSetupData.meta.totp_svg_url}`}
+                                  src={`${apiBaseUrl}${totpSetupData.meta.totp_svg_url}`}
                                   alt="TOTP QR Code"
                                   className="w-48 h-48 sm:w-64 sm:h-64"
                                 />

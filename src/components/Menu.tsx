@@ -33,7 +33,7 @@ function Menu() {
       <ul className="z-20 bg-base-200">
         {category.subcategories.map((subcat) => (
           <li key={subcat.id}>
-            <Link to={`/category/${subcat.slug}`}>{subcat.name}</Link>
+            <Link to={`/${subcat.slug}`}>{subcat.name}</Link>
             {subcat.subcategories && subcat.subcategories.length > 0 && renderSubcategories(subcat)}
           </li>
         ))}
@@ -54,36 +54,36 @@ function Menu() {
                   {category.subcategories && category.subcategories.length > 0 ? (
                     <details>
                       <summary>
-                        <Link to={`/category/${category.slug}`} onClick={(e) => e.stopPropagation()}>
+                        <Link to={`/${category.slug}`} onClick={(e) => e.stopPropagation()}>
                           {category.name}
                         </Link>
                       </summary>
                       {renderSubcategories(category)}
                     </details>
                   ) : (
-                    <Link to={`/category/${category.slug}`}>{category.name}</Link>
+                    <Link to={`/${category.slug}`}>{category.name}</Link>
                   )}
                 </li>
               ))
             ) : (
               <>
-                <li><Link to="/category/bikes">Bikes</Link></li>
+                <li><Link to="/bikes">Bikes</Link></li>
                 <li>
                   <details>
                     <summary>Components</summary>
                     <ul className="z-20 bg-base-200">
-                      <li><Link to="/category/frames">Frames</Link></li>
-                      <li><Link to="/category/wheels">Wheels</Link></li>
-                      <li><Link to="/category/drivetrain">Drivetrain</Link></li>
-                      <li><Link to="/category/brakes">Brakes</Link></li>
-                      <li><Link to="/category/handlebars">Handlebars</Link></li>
-                      <li><Link to="/category/saddles">Saddles</Link></li>
-                      <li><Link to="/category/pedals">Pedals</Link></li>
-                      <li><Link to="/category/accessories">Accessories</Link></li>
+                      <li><Link to="/frames">Frames</Link></li>
+                      <li><Link to="/wheels">Wheels</Link></li>
+                      <li><Link to="/drivetrain">Drivetrain</Link></li>
+                      <li><Link to="/brakes">Brakes</Link></li>
+                      <li><Link to="/handlebars">Handlebars</Link></li>
+                      <li><Link to="/saddles">Saddles</Link></li>
+                      <li><Link to="/pedals">Pedals</Link></li>
+                      <li><Link to="/accessories">Accessories</Link></li>
                     </ul>
                   </details>
                 </li>
-                <li><Link to="/category/miscellaneous">Miscellaneous</Link></li>
+                <li><Link to="/miscellaneous">Miscellaneous</Link></li>
               </>
             )}
           </ul>

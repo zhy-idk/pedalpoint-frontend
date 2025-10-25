@@ -1,4 +1,4 @@
-import { useParams } from "react-router-dom";
+import { useParams, Link } from "react-router-dom";
 import ItemCard from "../components/ItemCard";
 import ItemCardSkeleton from "../components/ItemCardSkeleton";
 import Breadcrumbs from "../components/Breadcrumbs";
@@ -57,16 +57,12 @@ function Category() {
 
   // Get category display name
   const getCategoryDisplayName = (slug: string) => {
-    switch (slug) {
-      case "bikes":
-        return "Bikes";
-      case "components":
-        return "Components";
-      case "miscellaneous":
-        return "Miscellaneous";
-      default:
-        return "Category";
-    }
+    // Capitalize first letter of slug
+    const formatted = slug
+      .split('-')
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ');
+    return formatted || "Category";
   };
 
   // Show loading skeletons while fetching data
@@ -122,12 +118,25 @@ function Category() {
 
       {transformedProducts.length === 0 ? (
         <div className="py-8 text-center">
-          <p className="text-lg text-gray-600">
-            No products found in this category.
+          <div className="text-6xl mb-4">🚲</div>
+          <p className="text-lg text-base-content/70 mb-2">
+            No products found in this category yet.
           </p>
+          <p className="text-sm text-base-content/50">
+            We're working on adding more products. Check back soon!
+          </p>
+          <Link 
+            to="/" 
+            className="btn btn-primary mt-4"
+          >
+            Browse All Products
+          </Link>
         </div>
       ) : (
         <div className="w-full">
+          <div className="mb-4 text-base-content/70">
+            Showing {transformedProducts.length} product{transformedProducts.length !== 1 ? 's' : ''}
+          </div>
           <div className="xs:grid-cols-3 grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
             {transformedProducts.map((product: Product, index: number) => (
               <ItemCard key={product.id || index} product={product} />
