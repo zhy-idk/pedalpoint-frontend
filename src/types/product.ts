@@ -4,6 +4,7 @@ export interface CompatibilityGroup {
   name: string;
   slug: string;
   description?: string;
+  attributes?: CompatibilityAttribute[];
 }
 
 export interface CompatibilityAttribute {
@@ -12,6 +13,7 @@ export interface CompatibilityAttribute {
   group: CompatibilityGroup;
   attribute_type: 'text' | 'number' | 'boolean' | 'choice';
   is_required: boolean;
+  values?: CompatibilityAttributeValue[];
 }
 
 export interface CompatibilityAttributeValue {
@@ -53,7 +55,7 @@ export interface Product {
     stock: number;
     available: boolean;
     variant_attribute: string;
-    product_images: {
+    product_images?: {
       image: string;
       alt_text: string;
     }[];
@@ -102,4 +104,79 @@ export interface ProductContextType {
 
 export interface ProductProviderProps {
   children: React.ReactNode;
+}
+
+// Bike Builder Types
+export interface BikeComponent {
+  id: number;
+  name: string;
+  price: number;
+  category: string;
+  brand?: string;
+  image?: string;
+  compatibility?: CompatibilityAttributeValue[];
+}
+
+export interface BikeConfiguration {
+  frame?: BikeComponent;
+  fork?: BikeComponent;
+  wheels?: BikeComponent;
+  drivetrain?: BikeComponent;
+  brakes?: BikeComponent;
+  handlebars?: BikeComponent;
+  saddle?: BikeComponent;
+  pedals?: BikeComponent;
+  accessories?: BikeComponent[];
+  selectedVariants?: Record<string, any>;
+}
+
+export interface ProductListing {
+  id: number;
+  name: string;
+  price: string;
+  stock: number;
+  description?: string;
+  available?: boolean;
+  brand: {
+    id: number;
+    name: string;
+    slug: string;
+  };
+  category: {
+    id: number;
+    name: string;
+    slug: string;
+  };
+  image: string | null;
+  images?: Array<{
+    image: string;
+    alt_text: string;
+  }>;
+  slug: string;
+  reviews?: Array<{
+    review: string;
+    star: number;
+    date: string;
+    user: {
+      username: string;
+    };
+  }>;
+  compatibility_attributes?: CompatibilityAttributeValue[];
+  products: Array<{
+    id: number;
+    name: string;
+    price: number;
+    stock: number;
+    sku: string | null;
+    variant_attribute: string;
+    available: boolean;
+    images?: Array<{
+      image: string;
+      alt_text: string;
+    }>;
+    product_images?: Array<{
+      image: string;
+      alt_text: string;
+    }>;
+  }>;
 }

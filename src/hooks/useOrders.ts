@@ -1,23 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from './useAuth';
 import { getCSRFToken } from '../utils/csrf';
-import { Order } from '../types/order';
+import type { Order } from '../types/order';
 import { apiBaseUrl } from '../api/index';
-
-interface OrderItem {
-  id: number;
-  product: {
-    id: number;
-    name: string;
-    price: number | string;
-    variant_attribute: string;
-    images?: Array<{
-      image: string;
-      alt_text?: string;
-    }>;
-  };
-  quantity: number;
-}
 
 interface UseOrdersReturn {
   orders: Order[];

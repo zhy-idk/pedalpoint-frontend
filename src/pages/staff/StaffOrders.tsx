@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "../../hooks/useAuth";
 import { useOrders } from "../../hooks/useOrders";
-import { Order } from "../../types/order";
+import type { Order } from "../../types/order";
 import { 
   Eye, 
   AlertCircle,

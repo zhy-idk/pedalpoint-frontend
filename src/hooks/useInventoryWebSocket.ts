@@ -83,7 +83,7 @@ export const useInventoryWebSocket = (): UseInventoryWebSocketReturn => {
                   if (Array.isArray(data.data)) {
                     setInventory(prev => {
                       const updated = [...prev];
-                      data.data.forEach((updatedItem: InventoryItem) => {
+                      (Array.isArray(data.data) ? data.data : [data.data]).forEach((updatedItem: InventoryItem) => {
                         const index = updated.findIndex(item => item.id === updatedItem.id);
                         if (index !== -1) {
                           updated[index] = updatedItem;
@@ -99,13 +99,14 @@ export const useInventoryWebSocket = (): UseInventoryWebSocketReturn => {
                   // Handle single item update
                   if (!Array.isArray(data.data)) {
                     setInventory(prev => {
-                      const index = prev.findIndex(item => item.id === data.data.id);
+                      const itemData = data.data as InventoryItem;
+                      const index = prev.findIndex(item => item.id === itemData.id);
                       if (index !== -1) {
                         const updated = [...prev];
-                        updated[index] = data.data;
+                        updated[index] = itemData;
                         return updated;
                       } else {
-                        return [...prev, data.data];
+                        return [...prev, itemData];
                       }
                     });
                   }

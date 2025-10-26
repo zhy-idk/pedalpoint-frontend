@@ -34,6 +34,10 @@ export interface ProductListing {
   category: Category;
   description: string | null;
   image: string | null;
+  images?: Array<{
+    image: string;
+    alt_text: string;
+  }>;
   slug: string;
   available: boolean;
   brand: Brand;

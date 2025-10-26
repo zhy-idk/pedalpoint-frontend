@@ -68,7 +68,7 @@ export const cartReducer = (state: CartState, action: CartAction): CartState => 
 // Helper function to calculate totals
 const calculateTotals = (state: CartState): CartState => {
   const totalItems = state.items.reduce((sum, item) => sum + item.quantity, 0);
-  const totalPrice = state.items.reduce((sum, item) => sum + (parseFloat(item.product.price) * item.quantity), 0);
+  const totalPrice = state.items.reduce((sum, item) => sum + ((typeof item.product.price === 'number' ? item.product.price : parseFloat(item.product.price)) * item.quantity), 0);
   
   return {
     ...state,

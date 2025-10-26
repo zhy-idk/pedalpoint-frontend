@@ -99,12 +99,12 @@ function ListingFormModal({
         );
         
         // Set assigned products
-        setAssignedProducts(editingListing.products || []);
+        setAssignedProducts(editingListing.products as any || []);
         setSelectedProducts([]);
         
         // Set existing images
         setThumbnailPreview(editingListing.image || null);
-        setExistingImages(editingListing.images || []);
+        setExistingImages(editingListing.images ? editingListing.images : (editingListing.image ? [{ image: editingListing.image, alt_text: '' }] : []));
         setThumbnailFile(null);
         setProductImages([]);
         setProductImagePreviews([]);

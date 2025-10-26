@@ -100,7 +100,7 @@ function CartCard({ item }: CartCardProps) {
             </div>
             
             <p className="text-xs text-base-content/60">
-              Total: ${(parseFloat(item.product.price) * item.quantity).toFixed(2)}
+              Total: ${((typeof item.product.price === 'number' ? item.product.price : parseFloat(item.product.price)) * item.quantity).toFixed(2)}
             </p>
           </div>
 

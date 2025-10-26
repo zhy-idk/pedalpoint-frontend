@@ -225,10 +225,10 @@ function OrderDetail() {
                             </div>
                           </Link>
                          </td>
-                        <td>₱{parseFloat(item.product.price).toFixed(2)}</td>
+                        <td>₱{(typeof item.product.price === 'number' ? item.product.price : parseFloat(item.product.price)).toFixed(2)}</td>
                         <td>{item.quantity}</td>
                         <td className="font-medium">
-                          ₱{(parseFloat(item.product.price) * item.quantity).toFixed(2)}
+                          ₱{((typeof item.product.price === 'number' ? item.product.price : parseFloat(item.product.price)) * item.quantity).toFixed(2)}
                         </td>
                       </tr>
                     ))}

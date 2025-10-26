@@ -20,6 +20,8 @@ export const useBikeBuilder = () => {
         if (selectedVariant) {
           bikeItems.push({
             id: `${component.category}-${component.id}`,
+            component_type: component.category,
+            product_id: component.id,
             name: component.name,
             price: component.price,
             image: component.image,

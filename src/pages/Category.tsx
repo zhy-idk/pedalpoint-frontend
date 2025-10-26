@@ -3,7 +3,7 @@ import ItemCard from "../components/ItemCard";
 import ItemCardSkeleton from "../components/ItemCardSkeleton";
 import Breadcrumbs from "../components/Breadcrumbs";
 import { useProductsByCategory } from "../hooks/useProducts";
-import type { ProductListing, Product } from "../types/product";
+import type { Product, ProductListing } from "../types/product";
 import PlaceholderIMG from "../assets/placeholder_img.jpg";
 
 function Category() {
@@ -42,10 +42,10 @@ function Category() {
           id: variant.id,
           name: variant.name,
           sku: variant.sku,
-          price: variant.price ? parseFloat(variant.price) : 0,
+          price: variant.price ? (typeof variant.price === 'number' ? variant.price : parseFloat(variant.price)) : 0,
           stock: variant.stock || 0,
           available: variant.available,
-          variant_images: variant.product_images,
+          variant_images: variant.product_images || variant.images || [],
         })),
         reviews: listing.reviews,
         compatibility: listing.compatibility_attributes,

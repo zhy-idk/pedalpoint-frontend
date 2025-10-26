@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import ItemCard from "../components/ItemCard";
 import ItemCardSkeleton from "../components/ItemCardSkeleton";
 import { Search, X, ArrowLeft } from "lucide-react";
-import type { ProductListing, Product } from "../types/product";
+import type { Product, ProductListing } from "../types/product";
 import PlaceholderIMG from "../assets/placeholder_img.jpg";
 import { apiBaseUrl } from "../api/index";
 
@@ -51,7 +51,7 @@ function SearchResult() {
 
         // Transform to Product format
         const transformedProducts: Product[] = filteredProducts.map(
-          (listing) => {
+          (listing): any => {
             let defaultImage = PlaceholderIMG;
             if (listing.image && listing.image.trim() !== "") {
               // Check if this looks like a valid API image path
@@ -67,27 +67,31 @@ function SearchResult() {
               id: listing.id,
               name: listing.name,
               price: listing.price ? parseFloat(listing.price) : 0,
-              description: listing.description,
+              description: listing.description || '',
               image: defaultImage,
               slug: listing.slug,
-              available: listing.available,
+              available: listing.available || true,
               brand: listing.brand,
               category: listing.category,
-              images: listing.images,
+              images: listing.images || [],
+              products: listing.products.map((v) => ({
+                ...v,
+                product_images: v.product_images || v.images || []
+              })),
               variants: listing.products.map((variant) => ({
                 id: variant.id,
                 name: variant.name,
                 sku: variant.sku,
-                price: variant.price ? parseFloat(variant.price) : 0,
+                price: variant.price ? (typeof variant.price === 'number' ? variant.price : parseFloat(variant.price)) : 0,
                 stock: variant.stock || 0,
                 available: variant.available,
-                variant_images: variant.product_images,
+                variant_images: variant.product_images || variant.images || [],
               })),
-              reviews: listing.reviews,
-              compatibility: listing.compatibility_attributes,
+              reviews: listing.reviews || [],
+              compatibility: listing.compatibility_attributes || [],
             };
           },
-        ).filter((product: Product) => {
+        ).filter((product: any) => {
           // Filter out products with missing essential data
           return product.id && product.name && product.slug;
         });

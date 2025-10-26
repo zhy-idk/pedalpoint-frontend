@@ -165,19 +165,9 @@ function StaffUserManagement() {
       newUser.lastName &&
       newUser.password
     ) {
-      const newId = Math.max(...users.map((u) => u.id)) + 1;
-      const user: User = {
-        id: newId,
-        email: newUser.email,
-        firstName: newUser.firstName,
-        lastName: newUser.lastName,
-        isStaff: newUser.isStaff,
-        isActive: newUser.isActive,
-        dateJoined: new Date().toISOString().split("T")[0],
-        lastLogin: null,
-      };
-
-      setUsers([...users, user]);
+      // TODO: Replace with actual API call to create user
+      // This is mock data - API should handle user creation
+      refresh();
       setShowCreateModal(false);
       const dialog = document.getElementById(
         "create_user_modal",
@@ -189,11 +179,9 @@ function StaffUserManagement() {
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (selectedUser) {
-      setUsers(
-        users.map((user) =>
-          user.id === selectedUser.id ? { ...selectedUser } : user,
-        ),
-      );
+      // TODO: Replace with actual API call to update user
+      // This is mock data - API should handle user updates
+      refresh();
       const dialog = document.getElementById(
         "edit_user_modal",
       ) as HTMLDialogElement;
@@ -561,11 +549,11 @@ function StaffUserManagement() {
                     type="text"
                     placeholder="First Name"
                     className="input input-bordered"
-                    value={selectedUser.firstName}
+                    value={selectedUser.first_name}
                     onChange={(e) =>
                       setSelectedUser({
                         ...selectedUser,
-                        firstName: e.target.value,
+                        first_name: e.target.value,
                       })
                     }
                     required
@@ -579,11 +567,11 @@ function StaffUserManagement() {
                     type="text"
                     placeholder="Last Name"
                     className="input input-bordered"
-                    value={selectedUser.lastName}
+                    value={selectedUser.last_name}
                     onChange={(e) =>
                       setSelectedUser({
                         ...selectedUser,
-                        lastName: e.target.value,
+                        last_name: e.target.value,
                       })
                     }
                     required
@@ -613,11 +601,11 @@ function StaffUserManagement() {
                   <input
                     type="checkbox"
                     className="checkbox checkbox-primary"
-                    checked={selectedUser.isStaff}
+                    checked={selectedUser.is_staff}
                     onChange={(e) =>
                       setSelectedUser({
                         ...selectedUser,
-                        isStaff: e.target.checked,
+                        is_staff: e.target.checked,
                       })
                     }
                   />
@@ -630,11 +618,11 @@ function StaffUserManagement() {
                   <input
                     type="checkbox"
                     className="checkbox checkbox-primary"
-                    checked={selectedUser.isActive}
+                    checked={selectedUser.is_active}
                     onChange={(e) =>
                       setSelectedUser({
                         ...selectedUser,
-                        isActive: e.target.checked,
+                        is_active: e.target.checked,
                       })
                     }
                   />

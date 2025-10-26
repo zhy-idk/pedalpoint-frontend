@@ -4,7 +4,7 @@ import { useCart } from "../providers/CartProvider";
 import { useAuth } from "../hooks/useAuth";
 import { getCSRFToken } from "../utils/csrf";
 import paymongoService from "../api/paymongo";
-import { fetchUserInfo, UserData } from "../api/auth";
+import { fetchUserInfo, type UserData } from "../api/auth";
 import {
   MapPin,
   Phone,
@@ -233,7 +233,7 @@ function Checkout() {
               }]
             : cart?.items.map(item => ({
                 name: `${item.product.name}${item.product.variant_attribute ? ` - ${item.product.variant_attribute}` : ''}`,
-                amount: Math.round(item.product.price * 100), // Convert to cents
+                amount: Math.round((typeof item.product.price === 'number' ? item.product.price : parseFloat(item.product.price)) * 100), // Convert to cents
                 quantity: item.quantity,
                 currency: "PHP"
               })) || [];

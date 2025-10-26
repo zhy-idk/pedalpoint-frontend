@@ -108,14 +108,14 @@ function OrderCard({ order }: OrderCardProps) {
                   </p>
                 )}
                 <p className="text-xs text-base-content/60 mt-1">
-                  Qty: {item.quantity} × ₱{parseFloat(item.product.price).toFixed(2)}
+                  Qty: {item.quantity} × ₱{(typeof item.product.price === 'number' ? item.product.price : parseFloat(item.product.price)).toFixed(2)}
                 </p>
               </div>
 
               {/* Item Subtotal */}
               <div className="text-right flex-shrink-0">
                 <p className="text-sm font-medium">
-                  ₱{(parseFloat(item.product.price) * item.quantity).toFixed(2)}
+                  ₱{((typeof item.product.price === 'number' ? item.product.price : parseFloat(item.product.price)) * item.quantity).toFixed(2)}
                 </p>
               </div>
             </div>

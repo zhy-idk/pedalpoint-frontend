@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import api from '../api/index';
-import { Order } from '../types/order';
+import type { Order } from '../types/order';
 
 export const useOrderDetail = (orderId: string | undefined) => {
   const [order, setOrder] = useState<Order | null>(null);

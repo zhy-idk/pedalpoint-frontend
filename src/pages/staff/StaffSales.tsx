@@ -323,9 +323,7 @@ function StaffSales() {
     const totalRevenue = sales
       .filter(sale => sale.status === 'completed')
       .reduce((sum, sale) => sum + sale.totalAmount, 0);
-    const totalRefunded = sales
-      .filter(sale => sale.status === 'refunded')
-      .reduce((sum, sale) => sum + sale.totalAmount, 0);
+    const totalRefunded = 0; // Refunded sales tracking disabled
     const netRevenue = totalRevenue - totalRefunded;
     const averageOrderValue = totalSales > 0 ? totalRevenue / totalSales : 0;
 
@@ -519,7 +517,7 @@ function StaffSales() {
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  label={({ name, percent }: any) => `${name} ${((percent as number) * 100).toFixed(0)}%`}
                   outerRadius={80}
                   fill="#8884d8"
                   dataKey="value"

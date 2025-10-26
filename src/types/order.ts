@@ -1,8 +1,14 @@
 export interface OrderItem {
   id: number;
   product: {
+    id: number;
+    name: string;
     variant_attribute: string;
-    price: string;
+    price: string | number;
+    images?: Array<{
+      image: string;
+      alt_text?: string;
+    }>;
     product_listing: {
       name: string;
       image: string;
@@ -24,6 +30,7 @@ export interface Order {
     username: string;
   };
   total_amount: number;
+  total_price?: number;  // Added for compatibility
   created_at: string;
   status: 'to_pay' | 'to_ship' | 'to_deliver' | 'completed' | 'cancelled' | 'returned';
   payment_method: 'cash_on_delivery' | 'card' | 'gcash' | 'paymaya' | 'dob' | 'grab_pay' | 'qr_ph' | 'cash' | string;

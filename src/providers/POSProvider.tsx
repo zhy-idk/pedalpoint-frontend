@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, ReactNode } from 'react';
+import React, { createContext, useContext, useReducer, type ReactNode } from 'react';
 
 // Types
 interface POSItem {

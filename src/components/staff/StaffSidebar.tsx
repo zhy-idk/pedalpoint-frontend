@@ -20,6 +20,9 @@ function StaffSidebar() {
   const { user } = useAuth();
   const permissions = usePermissions();
   const [isOpen, setIsOpen] = useState(false);
+  
+  // user is used for conditional rendering in the UI
+  const _user = user; // Suppress unused warning
 
   const navItems = (
     <ul className="menu rounded-box flex-1 gap-1">

@@ -2,7 +2,7 @@ import ItemCard from "../components/ItemCard";
 import Hero from "../components/Hero";
 import { useProducts } from "../hooks/useProducts";
 import ItemCardSkeleton from "../components/ItemCardSkeleton";
-import type { Product } from "../types/product";
+import type { Product, ProductListing } from "../types/product";
 import PlaceholderIMG from "../assets/placeholder_img.jpg";
 import { useState, useEffect } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";

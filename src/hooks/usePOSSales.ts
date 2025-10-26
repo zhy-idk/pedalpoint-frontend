@@ -17,9 +17,13 @@ interface POSSaleData {
 interface POSSaleResponse {
   success: boolean;
   order_id: number;
+  sale_id?: number;  // Added for compatibility
   total_amount: number;
   message: string;
 }
+
+// Export the type for use in other files
+export type { POSSaleResponse };
 
 export const usePOSSales = () => {
   const [isLoading, setIsLoading] = useState(false);
