@@ -26,15 +26,32 @@ export const useCSRF = () => {
       });
 
       if (response.ok) {
-        // Check if token was set in cookie
-        const token = getCSRFToken();
-        if (token) {
-          console.log('CSRF token received successfully');
+        const data = await response.json();
+        
+        // Backend sends token in response body for cross-origin scenarios
+        if (data.csrfToken) {
+          // Store token in a meta tag or localStorage for cross-origin access
+          const meta = document.querySelector('meta[name="csrf-token"]') || document.createElement('meta');
+          meta.setAttribute('name', 'csrf-token');
+          meta.setAttribute('content', data.csrfToken);
+          if (!document.querySelector('meta[name="csrf-token"]')) {
+            document.head.appendChild(meta);
+          }
+          
+          console.log('CSRF token received successfully from response body');
           setIsReady(true);
           setError(null);
         } else {
-          console.warn('Response OK but no CSRF token in cookie');
-          setIsReady(true); // Still mark as ready, token might come later
+          // Fallback: Check if token was set in cookie
+          const token = getCSRFToken();
+          if (token) {
+            console.log('CSRF token received successfully from cookie');
+            setIsReady(true);
+            setError(null);
+          } else {
+            console.warn('Response OK but no CSRF token found');
+            setIsReady(true); // Still mark as ready, token might come later
+          }
         }
       } else {
         throw new Error(`Failed to get CSRF token: ${response.status}`);
