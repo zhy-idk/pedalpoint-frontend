@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { getCSRFToken } from '../utils/csrf';
+import { apiBaseUrl } from '../api/index';
 
 export const useCSRF = () => {
   const [isReady, setIsReady] = useState(false);
@@ -14,10 +15,10 @@ export const useCSRF = () => {
         return;
       }
 
-      // Fetch CSRF token from Django
-      const protocol = window.location.protocol;
-      const hostname = window.location.hostname;
-      const csrfUrl = `${protocol}//${hostname}:8000/api/csrf/`;
+      // Fetch CSRF token from Django using centralized API URL
+      const csrfUrl = `${apiBaseUrl}/api/csrf/`;
+      
+      console.log('Fetching CSRF token from:', csrfUrl);
       
       const response = await fetch(csrfUrl, {
         method: 'GET',
@@ -25,8 +26,16 @@ export const useCSRF = () => {
       });
 
       if (response.ok) {
-        setIsReady(true);
-        setError(null);
+        // Check if token was set in cookie
+        const token = getCSRFToken();
+        if (token) {
+          console.log('CSRF token received successfully');
+          setIsReady(true);
+          setError(null);
+        } else {
+          console.warn('Response OK but no CSRF token in cookie');
+          setIsReady(true); // Still mark as ready, token might come later
+        }
       } else {
         throw new Error(`Failed to get CSRF token: ${response.status}`);
       }
@@ -35,7 +44,7 @@ export const useCSRF = () => {
       setError(errorMessage);
       console.error('CSRF initialization error:', err);
     }
-  }, []);
+  }, [apiBaseUrl]);
 
   useEffect(() => {
     fetchCSRFToken();
