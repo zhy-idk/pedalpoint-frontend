@@ -23,9 +23,13 @@ api.interceptors.request.use((config) => {
   const token = getCSRFToken();
   if (token && token.trim() !== '') {
     config.headers["X-CSRFToken"] = token;
-    console.log('Sending CSRF token in header:', token.substring(0, 20) + '... (length:', token.length + ')');
+    console.log('[API] Sending CSRF token for', config.url);
+    console.log('[API] Token length:', token.length, 'First 30 chars:', token.substring(0, 30) + '...');
   } else {
-    console.warn('No CSRF token available for request to:', config.url);
+    // Only warn if not the csrf endpoint itself
+    if (!config.url?.includes('/csrf/')) {
+      console.warn('[API] No CSRF token available for request to:', config.url);
+    }
   }
   return config;
 });
