@@ -21,8 +21,11 @@ const api = axios.create({
 
 api.interceptors.request.use((config) => {
   const token = getCSRFToken();
-  if (token) {
+  if (token && token.trim() !== '') {
     config.headers["X-CSRFToken"] = token;
+    console.log('Sending CSRF token in header:', token.substring(0, 20) + '... (length:', token.length + ')');
+  } else {
+    console.warn('No CSRF token available for request to:', config.url);
   }
   return config;
 });

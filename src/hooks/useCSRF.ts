@@ -28,9 +28,11 @@ export const useCSRF = () => {
       if (response.ok) {
         const data = await response.json();
         
+        console.log('CSRF endpoint response:', data);
+        
         // Backend sends token in response body for cross-origin scenarios
-        if (data.csrfToken) {
-          // Store token in a meta tag or localStorage for cross-origin access
+        if (data.csrfToken && data.csrfToken.trim() !== '') {
+          // Store token in a meta tag for cross-origin access
           const meta = document.querySelector('meta[name="csrf-token"]') || document.createElement('meta');
           meta.setAttribute('name', 'csrf-token');
           meta.setAttribute('content', data.csrfToken);
@@ -38,7 +40,8 @@ export const useCSRF = () => {
             document.head.appendChild(meta);
           }
           
-          console.log('CSRF token received successfully from response body');
+          console.log('CSRF token stored in meta tag:', data.csrfToken.substring(0, 20) + '...');
+          console.log('Token length:', data.csrfToken.length);
           setIsReady(true);
           setError(null);
         } else {
