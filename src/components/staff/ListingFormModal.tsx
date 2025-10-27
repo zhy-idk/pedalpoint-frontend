@@ -895,32 +895,42 @@ function ListingFormModal({
                       </p>
                       
                       <div className="space-y-4 max-h-96 overflow-y-auto">
-                        {groups.map((group) => {
-                          const groupValues = valuesByGroup[group.id] || [];
-                          if (groupValues.length === 0) return null;
-
-                          return (
-                            <div key={group.id} className="space-y-2">
-                              <h5 className="font-semibold text-sm">{group.name}</h5>
-                              <div className="space-y-1 pl-4">
-                                {groupValues.map((value) => (
-                                  <label 
-                                    key={value.id}
-                                    className="label cursor-pointer justify-start gap-2 py-1"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={selectedCompatibilityAttributes.includes(value.id)}
-                                      onChange={() => handleCompatibilityAttributeToggle(value.id)}
-                                      className="checkbox checkbox-sm"
-                                    />
-                                    <span className="label-text text-sm">{value.display_name}</span>
-                                  </label>
-                                ))}
-                              </div>
+                        {groups.length === 0 ? (
+                          <div className="alert alert-warning">
+                            <div>
+                              <p className="font-semibold">No compatibility data available</p>
+                              <p className="text-sm">Run the bike builder data command to create compatibility attributes.</p>
+                              <code className="text-xs mt-2 block">python manage.py create_bike_builder_data</code>
                             </div>
-                          );
-                        })}
+                          </div>
+                        ) : (
+                          groups.map((group) => {
+                            const groupValues = valuesByGroup[group.id] || [];
+                            if (groupValues.length === 0) return null;
+
+                            return (
+                              <div key={group.id} className="space-y-2">
+                                <h5 className="font-semibold text-sm">{group.name}</h5>
+                                <div className="space-y-1 pl-4">
+                                  {groupValues.map((value) => (
+                                    <label 
+                                      key={value.id}
+                                      className="label cursor-pointer justify-start gap-2 py-1"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedCompatibilityAttributes.includes(value.id)}
+                                        onChange={() => handleCompatibilityAttributeToggle(value.id)}
+                                        className="checkbox checkbox-sm"
+                                      />
+                                      <span className="label-text text-sm">{value.display_name}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
                       </div>
                       
                       {selectedCompatibilityAttributes.length > 0 && (
@@ -942,32 +952,42 @@ function ListingFormModal({
                       </p>
                       
                       <div className="space-y-4 max-h-96 overflow-y-auto">
-                        {groups.map((group) => {
-                          const groupValues = valuesByGroup[group.id] || [];
-                          if (groupValues.length === 0) return null;
-
-                          return (
-                            <div key={group.id} className="space-y-2">
-                              <h5 className="font-semibold text-sm">{group.name}</h5>
-                              <div className="space-y-1 pl-4">
-                                {groupValues.map((value) => (
-                                  <label 
-                                    key={value.id}
-                                    className="label cursor-pointer justify-start gap-2 py-1"
-                                  >
-                                    <input
-                                      type="checkbox"
-                                      checked={selectedCompatibleWith.includes(value.id)}
-                                      onChange={() => handleCompatibleWithToggle(value.id)}
-                                      className="checkbox checkbox-sm checkbox-secondary"
-                                    />
-                                    <span className="label-text text-sm">{value.display_name}</span>
-                                  </label>
-                                ))}
-                              </div>
+                        {groups.length === 0 ? (
+                          <div className="alert alert-warning">
+                            <div>
+                              <p className="font-semibold">No compatibility data available</p>
+                              <p className="text-sm">Run the bike builder data command to create compatibility attributes.</p>
+                              <code className="text-xs mt-2 block">python manage.py create_bike_builder_data</code>
                             </div>
-                          );
-                        })}
+                          </div>
+                        ) : (
+                          groups.map((group) => {
+                            const groupValues = valuesByGroup[group.id] || [];
+                            if (groupValues.length === 0) return null;
+
+                            return (
+                              <div key={group.id} className="space-y-2">
+                                <h5 className="font-semibold text-sm">{group.name}</h5>
+                                <div className="space-y-1 pl-4">
+                                  {groupValues.map((value) => (
+                                    <label 
+                                      key={value.id}
+                                      className="label cursor-pointer justify-start gap-2 py-1"
+                                    >
+                                      <input
+                                        type="checkbox"
+                                        checked={selectedCompatibleWith.includes(value.id)}
+                                        onChange={() => handleCompatibleWithToggle(value.id)}
+                                        className="checkbox checkbox-sm checkbox-secondary"
+                                      />
+                                      <span className="label-text text-sm">{value.display_name}</span>
+                                    </label>
+                                  ))}
+                                </div>
+                              </div>
+                            );
+                          })
+                        )}
                       </div>
                       
                       {selectedCompatibleWith.length > 0 && (
