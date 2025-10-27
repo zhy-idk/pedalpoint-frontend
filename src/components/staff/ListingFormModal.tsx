@@ -860,8 +860,12 @@ function ListingFormModal({
                 <Info className="w-5 h-5" />
                 <div className="text-sm">
                   <p className="font-semibold mb-1">How Compatibility Works</p>
-                  <p className="mb-2"><strong>Product Attributes:</strong> What this product IS (e.g., "This frame is Carbon, Large")</p>
-                  <p><strong>Compatible With:</strong> What this product works WITH (e.g., "This wheel works with Disc Brake frames")</p>
+                  <p className="mb-2"><strong>Product Attributes:</strong> What this product IS (e.g., "This frame is Carbon, 27.5&quot;, Trail, Budget")</p>
+                  <p className="mb-2"><strong>Compatible With:</strong> What this product works WITH (e.g., "This wheel works with Disc brakes, 700c frames")</p>
+                  <p className="text-xs mt-2 opacity-80">
+                    <strong>Budget Tiers:</strong> Budget (₱15k-24k) | Mid-Range (₱25k-75k) | Premium (₱75k+)<br/>
+                    <strong>Usage Types:</strong> City/Commute | Trail/Mountain | Casual/Recreation
+                  </p>
                 </div>
               </div>
 
@@ -876,7 +880,7 @@ function ListingFormModal({
                     <div className="card-body">
                       <h4 className="card-title text-lg">Product Attributes</h4>
                       <p className="text-sm text-base-content/70 mb-4">
-                        What characteristics does this product have?
+                        What characteristics does this product have? Select usage type, budget tier, and physical specs.
                       </p>
                       
                       <div className="space-y-4 max-h-96 overflow-y-auto">
@@ -923,7 +927,7 @@ function ListingFormModal({
                     <div className="card-body">
                       <h4 className="card-title text-lg">Compatible With</h4>
                       <p className="text-sm text-base-content/70 mb-4">
-                        What other product characteristics is this compatible with?
+                        What other product characteristics is this compatible with? (e.g., frames specify compatible wheel sizes and brake types)
                       </p>
                       
                       <div className="space-y-4 max-h-96 overflow-y-auto">

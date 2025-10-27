@@ -108,9 +108,9 @@ const BUDGET_OPTIONS = [
   {
     id: 'budget',
     title: 'Budget',
-    description: 'Up to ₱25,000 - Great starter options',
+    description: '₱15,000 - ₱24,000 - Great starter options',
     icon: '💵',
-    range: '₱0 - ₱25,000',
+    range: '₱15,000 - ₱24,000',
   },
   {
     id: 'mid',
@@ -237,12 +237,32 @@ function Builder() {
     setIsLoadingRecommendations(true);
     
     try {
-      // Fetch all builder products
+      // Build components sequentially to ensure compatibility
       const categories = ['frame', 'wheels', 'drivetrain', 'brakes', 'handlebars', 'saddle'];
       const newConfig = { ...configuration };
       
       for (const category of categories) {
-        const response = await api.get<Product[]>(`/api/bike-builder/products/?builder_category=${category}`);
+        // Collect compatibility IDs from already selected components
+        const selectedCompatibilityIds: number[] = [];
+        Object.values(newConfig).forEach((value) => {
+          if (value && typeof value === 'object' && 'compatibility_attributes' in value) {
+            const product = value as Product;
+            product.compatibility_attributes?.forEach(attr => {
+              if (!selectedCompatibilityIds.includes(attr.id)) {
+                selectedCompatibilityIds.push(attr.id);
+              }
+            });
+          }
+        });
+
+        // Build query with compatibility filtering
+        const params = new URLSearchParams();
+        params.append('builder_category', category);
+        if (selectedCompatibilityIds.length > 0) {
+          params.append('compatibility_ids', selectedCompatibilityIds.join(','));
+        }
+
+        const response = await api.get<Product[]>(`/api/bike-builder/products/?${params.toString()}`);
         const products = response.data;
         
         // Filter by usage and budget from compatibility attributes
