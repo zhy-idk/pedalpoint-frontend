@@ -46,53 +46,70 @@ function Menu() {
     return category.slug === 'components' || category.name.toLowerCase() === 'components';
   };
 
+  // Separate Bikes from other categories
+  const bikesCategory = topLevelCategories.find(cat => cat.slug === 'bikes' || cat.name.toLowerCase() === 'bikes');
+  const otherCategories = topLevelCategories.filter(cat => cat.slug !== 'bikes' && cat.name.toLowerCase() !== 'bikes');
+
   return (
     <>
       <li><Link to="/">Home</Link></li>
       
-      {/* Main Categories - shown directly in menu */}
-      {topLevelCategories.length > 0 ? (
-        topLevelCategories.map((category) => (
-          <li key={category.id}>
-            {category.subcategories && category.subcategories.length > 0 ? (
-              <details>
-                <summary>
-                  {/* Components is dropdown-only, no direct link */}
-                  {isComponentsCategory(category) ? (
-                    category.name
-                  ) : (
-                    <Link to={`/${category.slug}`} onClick={(e) => e.stopPropagation()}>
-                      {category.name}
-                    </Link>
-                  )}
-                </summary>
-                {renderSubcategories(category)}
-              </details>
-            ) : (
-              <Link to={`/${category.slug}`}>{category.name}</Link>
-            )}
-          </li>
-        ))
+      {/* Bikes - standalone main category */}
+      {bikesCategory ? (
+        <li><Link to={`/${bikesCategory.slug}`}>Bikes</Link></li>
       ) : (
-        <>
-          {/* Fallback categories when API hasn't loaded */}
-          <li><Link to="/bikes">Bikes</Link></li>
-          <li>
-            <details>
-              <summary>Components</summary>
-              <ul className="z-20 bg-base-200">
-                <li><Link to="/frames">Frames</Link></li>
-                <li><Link to="/wheels">Wheels</Link></li>
-                <li><Link to="/drivetrain">Drivetrain</Link></li>
-                <li><Link to="/brakes">Brakes</Link></li>
-                <li><Link to="/handlebars">Handlebars</Link></li>
-                <li><Link to="/saddles">Saddles</Link></li>
-              </ul>
-            </details>
-          </li>
-          <li><Link to="/miscellaneous">Miscellaneous</Link></li>
-        </>
+        <li><Link to="/bikes">Bikes</Link></li>
       )}
+      
+      {/* Other Categories - Components, Miscellaneous, etc. */}
+      <li>
+        <details>
+          <summary>Other Categories</summary>
+          <ul className="z-10">
+            {otherCategories.length > 0 ? (
+              otherCategories.map((category) => (
+                <li key={category.id}>
+                  {category.subcategories && category.subcategories.length > 0 ? (
+                    <details>
+                      <summary>
+                        {/* Components is dropdown-only, no direct link */}
+                        {isComponentsCategory(category) ? (
+                          category.name
+                        ) : (
+                          <Link to={`/${category.slug}`} onClick={(e) => e.stopPropagation()}>
+                            {category.name}
+                          </Link>
+                        )}
+                      </summary>
+                      {renderSubcategories(category)}
+                    </details>
+                  ) : (
+                    <Link to={`/${category.slug}`}>{category.name}</Link>
+                  )}
+                </li>
+              ))
+            ) : (
+              <>
+                {/* Fallback when API hasn't loaded */}
+                <li>
+                  <details>
+                    <summary>Components</summary>
+                    <ul className="z-20 bg-base-200">
+                      <li><Link to="/frames">Frames</Link></li>
+                      <li><Link to="/wheels">Wheels</Link></li>
+                      <li><Link to="/drivetrain">Drivetrain</Link></li>
+                      <li><Link to="/brakes">Brakes</Link></li>
+                      <li><Link to="/handlebars">Handlebars</Link></li>
+                      <li><Link to="/saddles">Saddles</Link></li>
+                    </ul>
+                  </details>
+                </li>
+                <li><Link to="/miscellaneous">Miscellaneous</Link></li>
+              </>
+            )}
+          </ul>
+        </details>
+      </li>
       
       <li>
         <details>
