@@ -46,9 +46,12 @@ function Menu() {
     return category.slug === 'components' || category.name.toLowerCase() === 'components';
   };
 
-  // Get all component subcategories and other categories (excluding Bikes and Components parent)
+  // Separate main categories
+  const bikesCategory = topLevelCategories.find(cat => cat.slug === 'bikes' || cat.name.toLowerCase() === 'bikes');
   const componentsCategory = topLevelCategories.find(cat => isComponentsCategory(cat));
   const componentSubcategories = componentsCategory?.subcategories || [];
+  
+  // Other categories = everything except Bikes and Components
   const otherCategories = topLevelCategories.filter(cat => 
     cat.slug !== 'bikes' && 
     cat.name.toLowerCase() !== 'bikes' &&
@@ -59,27 +62,24 @@ function Menu() {
     <>
       <li><Link to="/">Home</Link></li>
       
-      {/* Other Categories - Component subcategories + Miscellaneous */}
+      {/* Bikes - direct link */}
+      {bikesCategory ? (
+        <li><Link to={`/${bikesCategory.slug}`}>Bikes</Link></li>
+      ) : (
+        <li><Link to="/bikes">Bikes</Link></li>
+      )}
+      
+      {/* Components - dropdown with subcategories */}
       <li>
         <details>
-          <summary>Other Categories</summary>
+          <summary>Components</summary>
           <ul className="z-10">
-            {componentSubcategories.length > 0 || otherCategories.length > 0 ? (
-              <>
-                {/* Component subcategories directly (Frames, Wheels, etc.) */}
-                {componentSubcategories.map((subcat) => (
-                  <li key={subcat.id}>
-                    <Link to={`/${subcat.slug}`}>{subcat.name}</Link>
-                  </li>
-                ))}
-                
-                {/* Other top-level categories (Miscellaneous, etc.) */}
-                {otherCategories.map((category) => (
-                  <li key={category.id}>
-                    <Link to={`/${category.slug}`}>{category.name}</Link>
-                  </li>
-                ))}
-              </>
+            {componentSubcategories.length > 0 ? (
+              componentSubcategories.map((subcat) => (
+                <li key={subcat.id}>
+                  <Link to={`/${subcat.slug}`}>{subcat.name}</Link>
+                </li>
+              ))
             ) : (
               <>
                 {/* Fallback when API hasn't loaded */}
@@ -89,12 +89,27 @@ function Menu() {
                 <li><Link to="/brakes">Brakes</Link></li>
                 <li><Link to="/handlebars">Handlebars</Link></li>
                 <li><Link to="/saddles">Saddles</Link></li>
-                <li><Link to="/miscellaneous">Miscellaneous</Link></li>
               </>
             )}
           </ul>
         </details>
       </li>
+      
+      {/* Other Categories - Miscellaneous and any new categories */}
+      {otherCategories.length > 0 && (
+        <li>
+          <details>
+            <summary>Other Categories</summary>
+            <ul className="z-10">
+              {otherCategories.map((category) => (
+                <li key={category.id}>
+                  <Link to={`/${category.slug}`}>{category.name}</Link>
+                </li>
+              ))}
+            </ul>
+          </details>
+        </li>
+      )}
       
       <li>
         <details>
