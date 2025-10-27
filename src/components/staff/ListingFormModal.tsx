@@ -880,6 +880,42 @@ function ListingFormModal({
                 </div>
               </div>
 
+              {/* Debug Info */}
+              <div className="alert alert-warning">
+                <div className="text-xs space-y-1">
+                  <p><strong>Debug Info:</strong></p>
+                  <p>Groups loaded: {groups.length}</p>
+                  <p>Values loaded: {compatibilityValues.length}</p>
+                  <p>Values by group: {Object.keys(valuesByGroup).length} groups</p>
+                  <p>Selected attributes: {selectedCompatibilityAttributes.length}</p>
+                  <p>Selected compatible with: {selectedCompatibleWith.length}</p>
+                  {groups.length > 0 && (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer font-semibold">Show Groups</summary>
+                      <div className="mt-2 pl-4">
+                        {groups.map(g => (
+                          <div key={g.id} className="mb-1">
+                            {g.name} (ID: {g.id}) - {valuesByGroup[g.id]?.length || 0} values
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
+                  {compatibilityValues.length > 0 && (
+                    <details className="mt-2">
+                      <summary className="cursor-pointer font-semibold">Show First 10 Values</summary>
+                      <div className="mt-2 pl-4">
+                        {compatibilityValues.slice(0, 10).map(v => (
+                          <div key={v.id} className="mb-1">
+                            {v.display_name} (ID: {v.id})  - Group: {v.attribute?.group?.name || 'N/A'}
+                          </div>
+                        ))}
+                      </div>
+                    </details>
+                  )}
+                </div>
+              </div>
+
               {compatibilityLoading ? (
                 <div className="flex justify-center py-8">
                   <div className="loading loading-spinner loading-lg"></div>
