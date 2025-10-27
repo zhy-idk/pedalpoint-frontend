@@ -265,6 +265,9 @@ function Builder() {
         const response = await api.get<Product[]>(`/api/bike-builder/products/?${params.toString()}`);
         const products = response.data;
         
+        console.log(`Category: ${category}, Total products fetched: ${products.length}`);
+        console.log(`Looking for usage: ${configuration.usage}, budget: ${configuration.budget}`);
+        
         // Filter by usage and budget from compatibility attributes
         const matchingProducts = products.filter(product => {
           const hasUsageMatch = product.compatibility_attributes?.some(
@@ -274,9 +277,15 @@ function Builder() {
             attr => attr.value === configuration.budget
           );
           
+          console.log(`Product: ${product.name}`);
+          console.log(`  Compatibility values:`, product.compatibility_attributes?.map(a => a.value));
+          console.log(`  Usage match: ${hasUsageMatch}, Budget match: ${hasBudgetMatch}`);
+          
           // Prefer products that match both, but fallback to budget match only
           return (hasUsageMatch && hasBudgetMatch) || (!hasUsageMatch && hasBudgetMatch);
         });
+        
+        console.log(`Matching products for ${category}: ${matchingProducts.length}`);
 
         // Select the highest priority product
         if (matchingProducts.length > 0) {
