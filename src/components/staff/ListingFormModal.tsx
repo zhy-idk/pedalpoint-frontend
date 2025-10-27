@@ -209,19 +209,25 @@ function ListingFormModal({
   };
 
   const handleCompatibilityAttributeToggle = (valueId: number) => {
-    setSelectedCompatibilityAttributes(prev => 
-      prev.includes(valueId)
+    console.log('Toggling compatibility attribute:', valueId);
+    setSelectedCompatibilityAttributes(prev => {
+      const newValue = prev.includes(valueId)
         ? prev.filter(id => id !== valueId)
-        : [...prev, valueId]
-    );
+        : [...prev, valueId];
+      console.log('New compatibility attributes:', newValue);
+      return newValue;
+    });
   };
 
   const handleCompatibleWithToggle = (valueId: number) => {
-    setSelectedCompatibleWith(prev => 
-      prev.includes(valueId)
+    console.log('Toggling compatible with:', valueId);
+    setSelectedCompatibleWith(prev => {
+      const newValue = prev.includes(valueId)
         ? prev.filter(id => id !== valueId)
-        : [...prev, valueId]
-    );
+        : [...prev, valueId];
+      console.log('New compatible with:', newValue);
+      return newValue;
+    });
   };
 
   // Image handling functions
@@ -375,8 +381,13 @@ function ListingFormModal({
         grouped[groupId].push(value);
       }
     });
+    console.log('Compatibility values loaded:', compatibilityValues.length);
+    console.log('Groups:', groups.length);
+    console.log('Values by group:', grouped);
+    console.log('Selected compatibility attributes:', selectedCompatibilityAttributes);
+    console.log('Selected compatible with:', selectedCompatibleWith);
     return grouped;
-  }, [compatibilityValues]);
+  }, [compatibilityValues, groups, selectedCompatibilityAttributes, selectedCompatibleWith]);
 
   if (!isOpen) return null;
 
