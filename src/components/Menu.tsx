@@ -41,54 +41,59 @@ function Menu() {
     );
   };
 
+  // Check if category is "Components" - it should only be a dropdown parent
+  const isComponentsCategory = (category: Category) => {
+    return category.slug === 'components' || category.name.toLowerCase() === 'components';
+  };
+
   return (
     <>
       <li><Link to="/">Home</Link></li>
-      <li>
-        <details>
-          <summary>Categories</summary>
-          <ul className="z-10">
-            {topLevelCategories.length > 0 ? (
-              topLevelCategories.map((category) => (
-                <li key={category.id}>
-                  {category.subcategories && category.subcategories.length > 0 ? (
-                    <details>
-                      <summary>
-                        <Link to={`/${category.slug}`} onClick={(e) => e.stopPropagation()}>
-                          {category.name}
-                        </Link>
-                      </summary>
-                      {renderSubcategories(category)}
-                    </details>
+      
+      {/* Main Categories - shown directly in menu */}
+      {topLevelCategories.length > 0 ? (
+        topLevelCategories.map((category) => (
+          <li key={category.id}>
+            {category.subcategories && category.subcategories.length > 0 ? (
+              <details>
+                <summary>
+                  {/* Components is dropdown-only, no direct link */}
+                  {isComponentsCategory(category) ? (
+                    category.name
                   ) : (
-                    <Link to={`/${category.slug}`}>{category.name}</Link>
+                    <Link to={`/${category.slug}`} onClick={(e) => e.stopPropagation()}>
+                      {category.name}
+                    </Link>
                   )}
-                </li>
-              ))
+                </summary>
+                {renderSubcategories(category)}
+              </details>
             ) : (
-              <>
-                <li><Link to="/bikes">Bikes</Link></li>
-                <li>
-                  <details>
-                    <summary>Components</summary>
-                    <ul className="z-20 bg-base-200">
-                      <li><Link to="/frames">Frames</Link></li>
-                      <li><Link to="/wheels">Wheels</Link></li>
-                      <li><Link to="/drivetrain">Drivetrain</Link></li>
-                      <li><Link to="/brakes">Brakes</Link></li>
-                      <li><Link to="/handlebars">Handlebars</Link></li>
-                      <li><Link to="/saddles">Saddles</Link></li>
-                      <li><Link to="/pedals">Pedals</Link></li>
-                      <li><Link to="/accessories">Accessories</Link></li>
-                    </ul>
-                  </details>
-                </li>
-                <li><Link to="/miscellaneous">Miscellaneous</Link></li>
-              </>
+              <Link to={`/${category.slug}`}>{category.name}</Link>
             )}
-          </ul>
-        </details>
-      </li>
+          </li>
+        ))
+      ) : (
+        <>
+          {/* Fallback categories when API hasn't loaded */}
+          <li><Link to="/bikes">Bikes</Link></li>
+          <li>
+            <details>
+              <summary>Components</summary>
+              <ul className="z-20 bg-base-200">
+                <li><Link to="/frames">Frames</Link></li>
+                <li><Link to="/wheels">Wheels</Link></li>
+                <li><Link to="/drivetrain">Drivetrain</Link></li>
+                <li><Link to="/brakes">Brakes</Link></li>
+                <li><Link to="/handlebars">Handlebars</Link></li>
+                <li><Link to="/saddles">Saddles</Link></li>
+              </ul>
+            </details>
+          </li>
+          <li><Link to="/miscellaneous">Miscellaneous</Link></li>
+        </>
+      )}
+      
       <li>
         <details>
           <summary>Services</summary>
