@@ -1,11 +1,20 @@
 import { useSearchParams, useNavigate } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import ItemCard from "../components/ItemCard";
 import ItemCardSkeleton from "../components/ItemCardSkeleton";
 import { Search, X, ArrowLeft } from "lucide-react";
 import type { Product, ProductListing } from "../types/product";
 import PlaceholderIMG from "../assets/placeholder_img.jpg";
 import { apiBaseUrl } from "../api/index";
+
+type SortOption = 
+  | 'price-low-high' 
+  | 'price-high-low' 
+  | 'name-a-z' 
+  | 'name-z-a' 
+  | 'newest' 
+  | 'oldest' 
+  | 'bestselling';
 
 function SearchResult() {
   const [searchParams] = useSearchParams();
@@ -14,6 +23,7 @@ function SearchResult() {
   const [searchResults, setSearchResults] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
 
   // Redirect to home if no query
   useEffect(() => {
@@ -108,6 +118,31 @@ function SearchResult() {
     fetchSearchResults();
   }, [query]);
 
+  // Sort products based on selected option
+  const sortedProducts = useMemo(() => {
+    const products = [...searchResults];
+    
+    switch (sortBy) {
+      case 'price-low-high':
+        return products.sort((a, b) => a.price - b.price);
+      case 'price-high-low':
+        return products.sort((a, b) => b.price - a.price);
+      case 'name-a-z':
+        return products.sort((a, b) => a.name.localeCompare(b.name));
+      case 'name-z-a':
+        return products.sort((a, b) => b.name.localeCompare(a.name));
+      case 'newest':
+        return products.sort((a, b) => (b.id || 0) - (a.id || 0));
+      case 'oldest':
+        return products.sort((a, b) => (a.id || 0) - (b.id || 0));
+      case 'bestselling':
+        // Sort by reviews count (best selling based on reviews)
+        return products.sort((a, b) => (b.reviews?.length || 0) - (a.reviews?.length || 0));
+      default:
+        return products;
+    }
+  }, [searchResults, sortBy]);
+
   // Don't render anything if redirecting
   if (!query.trim()) {
     return null;
@@ -137,6 +172,28 @@ function SearchResult() {
             Clear Search
           </button>
         </div>
+
+        {/* Sort Filter */}
+        {searchResults.length > 0 && (
+          <div className="mt-4">
+            <label className="label">
+              <span className="label-text font-semibold">Sort by:</span>
+            </label>
+            <select 
+              className="select select-bordered w-full max-w-xs"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortOption)}
+            >
+              <option value="newest">Newest</option>
+              <option value="oldest">Oldest</option>
+              <option value="price-low-high">Price: Low to High</option>
+              <option value="price-high-low">Price: High to Low</option>
+              <option value="name-a-z">Name: A-Z</option>
+              <option value="name-z-a">Name: Z-A</option>
+              <option value="bestselling">Best Selling</option>
+            </select>
+          </div>
+        )}
       </div>
 
       {/* Loading State */}
@@ -168,7 +225,7 @@ function SearchResult() {
       {/* Search Results */}
       {!isLoading && !error && (
         <>
-          {searchResults.length === 0 ? (
+          {sortedProducts.length === 0 ? (
             <div className="w-full py-8 text-center">
               <Search className="mx-auto mb-4 h-16 w-16 opacity-50" />
               <h2 className="mb-2 text-xl font-semibold">No products found</h2>
@@ -194,7 +251,7 @@ function SearchResult() {
           ) : (
             <div className="w-full">
               <div className="xs:grid-cols-3 grid grid-cols-2 gap-2 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
-                {searchResults.map((product: Product, index: number) => (
+                {sortedProducts.map((product: Product, index: number) => (
                   <ItemCard key={product.id || index} product={product} />
                 ))}
               </div>
