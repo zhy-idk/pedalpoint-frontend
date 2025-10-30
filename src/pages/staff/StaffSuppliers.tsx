@@ -221,25 +221,14 @@ function StaffSuppliers() {
             <div key={supplier.id} className="card bg-base-100 shadow-lg hover:shadow-xl transition-shadow">
               <div className="card-body">
                 <div className="flex items-start justify-between mb-4">
-                  <div className="flex items-center gap-3">
-                    <div className="avatar placeholder">
-                      <div className={`rounded-full w-12 ${
-                        supplier.has_low_stock ? 'bg-error text-error-content' : 'bg-primary text-primary-content'
-                      }`}>
-                        <span className="text-lg font-bold">
-                          {supplier.name.charAt(0).toUpperCase()}
-                        </span>
+                  <div className="flex-1">
+                    <h3 className="card-title text-lg">{supplier.name}</h3>
+                    {supplier.contact && (
+                      <div className="flex items-center gap-1 text-sm text-base-content/70">
+                        <Phone className="h-3 w-3" />
+                        {supplier.contact}
                       </div>
-                    </div>
-                    <div>
-                      <h3 className="card-title text-lg">{supplier.name}</h3>
-                      {supplier.contact && (
-                        <div className="flex items-center gap-1 text-sm text-base-content/70">
-                          <Phone className="h-3 w-3" />
-                          {supplier.contact}
-                        </div>
-                      )}
-                    </div>
+                    )}
                   </div>
                   {supplier.has_low_stock && (
                     <div className="badge badge-error gap-1">

@@ -573,7 +573,7 @@ function StaffDashboard() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="font-semibold">{formatPrice(Number(order.total_price))}</div>
+                      <div className="font-semibold">{formatPrice(Number(order.total_amount))}</div>
                       <div className="text-sm text-base-content/70">
                         {new Date(order.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
                       </div>

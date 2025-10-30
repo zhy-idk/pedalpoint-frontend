@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { apiBaseUrl } from '../api/index';
+import { getCSRFToken } from '../utils/csrf';
 
 export interface ServiceQueueItem {
   id: number;
@@ -24,22 +25,6 @@ interface UseServiceQueueReturn {
   addService: (queueDate: string, info: string, userId: number) => Promise<boolean>;
 }
 
-const getCSRFToken = () => {
-  const name = "csrftoken";
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== "") {
-    const cookies = document.cookie.split(";");
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i].trim();
-      if (cookie.substring(0, name.length + 1) === name + "=") {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-        break;
-      }
-    }
-  }
-  return cookieValue;
-};
-
 export const useServiceQueue = (): UseServiceQueueReturn => {
   const [queueItems, setQueueItems] = useState<ServiceQueueItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -50,12 +35,13 @@ export const useServiceQueue = (): UseServiceQueueReturn => {
       setLoading(true);
       setError(null);
 
+      const csrfToken = getCSRFToken();
       const response = await fetch(`${apiBaseUrl}/api/queue/`, {
         method: 'GET',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': getCSRFToken() || '',
+          'X-CSRFToken': csrfToken || '',
         },
       });
 
@@ -78,12 +64,13 @@ export const useServiceQueue = (): UseServiceQueueReturn => {
     try {
       setError(null);
 
+      const csrfToken = getCSRFToken();
       const response = await fetch(`${apiBaseUrl}/api/queue/${itemId}/update/`, {
         method: 'PUT',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': getCSRFToken() || '',
+          'X-CSRFToken': csrfToken || '',
         },
         body: JSON.stringify({ status }),
       });
@@ -108,12 +95,16 @@ export const useServiceQueue = (): UseServiceQueueReturn => {
     try {
       setError(null);
 
+      const csrfToken = getCSRFToken();
+      console.log('Adding service:', { queueDate, info, userId });
+      console.log('CSRF Token:', csrfToken ? `${csrfToken.substring(0, 20)}... (length: ${csrfToken.length})` : 'null');
+
       const response = await fetch(`${apiBaseUrl}/api/queue/add/`, {
         method: 'POST',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-          'X-CSRFToken': getCSRFToken() || '',
+          'X-CSRFToken': csrfToken || '',
         },
         body: JSON.stringify({ 
           queue_date: queueDate,
@@ -122,9 +113,18 @@ export const useServiceQueue = (): UseServiceQueueReturn => {
         }),
       });
 
+      console.log('Add service response status:', response.status);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to add service: ${response.statusText}`);
+        let errorMessage = `Failed to add service: ${response.statusText}`;
+        try {
+          const errorData = await response.json();
+          console.error('Add service error data:', errorData);
+          errorMessage = errorData.error || errorData.detail || errorMessage;
+        } catch (e) {
+          console.error('Could not parse error response:', e);
+        }
+        throw new Error(errorMessage);
       }
 
       // Refresh the queue items list

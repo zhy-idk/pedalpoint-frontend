@@ -116,19 +116,33 @@ function StaffUserManagement() {
     dialog?.showModal();
   };
 
-  const handleSavePermissions = async () => {
-    if (!selectedUser || !selectedUser.is_staff) return;
+  const handleSaveUser = async () => {
+    if (!selectedUser) return;
 
     setSavingPermissions(true);
     try {
-      const response = await api.put(`/api/users/${selectedUser.id}/permissions/`, staffPermissions);
-      if (response.status === 200) {
-        alert('Permissions updated successfully!');
-        await refresh(); // Refresh user list
+      // Update user details first
+      await updateUser(selectedUser.id, {
+        first_name: selectedUser.first_name,
+        last_name: selectedUser.last_name,
+        email: selectedUser.email,
+        is_staff: selectedUser.is_staff,
+        is_active: selectedUser.is_active,
+      });
+
+      // If user is staff, update their permissions
+      if (selectedUser.is_staff && !selectedUser.is_superuser) {
+        await api.put(`/api/users/${selectedUser.id}/permissions/`, staffPermissions);
       }
+
+      alert('User updated successfully!');
+      await refresh(); // Refresh user list
+      
+      const dialog = document.getElementById("edit_user_modal") as HTMLDialogElement;
+      dialog?.close();
     } catch (error) {
-      console.error('Failed to update permissions:', error);
-      alert('Failed to update permissions');
+      console.error('Failed to update user:', error);
+      alert('Failed to update user');
     } finally {
       setSavingPermissions(false);
     }
@@ -178,15 +192,7 @@ function StaffUserManagement() {
 
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (selectedUser) {
-      // TODO: Replace with actual API call to update user
-      // This is mock data - API should handle user updates
-      refresh();
-      const dialog = document.getElementById(
-        "edit_user_modal",
-      ) as HTMLDialogElement;
-      dialog?.close();
-    }
+    handleSaveUser();
   };
 
   const handleDeleteUser = async (userId: number) => {
@@ -289,20 +295,8 @@ function StaffUserManagement() {
               <tr key={user.id} className="hover">
                 <th>{user.id}</th>
                 <td>
-                  <div className="flex items-center gap-3">
-                    <div className="avatar placeholder">
-                      <div className="bg-neutral text-neutral-content w-8 rounded-full">
-                        <span className="text-xs">
-                          {user.first_name?.charAt(0) || user.username.charAt(0)}
-                          {user.last_name?.charAt(0) || ''}
-                        </span>
-                      </div>
-                    </div>
-                    <div>
-                      <div className="font-bold">
-                        {user.full_name}
-                      </div>
-                    </div>
+                  <div className="font-bold">
+                    {user.full_name}
                   </div>
                 </td>
                 <td>
@@ -779,25 +773,6 @@ function StaffUserManagement() {
                       </label>
                     </div>
                   </div>
-
-                  <button
-                    type="button"
-                    className="btn btn-sm btn-accent w-full mt-2"
-                    onClick={handleSavePermissions}
-                    disabled={savingPermissions}
-                  >
-                    {savingPermissions ? (
-                      <>
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="h-4 w-4" />
-                        Save Permissions
-                      </>
-                    )}
-                  </button>
                 </>
               )}
 
@@ -811,11 +786,19 @@ function StaffUserManagement() {
                     ) as HTMLDialogElement;
                     dialog?.close();
                   }}
+                  disabled={savingPermissions}
                 >
                   Cancel
                 </button>
-                <button type="submit" className="btn btn-primary">
-                  Save Changes
+                <button type="submit" className="btn btn-primary" disabled={savingPermissions}>
+                  {savingPermissions ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    'Save Changes'
+                  )}
                 </button>
               </div>
             </form>

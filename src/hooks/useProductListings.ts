@@ -45,7 +45,16 @@ export interface ProductListing {
   bike_builder_enabled?: boolean;
   builder_category?: string;
   builder_priority?: number;
-  compatibility_attributes: Array<{
+  compatibility_tags?: Array<{
+    id: number;
+    tag_type: 'use_case' | 'budget' | 'physical';
+    value: string;
+    display_name: string;
+    description?: string;
+    display_order: number;
+  }>;
+  // Old fields (deprecated, kept for backward compatibility)
+  compatibility_attributes?: Array<{
     id: number;
     display_name: string;
     value: string;
@@ -54,7 +63,7 @@ export interface ProductListing {
       name: string;
     };
   }>;
-  compatible_with: Array<{
+  compatible_with?: Array<{
     id: number;
     display_name: string;
     value: string;

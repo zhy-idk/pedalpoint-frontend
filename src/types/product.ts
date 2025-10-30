@@ -1,4 +1,15 @@
-// Compatibility Types
+// New Bike Compatibility Tag System
+export interface BikeCompatibilityTag {
+  id: number;
+  tag_type: 'use_case' | 'budget' | 'physical';
+  tag_type_display: string;
+  value: string;
+  display_name: string;
+  description?: string;
+  display_order: number;
+}
+
+// Old Compatibility Types (Deprecated - kept for backward compatibility)
 export interface CompatibilityGroup {
   id: number;
   name: string;
@@ -68,6 +79,8 @@ export interface Product {
       username: string;
     };
   }[];
+  compatibility_tags?: BikeCompatibilityTag[];
+  // Old fields (deprecated)
   compatibility_attributes?: CompatibilityAttributeValue[];
   compatible_with?: CompatibilityAttributeValue[];
 }
@@ -114,7 +127,7 @@ export interface BikeComponent {
   category: string;
   brand?: string;
   image?: string;
-  compatibility?: CompatibilityAttributeValue[];
+  compatibility_tags?: BikeCompatibilityTag[];
 }
 
 export interface BikeConfiguration {
@@ -161,7 +174,11 @@ export interface ProductListing {
       username: string;
     };
   }>;
-  compatibility_attributes?: CompatibilityAttributeValue[];
+  compatibility_tags?: BikeCompatibilityTag[];
+  compatibility_attributes?: CompatibilityAttributeValue[]; // deprecated
+  bike_builder_enabled?: boolean;
+  builder_category?: 'frame' | 'wheels' | 'drivetrain' | 'brakes' | 'handlebars' | 'saddle';
+  builder_priority?: number;
   products: Array<{
     id: number;
     name: string;

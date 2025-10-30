@@ -89,7 +89,9 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       );
 
       // After successful login, get user info
+      console.log('Login API call successful, now checking auth status...');
       await checkAuth();
+      console.log('checkAuth completed after login');
       
       // Refresh cart when user logs in
       if ((window as any).refreshCartOnLogin) {
@@ -100,10 +102,29 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       let errorMessage = 'Login failed';
       
       if (Axios.isAxiosError(error)) {
-        errorMessage = error.response?.data?.message || 
-                      error.response?.data?.error || 
-                      error.message || 
-                      'Login failed';
+        const status = error.response?.status;
+        
+        // Handle specific status codes according to allauth documentation
+        if (status === 400) {
+          // 400: Invalid credentials
+          errorMessage = error.response?.data?.message || 
+                        error.response?.data?.error || 
+                        'Invalid email or password. Please check your credentials and try again.';
+        } else if (status === 409) {
+          // 409: User is already logged in
+          errorMessage = 'You are already logged in. Please log out first if you want to use a different account.';
+        } else if (status === 401) {
+          // 401: Unauthorized (could be MFA or email verification)
+          errorMessage = error.response?.data?.message || 
+                        error.response?.data?.error || 
+                        'Authentication failed. Please check your credentials and try again.';
+        } else {
+          // Other errors
+          errorMessage = error.response?.data?.message || 
+                        error.response?.data?.error || 
+                        error.message || 
+                        'Login failed. Please try again.';
+        }
       }
       
       dispatch({ type: 'AUTH_ERROR', payload: errorMessage });

@@ -305,11 +305,13 @@ function StaffInventory() {
         supplier_id: undefined,
       });
       setNewItemImages([]);
-      
+
       // Reset file input
-      const fileInput = document.getElementById("new-item-images-input") as HTMLInputElement;
+      const fileInput = document.getElementById(
+        "new-item-images-input",
+      ) as HTMLInputElement;
       if (fileInput) fileInput.value = "";
-      
+
       // Close modal if open
       const modal = document.getElementById(
         "create_modal",
@@ -356,11 +358,13 @@ function StaffInventory() {
       });
 
       setEditItemImages([]);
-      
+
       // Reset file input
-      const fileInput = document.getElementById("edit-item-images-input") as HTMLInputElement;
+      const fileInput = document.getElementById(
+        "edit-item-images-input",
+      ) as HTMLInputElement;
       if (fileInput) fileInput.value = "";
-      
+
       // Close modal if open
       const modal = document.getElementById("edit_modal") as HTMLDialogElement;
       if (modal) modal.close();
@@ -531,11 +535,13 @@ function StaffInventory() {
     setEditItemImages([]);
     setIsCreatingNewBrandEdit(false);
     setNewBrandNameEdit("");
-    
+
     // Reset file input
-    const fileInput = document.getElementById("edit-item-images-input") as HTMLInputElement;
+    const fileInput = document.getElementById(
+      "edit-item-images-input",
+    ) as HTMLInputElement;
     if (fileInput) fileInput.value = "";
-    
+
     const dialog = document.getElementById("edit_modal") as HTMLDialogElement;
     dialog?.showModal();
   };
@@ -554,11 +560,13 @@ function StaffInventory() {
     setNewItemImages([]);
     setIsCreatingNewBrand(false);
     setNewBrandName("");
-    
+
     // Reset file input
-    const fileInput = document.getElementById("new-item-images-input") as HTMLInputElement;
+    const fileInput = document.getElementById(
+      "new-item-images-input",
+    ) as HTMLInputElement;
     if (fileInput) fileInput.value = "";
-    
+
     const dialog = document.getElementById("create_modal") as HTMLDialogElement;
     dialog?.showModal();
   };
@@ -607,7 +615,7 @@ function StaffInventory() {
   return (
     <div className="bg-base-100 p-3">
       {/* Connection Status and Error Display */}
-      <div className="mb-4 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="mb-4 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
         <div className="flex flex-wrap items-center gap-2 md:gap-4">
           {/* WebSocket Status */}
           {isConnected ? (
@@ -1100,7 +1108,7 @@ function StaffInventory() {
 
       {/* Create Modal */}
       <dialog id="create_modal" className="modal">
-        <div className="modal-box max-w-full md:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="modal-box max-h-[90vh] max-w-full overflow-y-auto md:max-w-2xl">
           <h3 className="mb-2 text-lg font-bold">Create Item</h3>
 
           <div className="flex flex-col gap-2">
@@ -1321,7 +1329,7 @@ function StaffInventory() {
 
       {/* Edit Modal */}
       <dialog id="edit_modal" className="modal">
-        <div className="modal-box max-w-full md:max-w-2xl max-h-[90vh] overflow-y-auto">
+        <div className="modal-box max-h-[90vh] max-w-full overflow-y-auto md:max-w-2xl">
           <h3 className="mb-2 text-lg font-bold">Edit Item</h3>
 
           {selectedItem && (
@@ -1507,7 +1515,7 @@ function StaffInventory() {
                 selectedItem.product_images.length > 0 && (
                   <div className="floating-label">
                     <span>Current Images</span>
-                    <div className="mt-2 grid grid-cols-2 md:grid-cols-3 gap-2">
+                    <div className="mt-2 grid grid-cols-2 gap-2 md:grid-cols-3">
                       {selectedItem.product_images.map((image) => (
                         <div key={image.id} className="group relative">
                           <img

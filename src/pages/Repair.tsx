@@ -11,71 +11,49 @@ import {
 } from "lucide-react";
 import ChatButton from "../components/Chat";
 import { apiBaseUrl } from "../api/index";
+import { useAuth } from "../hooks/useAuth";
+import { getCSRFToken } from "../utils/csrf";
 
 function Repair() {
+  const { user, isAuthenticated } = useAuth();
   const [date, setDate] = useState<Date | undefined>();
   const [issue, setIssue] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [userId, setUserId] = useState<string | null>(null);
   const [hasPendingServices, setHasPendingServices] = useState(false);
   const [pendingServicesLoading, setPendingServicesLoading] = useState(false);
+  const [queueCount, setQueueCount] = useState<number | null>(null);
+  const [isCheckingQueue, setIsCheckingQueue] = useState(false);
+  const [queueFull, setQueueFull] = useState(false);
 
-  // Get CSRF token using the same method as CartProvider
-  const getCSRFToken = () => {
-    const name = "csrftoken";
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== "") {
-      const cookies = document.cookie.split(";");
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === name + "=") {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
-  };
-
-  // Check authentication status
-  const checkAuthStatus = async () => {
+  // Check queue count for selected date
+  const checkQueueCount = async (selectedDate: Date) => {
+    setIsCheckingQueue(true);
+    setQueueFull(false);
+    setQueueCount(null);
+    
     try {
-      // Check if we have authentication cookies
-      const hasSessionCookie =
-        document.cookie.includes("sessionid") ||
-        document.cookie.includes("csrftoken");
-
-      if (!hasSessionCookie) {
-        setIsAuthenticated(false);
-        setUserId(null);
-        return;
-      }
-
-      // Try to get user info from cart endpoint (which we know works)
-      const response = await fetch(`${apiBaseUrl}/api/cart/`, {
+      const formattedDate = selectedDate.toISOString().split("T")[0];
+      const response = await fetch(`${apiBaseUrl}/api/queue/count/?queue_date=${formattedDate}`, {
+        method: "GET",
         credentials: "include",
         headers: {
-          "Content-Type": "application/json",
+          "X-CSRFToken": getCSRFToken() || "",
         },
       });
 
       if (response.ok) {
-        setIsAuthenticated(true);
-        // For now, use a default user ID since we need to get it from somewhere
-        setUserId("1"); // This should be the actual user ID from your system
-        console.log("User authenticated via cart API");
+        const data = await response.json();
+        setQueueCount(data.count);
+        setQueueFull(data.is_full);
       } else {
-        setIsAuthenticated(false);
-        setUserId(null);
-        console.log("User not authenticated (cart API failed)");
+        console.error("Error checking queue count");
       }
     } catch (error) {
-      console.error("Auth check failed:", error);
-      setIsAuthenticated(false);
-      setUserId(null);
+      console.error("Error checking queue count:", error);
+    } finally {
+      setIsCheckingQueue(false);
     }
   };
 
@@ -108,11 +86,6 @@ function Repair() {
     }
   };
 
-  // Check auth on component mount
-  useEffect(() => {
-    checkAuthStatus();
-  }, []);
-
   // Check pending services when user is authenticated
   useEffect(() => {
     if (isAuthenticated) {
@@ -122,8 +95,20 @@ function Repair() {
 
   const disabledDays = [
     { before: new Date() },
-    { dayOfWeek: [0, 6] }, // Disable weekends
+    // Weekends are now allowed
   ];
+
+  // Handle date selection
+  const handleDateSelect = (selectedDate: Date | undefined) => {
+    setDate(selectedDate);
+    setError(null);
+    setQueueCount(null);
+    setQueueFull(false);
+    
+    if (selectedDate) {
+      checkQueueCount(selectedDate);
+    }
+  };
 
   const handleSubmit = async () => {
     if (!date || !issue.trim()) {
@@ -131,7 +116,7 @@ function Repair() {
       return;
     }
 
-    if (!isAuthenticated || !userId) {
+    if (!isAuthenticated || !user) {
       alert("Please log in to schedule a repair");
       return;
     }
@@ -159,12 +144,14 @@ function Repair() {
         body: JSON.stringify({
           queue_date: formattedDate,
           info: issue.trim(),
-          user: parseInt(userId || "1"),
+          user: user.id,
         }),
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to schedule repair: ${response.statusText}`);
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.error || errorData.message || `Failed to schedule repair: ${response.statusText}`;
+        throw new Error(errorMessage);
       }
 
       setIsSubmitted(true);
@@ -230,13 +217,20 @@ function Repair() {
                   className="react-day-picker w-full"
                   mode="single"
                   selected={date}
-                  onSelect={setDate}
+                  onSelect={handleDateSelect}
                   disabled={disabledDays}
                 />
 
                 <div className="bg-base-200 text-base-content/70 mt-4 rounded-lg p-3 text-center text-xs">
-                  <p className="font-medium">Service Hours: Mon-Fri, 8AM-5PM</p>
-                  <p>Weekends unavailable</p>
+                  <p className="font-medium">Service Hours: 8AM-5PM</p>
+                  <p>Available 7 days a week</p>
+                  {queueCount !== null && (
+                    <p className={`mt-2 font-semibold ${queueFull ? 'text-error' : 'text-success'}`}>
+                      {queueFull 
+                        ? `Fully booked (${queueCount}/10) - Contact staff for assistance`
+                        : `Available slots: ${10 - queueCount} remaining`}
+                    </p>
+                  )}
                 </div>
               </div>
 
@@ -295,18 +289,39 @@ function Repair() {
               </div>
             )}
 
-            {/* Time Notice */}
-            <div className="alert alert-info mb-6">
-              <Clock size={16} />
-              <div>
-                <div className="font-bold">
-                  Service Hours: Monday - Friday, 8:00 AM - 5:00 PM
-                </div>
-                <div className="text-xs">
-                  Same-day bookings available until 5:00 PM
+            {/* Queue Status */}
+            {date && queueCount !== null && (
+              <div className={`alert mb-6 ${queueFull ? 'alert-error' : 'alert-info'}`}>
+                <Clock size={16} />
+                <div>
+                  <div className="font-bold">
+                    {queueFull 
+                      ? `Date Fully Booked (${queueCount}/10 customers)`
+                      : `Available: ${10 - queueCount} spots remaining (${queueCount}/10 booked)`}
+                  </div>
+                  <div className="text-xs">
+                    {queueFull 
+                      ? "Please choose another date or contact staff for assistance"
+                      : "Service Hours: 8:00 AM - 5:00 PM, 7 days a week"}
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
+
+            {/* Time Notice */}
+            {(!date || queueCount === null || !queueFull) && (
+              <div className="alert alert-info mb-6">
+                <Clock size={16} />
+                <div>
+                  <div className="font-bold">
+                    Service Hours: 8:00 AM - 5:00 PM, 7 days a week
+                  </div>
+                  <div className="text-xs">
+                    Same-day bookings available until 5:00 PM
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Submit Button */}
             {!isAuthenticated ? (
@@ -327,11 +342,25 @@ function Repair() {
                   </div>
                 </div>
               </div>
+            ) : queueFull ? (
+              <div className="alert alert-error mb-6">
+                <div>
+                  <div className="font-bold">Cannot Book This Date</div>
+                  <div className="text-sm">
+                    This date is fully booked (10 customers). Please choose another date or contact staff for assistance.
+                  </div>
+                </div>
+              </div>
+            ) : isCheckingQueue ? (
+              <button className="btn btn-primary w-full btn-disabled">
+                <Loader2 size={20} className="animate-spin" />
+                Checking availability...
+              </button>
             ) : (
               <button
                 onClick={handleSubmit}
-                disabled={!date || !issue.trim() || isSubmitted || isLoading || pendingServicesLoading}
-                className={`btn btn-primary w-full ${isSubmitted ? "btn-success" : ""} ${!date || !issue.trim() || pendingServicesLoading ? "btn-disabled" : ""}`}
+                disabled={!date || !issue.trim() || isSubmitted || isLoading || pendingServicesLoading || queueFull}
+                className={`btn btn-primary w-full ${isSubmitted ? "btn-success" : ""} ${!date || !issue.trim() || pendingServicesLoading || queueFull ? "btn-disabled" : ""}`}
               >
                 {pendingServicesLoading ? (
                   <>

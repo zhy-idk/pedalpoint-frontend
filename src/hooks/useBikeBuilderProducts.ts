@@ -4,15 +4,17 @@ import type { Product } from '../types/product';
 
 interface UseBikeBuilderProductsParams {
   builderCategory?: string;
-  compatibilityIds?: number[];
-  requiredAttributeIds?: number[];
+  useCase?: string;
+  budget?: string;
+  compatibilityTagIds?: number[];
   autoFetch?: boolean;
 }
 
 export const useBikeBuilderProducts = ({
   builderCategory,
-  compatibilityIds,
-  requiredAttributeIds,
+  useCase,
+  budget,
+  compatibilityTagIds,
   autoFetch = true,
 }: UseBikeBuilderProductsParams = {}) => {
   const [products, setProducts] = useState<Product[]>([]);
@@ -31,12 +33,16 @@ export const useBikeBuilderProducts = ({
         params.append('builder_category', builderCategory);
       }
       
-      if (compatibilityIds && compatibilityIds.length > 0) {
-        params.append('compatibility_ids', compatibilityIds.join(','));
+      if (useCase) {
+        params.append('use_case', useCase);
       }
       
-      if (requiredAttributeIds && requiredAttributeIds.length > 0) {
-        params.append('required_attribute_ids', requiredAttributeIds.join(','));
+      if (budget) {
+        params.append('budget', budget);
+      }
+      
+      if (compatibilityTagIds && compatibilityTagIds.length > 0) {
+        params.append('compatibility_tag_ids', compatibilityTagIds.join(','));
       }
 
       const queryString = params.toString();
@@ -50,7 +56,7 @@ export const useBikeBuilderProducts = ({
     } finally {
       setLoading(false);
     }
-  }, [builderCategory, compatibilityIds, requiredAttributeIds]);
+  }, [builderCategory, useCase, budget, compatibilityTagIds]);
 
   useEffect(() => {
     if (autoFetch) {

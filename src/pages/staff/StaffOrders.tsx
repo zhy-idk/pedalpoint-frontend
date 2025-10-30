@@ -215,15 +215,6 @@ function StaffOrders() {
           </div>
           <div className="stat-desc">Successfully delivered</div>
         </div>
-        {isSuperuser && (
-          <div className="stat bg-base-100 rounded-box shadow">
-            <div className="stat-title">Revenue</div>
-            <div className="stat-value text-success">
-              ${orders.reduce((sum, o) => sum + calculateOrderTotal(o.items), 0).toFixed(2)}
-            </div>
-            <div className="stat-desc">Total earnings</div>
-          </div>
-        )}
       </div>
 
       {/* Filters and Search */}

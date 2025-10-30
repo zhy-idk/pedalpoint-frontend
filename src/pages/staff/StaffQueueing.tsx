@@ -159,11 +159,14 @@ function StaffQueueing() {
         alert("Service added to queue successfully");
         handleCloseAddModal();
       } else {
-        alert("Failed to add service");
+        // Show the actual error message from the hook
+        const errorMsg = error || "Failed to add service. Please check your permissions.";
+        alert(errorMsg);
       }
     } catch (error) {
       console.error("Error adding service:", error);
-      alert("Failed to add service");
+      const errorMsg = error instanceof Error ? error.message : "Failed to add service";
+      alert(errorMsg);
     } finally {
       setAddingService(false);
     }

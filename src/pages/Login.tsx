@@ -6,7 +6,7 @@ import api from "../api/index";
 function Login() {
   const navigate = useNavigate();
 
-  const { login, isLoading, error, clearError, isAuthenticated, handleSocialLogin } = useAuth();
+  const { login, isLoading, error, clearError, isAuthenticated, handleSocialLogin, checkAuth } = useAuth();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -24,6 +24,7 @@ function Login() {
   // Redirect to home if user is already authenticated (but not during login process)
   useEffect(() => {
     if (isAuthenticated && !isLoggingIn) {
+      console.log('Already authenticated, redirecting to home');
       navigate("/");
     }
   }, [isAuthenticated, navigate, isLoggingIn]);
@@ -40,20 +41,39 @@ function Login() {
 
     try {
       await login(formData.email, formData.password);
+      console.log('Login successful, checkAuth completed');
       setFormData({ email: "", password: "" });
       setShowSuccessModal(true);
       
-      // Navigate after 2 seconds to show the success modal
+      // Small delay to ensure state propagation, then navigate
       setTimeout(() => {
+        console.log('Navigating to home after successful login');
         setIsLoggingIn(false);
-        navigate("/");
-      }, 2000);
+        // Force a small delay to ensure context update propagates
+        setTimeout(() => {
+          navigate("/");
+        }, 100);
+      }, 1500);
     } catch (error: any) {
       setIsLoggingIn(false);
       console.error("Login failed:", error);
       
-      // Check for 401 status code
-      if (error?.response?.status === 401) {
+      const status = error?.response?.status;
+      
+      // Check for 400: Invalid credentials
+      if (status === 400) {
+        // Error message is already set in AuthProvider, it will show in the error display below
+        return;
+      }
+      
+      // Check for 409: Already logged in
+      if (status === 409) {
+        // Error message is already set in AuthProvider, it will show in the error display below
+        return;
+      }
+      
+      // Check for 401 status code (MFA or email verification)
+      if (status === 401) {
         const responseData = error?.response?.data;
         
         // Check for MFA flow first
@@ -87,19 +107,36 @@ function Login() {
     setTotpError(null);
 
     try {
-      await api.post('/_allauth/browser/v1/auth/2fa/authenticate', {
+      const response = await api.post('/_allauth/browser/v1/auth/2fa/authenticate', {
         code: totpCode
       });
+
+      console.log('2FA authentication successful:', response.data);
+
+      // Check if the response indicates user is now authenticated
+      if (response.data?.meta?.is_authenticated || response.data?.status === 200) {
+        console.log('User authenticated after 2FA, updating auth state...');
+        
+        // Update authentication state by calling checkAuth
+        await checkAuth();
+        console.log('Auth state updated after 2FA');
+      }
 
       // Success! Clear everything and show success modal
       setTotpCode("");
       setShowTotpModal(false);
-      setShowSuccessModal(true);
       
-      // Navigate after 2 seconds
+      // Small delay to ensure modal closes smoothly before showing success
       setTimeout(() => {
-        navigate("/");
-      }, 2000);
+        setShowSuccessModal(true);
+        setIsLoggingIn(false);
+        
+        // Navigate after showing success modal
+        setTimeout(() => {
+          console.log('Navigating to home after 2FA success');
+          navigate("/");
+        }, 2000);
+      }, 300);
     } catch (error: any) {
       console.error("TOTP verification failed:", error);
       const errorMsg = error?.response?.data?.errors?.[0]?.message || 
@@ -117,6 +154,15 @@ function Login() {
         <legend className="fieldset-legend text-lg">Login</legend>
 
         <form onSubmit={handleSubmit}>
+          {error && (
+            <div className="alert alert-error mb-4">
+              <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>{error}</span>
+            </div>
+          )}
+
           <label className="floating-label">
             <span>Email</span>
             <input
@@ -127,7 +173,7 @@ function Login() {
               onChange={handleChange}
               required
               placeholder="mail@site.com"
-              disabled={isLoading}
+              disabled={isLoading || isLoggingIn}
             />
           </label>
 
@@ -141,16 +187,16 @@ function Login() {
               onChange={handleChange}
               required
               placeholder="Enter your password"
-              disabled={isLoading}
+              disabled={isLoading || isLoggingIn}
             />
           </label>
 
           <button
             className="btn btn-neutral btn-sm md:btn-md lg:btn-lg xl:btn-xl mt-4 w-full"
             type="submit"
-            disabled={isLoading}
+            disabled={isLoading || isLoggingIn}
           >
-            {isLoading ? "Logging in..." : "Login"}
+            {isLoading || isLoggingIn ? "Logging in..." : "Login"}
           </button>
 
           <span>

@@ -11,10 +11,9 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api';
-import { useCompatibility } from '../hooks/useCompatibility';
 import { useBikeBuilderProducts } from '../hooks/useBikeBuilderProducts';
 import { useCart } from '../providers/CartProvider';
-import type { Product, CompatibilityAttributeValue } from '../types/product';
+import type { Product } from '../types/product';
 
 // Step configuration for the wizard
 const BUILDER_STEPS = [
@@ -145,7 +144,6 @@ interface BikeConfiguration {
 function Builder() {
   const navigate = useNavigate();
   const { actions } = useCart();
-  const { values: compatibilityValues, loading: compatibilityLoading } = useCompatibility();
 
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [configuration, setConfiguration] = useState<BikeConfiguration>({
@@ -165,17 +163,17 @@ function Builder() {
 
   const currentStep = BUILDER_STEPS[currentStepIndex];
 
-  // Get currently selected compatibility attributes from all selected products
-  const selectedCompatibilityIds = useMemo(() => {
+  // Get currently selected compatibility tags from all selected products
+  const selectedCompatibilityTagIds = useMemo(() => {
     const ids: number[] = [];
     
-    // Collect all compatibility_attributes from selected products
+    // Collect all compatibility_tags from selected products
     Object.values(configuration).forEach((value) => {
-      if (value && typeof value === 'object' && 'compatibility_attributes' in value) {
+      if (value && typeof value === 'object' && 'compatibility_tags' in value) {
         const product = value as Product;
-        product.compatibility_attributes?.forEach(attr => {
-          if (!ids.includes(attr.id)) {
-            ids.push(attr.id);
+        product.compatibility_tags?.forEach(tag => {
+          if (!ids.includes(tag.id)) {
+            ids.push(tag.id);
           }
         });
       }
@@ -191,7 +189,9 @@ function Builder() {
     refresh: refreshProducts 
   } = useBikeBuilderProducts({
     builderCategory: currentStep.category,
-    compatibilityIds: selectedCompatibilityIds.length > 0 ? selectedCompatibilityIds : undefined,
+    useCase: configuration.usage || undefined,
+    budget: configuration.budget || undefined,
+    compatibilityTagIds: selectedCompatibilityTagIds.length > 0 ? selectedCompatibilityTagIds : undefined,
     autoFetch: !!currentStep.category,
   });
 
@@ -242,14 +242,14 @@ function Builder() {
       const newConfig = { ...configuration };
       
       for (const category of categories) {
-        // Collect compatibility IDs from already selected components
-        const selectedCompatibilityIds: number[] = [];
+        // Collect compatibility tag IDs from already selected components
+        const selectedTagIds: number[] = [];
         Object.values(newConfig).forEach((value) => {
-          if (value && typeof value === 'object' && 'compatibility_attributes' in value) {
+          if (value && typeof value === 'object' && 'compatibility_tags' in value) {
             const product = value as Product;
-            product.compatibility_attributes?.forEach(attr => {
-              if (!selectedCompatibilityIds.includes(attr.id)) {
-                selectedCompatibilityIds.push(attr.id);
+            product.compatibility_tags?.forEach(tag => {
+              if (!selectedTagIds.includes(tag.id)) {
+                selectedTagIds.push(tag.id);
               }
             });
           }
@@ -258,32 +258,19 @@ function Builder() {
         // Build query with compatibility filtering
         const params = new URLSearchParams();
         params.append('builder_category', category);
-        if (selectedCompatibilityIds.length > 0) {
-          params.append('compatibility_ids', selectedCompatibilityIds.join(','));
+        params.append('use_case', configuration.usage!);
+        params.append('budget', configuration.budget!);
+        if (selectedTagIds.length > 0) {
+          params.append('compatibility_tag_ids', selectedTagIds.join(','));
         }
 
         const response = await api.get<Product[]>(`/api/bike-builder/products/?${params.toString()}`);
         const products = response.data;
         
         console.log(`Category: ${category}, Total products fetched: ${products.length}`);
-        console.log(`Looking for usage: ${configuration.usage}, budget: ${configuration.budget}`);
         
-        // Filter by usage and budget from compatibility attributes
-        const matchingProducts = products.filter(product => {
-          const hasUsageMatch = product.compatibility_attributes?.some(
-            attr => attr.value === configuration.usage
-          );
-          const hasBudgetMatch = product.compatibility_attributes?.some(
-            attr => attr.value === configuration.budget
-          );
-          
-          console.log(`Product: ${product.name}`);
-          console.log(`  Compatibility values:`, product.compatibility_attributes?.map(a => a.value));
-          console.log(`  Usage match: ${hasUsageMatch}, Budget match: ${hasBudgetMatch}`);
-          
-          // Prefer products that match both, but fallback to budget match only
-          return (hasUsageMatch && hasBudgetMatch) || (!hasUsageMatch && hasBudgetMatch);
-        });
+        // Products are already filtered by use_case and budget by the API
+        const matchingProducts = products;
         
         console.log(`Matching products for ${category}: ${matchingProducts.length}`);
 
@@ -694,16 +681,16 @@ function Builder() {
                           )}
 
                           {/* Compatibility badges */}
-                          {product.compatibility_attributes && product.compatibility_attributes.length > 0 && (
+                          {product.compatibility_tags && product.compatibility_tags.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-2">
-                              {product.compatibility_attributes.slice(0, 3).map((attr) => (
-                                <span key={attr.id} className="badge badge-sm badge-outline">
-                                  {attr.display_name}
+                              {product.compatibility_tags.slice(0, 3).map((tag) => (
+                                <span key={tag.id} className="badge badge-sm badge-outline">
+                                  {tag.display_name}
                                 </span>
                               ))}
-                              {product.compatibility_attributes.length > 3 && (
+                              {product.compatibility_tags.length > 3 && (
                                 <span className="badge badge-sm badge-outline">
-                                  +{product.compatibility_attributes.length - 3} more
+                                  +{product.compatibility_tags.length - 3} more
                                 </span>
                               )}
                             </div>

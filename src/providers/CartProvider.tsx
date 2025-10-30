@@ -3,6 +3,8 @@ import type { ReactNode } from 'react';
 import { cartReducer, initialState } from '../reducers/cartReducer';
 import type { CartContextType, CartItem, CartResponse } from '../types/cart';
 import { apiBaseUrl } from '../api/index';
+import { getCSRFToken } from '../utils/csrf';
+import { useAuth } from '../hooks/useAuth';
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
@@ -20,37 +22,13 @@ interface CartProviderProps {
 
 export const CartProvider = ({ children }: CartProviderProps) => {
   const [state, dispatch] = useReducer(cartReducer, initialState);
-
-  const getCSRFToken = () => {
-    // Get CSRF token from cookie
-    const name = 'csrftoken';
-    let cookieValue = null;
-    if (document.cookie && document.cookie !== '') {
-      const cookies = document.cookie.split(';');
-      for (let i = 0; i < cookies.length; i++) {
-        const cookie = cookies[i].trim();
-        if (cookie.substring(0, name.length + 1) === (name + '=')) {
-          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-          break;
-        }
-      }
-    }
-    return cookieValue;
-  };
-
-  const checkIfUserIsAuthenticated = () => {
-    const hasSessionCookie = document.cookie.includes('sessionid') ||
-                           document.cookie.includes('csrftoken');
-    return hasSessionCookie;
-  };
+  const { isAuthenticated } = useAuth();
 
   const fetchCart = async () => {
     try {
       console.log('Fetching cart data...');
       dispatch({ type: 'SET_LOADING', payload: true });
       dispatch({ type: 'SET_ERROR', payload: null });
-
-      const isAuthenticated = checkIfUserIsAuthenticated();
 
       if (!isAuthenticated) {
         console.log('User not authenticated, showing empty cart');
@@ -111,7 +89,6 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const addItem = async (productId: number, quantity: number = 1) => {
     try {
-      const isAuthenticated = checkIfUserIsAuthenticated();
       if (!isAuthenticated) {
         dispatch({ type: 'SET_ERROR', payload: 'Please log in to add items to cart' });
         return;
@@ -159,7 +136,6 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const removeItem = async (productId: number) => {
     try {
-      const isAuthenticated = checkIfUserIsAuthenticated();
       if (!isAuthenticated) {
         dispatch({ type: 'SET_ERROR', payload: 'Please log in to manage your cart' });
         return;
@@ -201,7 +177,6 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const updateQuantity = async (productId: number, quantity: number) => {
     try {
-      const isAuthenticated = checkIfUserIsAuthenticated();
       if (!isAuthenticated) {
         dispatch({ type: 'SET_ERROR', payload: 'Please log in to manage your cart' });
         return;
@@ -248,7 +223,6 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   const clearCart = async () => {
     try {
-      const isAuthenticated = checkIfUserIsAuthenticated();
       if (!isAuthenticated) {
         dispatch({ type: 'SET_ERROR', payload: 'Please log in to manage your cart' });
         return;
@@ -295,7 +269,6 @@ export const CartProvider = ({ children }: CartProviderProps) => {
 
   useEffect(() => {
     // Only fetch cart if user is authenticated
-    const isAuthenticated = checkIfUserIsAuthenticated();
     if (isAuthenticated) {
       fetchCart();
     } else {
@@ -303,7 +276,7 @@ export const CartProvider = ({ children }: CartProviderProps) => {
       dispatch({ type: 'SET_CART', payload: [] });
       dispatch({ type: 'SET_ERROR', payload: null });
     }
-  }, []);
+  }, [isAuthenticated]);
 
   // Function to clear cart (can be called from AuthProvider)
   const clearCartOnLogout = () => {

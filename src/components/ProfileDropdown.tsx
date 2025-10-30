@@ -1,4 +1,5 @@
 import { Link, useNavigate } from "react-router-dom";
+import { useEffect } from "react";
 import { useTheme } from "../hooks/useTheme";
 import ThemeSwitch from "./ThemeSwitch";
 import NoProfileIcon from "../assets/account_circle_24dp.svg?react"
@@ -9,6 +10,15 @@ function ProfileDropdown(){
   const { theme, toggleTheme } = useTheme();
   const { logout, isAuthenticated, user } = useAuth();
   
+  // Debug logging - log when auth state changes
+  useEffect(() => {
+    console.log('ProfileDropdown - Auth state changed:', { 
+      isAuthenticated, 
+      userId: user?.id, 
+      username: user?.username,
+      timestamp: new Date().toISOString()
+    });
+  }, [isAuthenticated, user]);
 
   const handleLogout = async () => {
     try {

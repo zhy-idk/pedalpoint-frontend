@@ -166,8 +166,9 @@ function StaffChats() {
   const selectedRoom = chatRooms.find(room => room.id === selectedChatRoom);
 
   return (
-    <div className="flex h-full flex-row">
-      <div className="bg-base-200 flex h-full min-w-100 flex-col gap-1 rounded-md px-2">
+    <div className="flex h-full flex-col md:flex-row">
+      {/* Chat list sidebar - hidden on mobile when chat is selected */}
+      <div className={`bg-base-200 flex h-full w-full md:min-w-64 md:max-w-80 flex-col gap-1 rounded-md px-2 ${selectedChatRoom ? 'hidden md:flex' : ''}`}>
         <div className="mt-5 mb-3">
           <ChatSearch value={searchQuery} onChange={setSearchQuery} />
         </div>
@@ -191,19 +192,19 @@ function StaffChats() {
                 onClick={() => {
                   setSelectedChatRoom(room.id);
                 }}
-                className={`cursor-pointer rounded-lg p-3 transition-colors ${
+                className={`cursor-pointer rounded-lg p-2 md:p-3 transition-colors ${
                   selectedChatRoom === room.id ? 'bg-primary text-primary-content' : 'hover:bg-base-300'
                 }`}
               >
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 md:gap-3">
                   <div className="avatar">
-                    <div className="w-10 rounded-full">
+                    <div className="w-8 md:w-10 rounded-full">
                       <img src={room.avatar} alt={`${room.customerName} avatar`} />
                     </div>
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <p className="font-semibold text-sm truncate">{room.customerName}</p>
+                      <p className="font-semibold text-xs md:text-sm truncate">{room.customerName}</p>
                       <div className="flex items-center gap-1">
                         {room.isOnline && <div className="w-2 h-2 bg-green-500 rounded-full"></div>}
                         {room.unreadCount > 0 && (
@@ -214,7 +215,7 @@ function StaffChats() {
                     <p className="text-xs text-base-content/70 truncate">{room.lastMessage}</p>
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-xs text-base-content/50">{room.timestamp}</span>
-                      <span className="text-xs text-base-content/50">{room.messageCount} messages</span>
+                      <span className="text-xs text-base-content/50 hidden md:inline">{room.messageCount} messages</span>
                     </div>
                   </div>
                 </div>
@@ -224,10 +225,21 @@ function StaffChats() {
         </div>
       </div>
 
-      <div className="bg-base-200 mx-3 flex h-full w-full flex-col rounded-md">
+      {/* Chat conversation area - only shown when a room is selected */}
+      <div className={`bg-base-200 md:mx-3 flex h-full w-full flex-col rounded-md ${!selectedChatRoom ? 'hidden md:flex' : ''}`}>
         {selectedRoom ? (
           <>
         <div className="flex min-h-fit flex-row items-center gap-2 border-b-1 border-gray-600 p-2 pl-5">
+          {/* Back button for mobile */}
+          <button
+            onClick={() => setSelectedChatRoom('')}
+            className="btn btn-ghost btn-sm md:hidden"
+            aria-label="Back to chat list"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor" className="w-5 h-5">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+            </svg>
+          </button>
           <div className="avatar">
             <div className="w-12 rounded-full">
                   <img src={selectedRoom.avatar} alt={`${selectedRoom.customerName} avatar`} />
@@ -244,7 +256,7 @@ function StaffChats() {
           </div>
         </div>
 
-        <div className="flex flex-1 flex-col overflow-y-auto px-5">
+        <div className="flex flex-1 flex-col overflow-y-auto px-3 md:px-5">
               {messages.map((message, index) => {
                 // Check if the sender is the current logged-in user
                 const isMyMessage = message.sender?.id === user?.id;
@@ -252,7 +264,7 @@ function StaffChats() {
                 return (
                   <div
                     key={index}
-                    className={`chat ${isMyMessage ? "chat-end ml-8" : "chat-start mr-8"}`}
+                    className={`chat ${isMyMessage ? "chat-end md:ml-8" : "chat-start md:mr-8"}`}
                   >
               <div className="chat-image avatar">
                 <div className="w-10 rounded-full">
@@ -294,11 +306,11 @@ function StaffChats() {
               <div ref={messagesEndRef} />
         </div>
 
-        <div className="flex flex-row gap-5 px-5 pb-5">
+        <div className="flex flex-row gap-2 md:gap-5 px-3 md:px-5 pb-3 md:pb-5">
           <input
             type="text"
             placeholder="Type your message..."
-            className="input w-full"
+            className="input input-sm md:input-md w-full"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     const input = e.target as HTMLInputElement;
@@ -309,7 +321,7 @@ function StaffChats() {
                 disabled={!isConnected}
               />
               <button
-                className="btn btn-primary"
+                className="btn btn-primary btn-sm md:btn-md"
                 disabled={!isConnected}
                 onClick={() => {
                   const input = document.querySelector('input[placeholder="Type your message..."]') as HTMLInputElement;

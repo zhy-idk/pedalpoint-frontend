@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Info, X, Package } from 'lucide-react';
 import type { ProductListing } from '../../hooks/useProductListings';
-import { useCompatibility } from '../../hooks/useCompatibility';
-import type { CompatibilityAttributeValue } from '../../types/product';
+import { useCompatibilityTags } from '../../hooks/useCompatibilityTags';
+import type { BikeCompatibilityTag } from '../../types/product';
 import api from '../../api';
 
 interface ListingFormModalProps {
@@ -17,14 +17,11 @@ interface ListingFormModalProps {
 const BUILDER_CATEGORIES = [
   { value: '', label: 'None (Not in builder)' },
   { value: 'frame', label: 'Frame' },
-  { value: 'fork', label: 'Fork' },
   { value: 'wheels', label: 'Wheels' },
   { value: 'drivetrain', label: 'Drivetrain' },
   { value: 'brakes', label: 'Brakes' },
   { value: 'handlebars', label: 'Handlebars' },
   { value: 'saddle', label: 'Saddle' },
-  { value: 'pedals', label: 'Pedals' },
-  { value: 'accessories', label: 'Accessories' },
 ];
 
 interface Product {
@@ -44,9 +41,9 @@ function ListingFormModal({
   editingListing,
   categories = [],
 }: ListingFormModalProps) {
-  const { groups, values: compatibilityValues, loading: compatibilityLoading } = useCompatibility();
+  const { tags: compatibilityTags, loading: compatibilityLoading } = useCompatibilityTags();
 
-  const [activeTab, setActiveTab] = useState<'basic' | 'images' | 'products' | 'builder' | 'compatibility'>('basic');
+  const [activeTab, setActiveTab] = useState<'basic' | 'images' | 'products' | 'bike-builder'>('basic');
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -57,9 +54,8 @@ function ListingFormModal({
     builder_priority: 0,
   });
   
-  // Selected compatibility attribute IDs
-  const [selectedCompatibilityAttributes, setSelectedCompatibilityAttributes] = useState<number[]>([]);
-  const [selectedCompatibleWith, setSelectedCompatibleWith] = useState<number[]>([]);
+  // Selected compatibility tag IDs
+  const [selectedCompatibilityTags, setSelectedCompatibilityTags] = useState<number[]>([]);
   
   // Products management
   const [unassignedProducts, setUnassignedProducts] = useState<Product[]>([]);
@@ -90,12 +86,9 @@ function ListingFormModal({
           builder_priority: editingListing.builder_priority || 0,
         });
         
-        // Set compatibility attributes
-        setSelectedCompatibilityAttributes(
-          editingListing.compatibility_attributes?.map(attr => attr.id) || []
-        );
-        setSelectedCompatibleWith(
-          editingListing.compatible_with?.map(attr => attr.id) || []
+        // Set compatibility tags
+        setSelectedCompatibilityTags(
+          editingListing.compatibility_tags?.map(tag => tag.id) || []
         );
         
         // Set assigned products
@@ -118,8 +111,7 @@ function ListingFormModal({
           builder_category: '',
           builder_priority: 0,
         });
-        setSelectedCompatibilityAttributes([]);
-        setSelectedCompatibleWith([]);
+        setSelectedCompatibilityTags([]);
         setAssignedProducts([]);
         setSelectedProducts([]);
         setThumbnailFile(null);
@@ -208,25 +200,11 @@ function ListingFormModal({
     }
   };
 
-  const handleCompatibilityAttributeToggle = (valueId: number) => {
-    console.log('Toggling compatibility attribute:', valueId);
-    setSelectedCompatibilityAttributes(prev => {
-      const newValue = prev.includes(valueId)
-        ? prev.filter(id => id !== valueId)
-        : [...prev, valueId];
-      console.log('New compatibility attributes:', newValue);
-      return newValue;
-    });
-  };
-
-  const handleCompatibleWithToggle = (valueId: number) => {
-    console.log('Toggling compatible with:', valueId);
-    setSelectedCompatibleWith(prev => {
-      const newValue = prev.includes(valueId)
-        ? prev.filter(id => id !== valueId)
-        : [...prev, valueId];
-      console.log('New compatible with:', newValue);
-      return newValue;
+  const handleCompatibilityTagToggle = (tagId: number) => {
+    setSelectedCompatibilityTags(prev => {
+      return prev.includes(tagId)
+        ? prev.filter(id => id !== tagId)
+        : [...prev, tagId];
     });
   };
 
@@ -306,9 +284,8 @@ function ListingFormModal({
         }
         formDataToSubmit.append('builder_priority', formData.builder_priority.toString());
         
-        // Add compatibility arrays as JSON strings
-        formDataToSubmit.append('compatibility_attribute_ids', JSON.stringify(selectedCompatibilityAttributes));
-        formDataToSubmit.append('compatible_with_ids', JSON.stringify(selectedCompatibleWith));
+        // Add compatibility tags as JSON string
+        formDataToSubmit.append('compatibility_tag_ids', JSON.stringify(selectedCompatibilityTags));
         
         // Add thumbnail
         if (thumbnailFile) {
@@ -349,8 +326,7 @@ function ListingFormModal({
           bike_builder_enabled: formData.bike_builder_enabled,
           builder_category: formData.builder_category || null,
           builder_priority: formData.builder_priority,
-          compatibility_attribute_ids: selectedCompatibilityAttributes,
-          compatible_with_ids: selectedCompatibleWith,
+          compatibility_tag_ids: selectedCompatibilityTags,
         };
 
         const success = await onSubmit(submitData);
@@ -368,26 +344,6 @@ function ListingFormModal({
     }
   };
 
-  // Group compatibility values by group
-  const valuesByGroup = useMemo(() => {
-    const grouped: Record<number, CompatibilityAttributeValue[]> = {};
-    compatibilityValues.forEach(value => {
-      // Check if value has the nested attribute.group structure
-      if (value.attribute && value.attribute.group && value.attribute.group.id) {
-        const groupId = value.attribute.group.id;
-        if (!grouped[groupId]) {
-          grouped[groupId] = [];
-        }
-        grouped[groupId].push(value);
-      }
-    });
-    console.log('Compatibility values loaded:', compatibilityValues.length);
-    console.log('Groups:', groups.length);
-    console.log('Values by group:', grouped);
-    console.log('Selected compatibility attributes:', selectedCompatibilityAttributes);
-    console.log('Selected compatible with:', selectedCompatibleWith);
-    return grouped;
-  }, [compatibilityValues, groups, selectedCompatibilityAttributes, selectedCompatibleWith]);
 
   if (!isOpen) return null;
 
@@ -433,18 +389,11 @@ function ListingFormModal({
             Products {editingListing && `(${assignedProducts.length})`}
           </button>
           <button 
-            className={`tab ${activeTab === 'builder' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('builder')}
+            className={`tab ${activeTab === 'bike-builder' ? 'tab-active' : ''}`}
+            onClick={() => setActiveTab('bike-builder')}
             type="button"
           >
-            Bike Builder
-          </button>
-          <button 
-            className={`tab ${activeTab === 'compatibility' ? 'tab-active' : ''}`}
-            onClick={() => setActiveTab('compatibility')}
-            type="button"
-          >
-            Compatibility
+            Bike Builder & Compatibility
           </button>
         </div>
         
@@ -786,16 +735,18 @@ function ListingFormModal({
           )}
 
           {/* Bike Builder Tab */}
-          {activeTab === 'builder' && (
+          {/* Bike Builder & Compatibility Tab */}
+          {activeTab === 'bike-builder' && (
             <div className="space-y-4">
               <div className="alert alert-info">
                 <Info className="w-5 h-5" />
                 <div className="text-sm">
-                  <p className="font-semibold mb-1">Bike Builder Settings</p>
-                  <p>Enable this product in the bike builder wizard and choose its category.</p>
+                  <p className="font-semibold mb-1">Bike Builder & Compatibility</p>
+                  <p>Configure this product for the bike builder. Select use case, budget range, and physical compatibility.</p>
                 </div>
               </div>
 
+              {/* Enable in Bike Builder */}
               <div className="form-control">
                 <label className="label cursor-pointer justify-start gap-2">
                   <input
@@ -816,9 +767,10 @@ function ListingFormModal({
 
               {formData.bike_builder_enabled && (
                 <>
+                  {/* Component Type */}
                   <div className="form-control">
                     <label className="label">
-                      <span className="label-text">Builder Category *</span>
+                      <span className="label-text">Component Type *</span>
                     </label>
                     <select
                       name="builder_category"
@@ -835,11 +787,12 @@ function ListingFormModal({
                     </select>
                     <label className="label">
                       <span className="label-text-alt text-base-content/70">
-                        Which step should this product appear in?
+                        Which component type is this? (Frame, Wheels, Drivetrain, etc.)
                       </span>
                     </label>
                   </div>
 
+                  {/* Priority */}
                   <div className="form-control">
                     <label className="label">
                       <span className="label-text">Display Priority</span>
@@ -855,187 +808,117 @@ function ListingFormModal({
                     />
                     <label className="label">
                       <span className="label-text-alt text-base-content/70">
-                        Higher numbers appear first (default: 0)
+                        Higher numbers appear first in the bike builder (default: 0)
                       </span>
                     </label>
                   </div>
+
+                  <div className="divider">Compatibility Tags</div>
+
+                  {compatibilityLoading ? (
+                    <div className="flex justify-center py-4">
+                      <div className="loading loading-spinner loading-md"></div>
+                    </div>
+                  ) : (
+                    <div className="space-y-6">
+                      {/* Use Case */}
+                      <div className="card bg-base-200">
+                        <div className="card-body p-4">
+                          <h5 className="font-semibold mb-2">Use Case</h5>
+                          <p className="text-xs text-base-content/70 mb-3">
+                            What riding style is this product suited for?
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {compatibilityTags
+                              .filter(tag => tag.tag_type === 'use_case')
+                              .map(tag => (
+                                <label 
+                                  key={tag.id}
+                                  className="label cursor-pointer justify-start gap-2 py-1 px-3 border rounded-lg hover:bg-base-300"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedCompatibilityTags.includes(tag.id)}
+                                    onChange={() => handleCompatibilityTagToggle(tag.id)}
+                                    className="checkbox checkbox-sm checkbox-primary"
+                                  />
+                                  <span className="label-text">{tag.display_name}</span>
+                                </label>
+                              ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Budget Tier */}
+                      <div className="card bg-base-200">
+                        <div className="card-body p-4">
+                          <h5 className="font-semibold mb-2">Budget Tier</h5>
+                          <p className="text-xs text-base-content/70 mb-3">
+                            Which price range does this product fit in?
+                          </p>
+                          <div className="flex flex-wrap gap-2">
+                            {compatibilityTags
+                              .filter(tag => tag.tag_type === 'budget')
+                              .map(tag => (
+                                <label 
+                                  key={tag.id}
+                                  className="label cursor-pointer justify-start gap-2 py-1 px-3 border rounded-lg hover:bg-base-300"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedCompatibilityTags.includes(tag.id)}
+                                    onChange={() => handleCompatibilityTagToggle(tag.id)}
+                                    className="checkbox checkbox-sm checkbox-success"
+                                  />
+                                  <span className="label-text">{tag.display_name}</span>
+                                </label>
+                              ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Physical Compatibility */}
+                      <div className="card bg-base-200">
+                        <div className="card-body p-4">
+                          <h5 className="font-semibold mb-2">Physical Compatibility</h5>
+                          <p className="text-xs text-base-content/70 mb-3">
+                            Select all physical specs (brake types, wheel sizes, materials, etc.)
+                          </p>
+                          <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
+                            {compatibilityTags
+                              .filter(tag => tag.tag_type === 'physical')
+                              .map(tag => (
+                                <label 
+                                  key={tag.id}
+                                  className="label cursor-pointer justify-start gap-2 py-1 px-2 border rounded hover:bg-base-300"
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedCompatibilityTags.includes(tag.id)}
+                                    onChange={() => handleCompatibilityTagToggle(tag.id)}
+                                    className="checkbox checkbox-xs checkbox-secondary"
+                                  />
+                                  <span className="label-text text-xs">{tag.display_name}</span>
+                                </label>
+                              ))}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Summary */}
+                      {selectedCompatibilityTags.length > 0 && (
+                        <div className="alert alert-success">
+                          <div className="text-sm">
+                            <p className="font-semibold">✓ Compatibility Tags Selected</p>
+                            <p className="text-xs mt-1">
+                              {selectedCompatibilityTags.length} tag(s) selected
+                            </p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </>
-              )}
-            </div>
-          )}
-
-          {/* Compatibility Tab */}
-          {activeTab === 'compatibility' && (
-            <div className="space-y-6">
-              <div className="alert alert-info">
-                <Info className="w-5 h-5" />
-                <div className="text-sm">
-                  <p className="font-semibold mb-1">How Compatibility Works</p>
-                  <p className="mb-2"><strong>Product Attributes:</strong> What this product IS (e.g., "This frame is Carbon, 27.5&quot;, Trail, Budget")</p>
-                  <p className="mb-2"><strong>Compatible With:</strong> What this product works WITH (e.g., "This wheel works with Disc brakes, 700c frames")</p>
-                  <p className="text-xs mt-2 opacity-80">
-                    <strong>Budget Tiers:</strong> Budget (₱15k-24k) | Mid-Range (₱25k-75k) | Premium (₱75k+)<br/>
-                    <strong>Usage Types:</strong> City/Commute | Trail/Mountain | Casual/Recreation
-                  </p>
-                </div>
-              </div>
-
-              {/* Debug Info */}
-              <div className="alert alert-warning">
-                <div className="text-xs space-y-1">
-                  <p><strong>Debug Info:</strong></p>
-                  <p>Groups loaded: {groups.length}</p>
-                  <p>Values loaded: {compatibilityValues.length}</p>
-                  <p>Values by group: {Object.keys(valuesByGroup).length} groups</p>
-                  <p>Selected attributes: {selectedCompatibilityAttributes.length}</p>
-                  <p>Selected compatible with: {selectedCompatibleWith.length}</p>
-                  {groups.length > 0 && (
-                    <details className="mt-2">
-                      <summary className="cursor-pointer font-semibold">Show Groups</summary>
-                      <div className="mt-2 pl-4">
-                        {groups.map(g => (
-                          <div key={g.id} className="mb-1">
-                            {g.name} (ID: {g.id}) - {valuesByGroup[g.id]?.length || 0} values
-                          </div>
-                        ))}
-                      </div>
-                    </details>
-                  )}
-                  {compatibilityValues.length > 0 && (
-                    <details className="mt-2">
-                      <summary className="cursor-pointer font-semibold">Show First 10 Values</summary>
-                      <div className="mt-2 pl-4">
-                        {compatibilityValues.slice(0, 10).map(v => (
-                          <div key={v.id} className="mb-1">
-                            {v.display_name} (ID: {v.id})  - Group: {v.attribute?.group?.name || 'N/A'}
-                          </div>
-                        ))}
-                      </div>
-                    </details>
-                  )}
-                </div>
-              </div>
-
-              {compatibilityLoading ? (
-                <div className="flex justify-center py-8">
-                  <div className="loading loading-spinner loading-lg"></div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  {/* Product Attributes */}
-                  <div className="card bg-base-200">
-                    <div className="card-body">
-                      <h4 className="card-title text-lg">Product Attributes</h4>
-                      <p className="text-sm text-base-content/70 mb-4">
-                        What characteristics does this product have? Select usage type, budget tier, and physical specs.
-                      </p>
-                      
-                      <div className="space-y-4 max-h-96 overflow-y-auto">
-                        {groups.length === 0 ? (
-                          <div className="alert alert-warning">
-                            <div>
-                              <p className="font-semibold">No compatibility data available</p>
-                              <p className="text-sm">Run the bike builder data command to create compatibility attributes.</p>
-                              <code className="text-xs mt-2 block">python manage.py create_bike_builder_data</code>
-                            </div>
-                          </div>
-                        ) : (
-                          groups.map((group) => {
-                            const groupValues = valuesByGroup[group.id] || [];
-                            if (groupValues.length === 0) return null;
-
-                            return (
-                              <div key={group.id} className="space-y-2">
-                                <h5 className="font-semibold text-sm">{group.name}</h5>
-                                <div className="space-y-1 pl-4">
-                                  {groupValues.map((value) => (
-                                    <label 
-                                      key={value.id}
-                                      className="label cursor-pointer justify-start gap-2 py-1"
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={selectedCompatibilityAttributes.includes(value.id)}
-                                        onChange={() => handleCompatibilityAttributeToggle(value.id)}
-                                        className="checkbox checkbox-sm"
-                                      />
-                                      <span className="label-text text-sm">{value.display_name}</span>
-                                    </label>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                      
-                      {selectedCompatibilityAttributes.length > 0 && (
-                        <div className="mt-4 p-3 bg-success/10 rounded-lg">
-                          <p className="text-sm font-semibold text-success mb-2">
-                            Selected: {selectedCompatibilityAttributes.length} attribute(s)
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Compatible With */}
-                  <div className="card bg-base-200">
-                    <div className="card-body">
-                      <h4 className="card-title text-lg">Compatible With</h4>
-                      <p className="text-sm text-base-content/70 mb-4">
-                        What other product characteristics is this compatible with? (e.g., frames specify compatible wheel sizes and brake types)
-                      </p>
-                      
-                      <div className="space-y-4 max-h-96 overflow-y-auto">
-                        {groups.length === 0 ? (
-                          <div className="alert alert-warning">
-                            <div>
-                              <p className="font-semibold">No compatibility data available</p>
-                              <p className="text-sm">Run the bike builder data command to create compatibility attributes.</p>
-                              <code className="text-xs mt-2 block">python manage.py create_bike_builder_data</code>
-                            </div>
-                          </div>
-                        ) : (
-                          groups.map((group) => {
-                            const groupValues = valuesByGroup[group.id] || [];
-                            if (groupValues.length === 0) return null;
-
-                            return (
-                              <div key={group.id} className="space-y-2">
-                                <h5 className="font-semibold text-sm">{group.name}</h5>
-                                <div className="space-y-1 pl-4">
-                                  {groupValues.map((value) => (
-                                    <label 
-                                      key={value.id}
-                                      className="label cursor-pointer justify-start gap-2 py-1"
-                                    >
-                                      <input
-                                        type="checkbox"
-                                        checked={selectedCompatibleWith.includes(value.id)}
-                                        onChange={() => handleCompatibleWithToggle(value.id)}
-                                        className="checkbox checkbox-sm checkbox-secondary"
-                                      />
-                                      <span className="label-text text-sm">{value.display_name}</span>
-                                    </label>
-                                  ))}
-                                </div>
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                      
-                      {selectedCompatibleWith.length > 0 && (
-                        <div className="mt-4 p-3 bg-secondary/10 rounded-lg">
-                          <p className="text-sm font-semibold text-secondary mb-2">
-                            Selected: {selectedCompatibleWith.length} compatibility(ies)
-                          </p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
               )}
             </div>
           )}
