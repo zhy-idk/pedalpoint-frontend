@@ -160,14 +160,23 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         form.appendChild(input);
       };
 
-      // 4. Add form data
+      // 4. Construct callback URL - ensure HTTPS in production
+      // Facebook requires HTTPS, so we need to force HTTPS for the callback URL
+      let callbackUrl = window.location.origin;
+      
+      // Force HTTPS if we're in production (not localhost)
+      if (!callbackUrl.includes('localhost') && !callbackUrl.includes('127.0.0.1')) {
+        callbackUrl = callbackUrl.replace(/^http:/, 'https:');
+      }
+      
+      // 5. Add form data
       addInput("csrfmiddlewaretoken", csrf);
       addInput("provider", provider);
       addInput("process", "login");
       // Callback URL - where Django redirects after OAuth completes
-      addInput("callback_url", `${window.location.origin}/auth/callback`);
+      addInput("callback_url", `${callbackUrl}/auth/callback`);
 
-      // 5. Submit the form
+      // 6. Submit the form
       document.body.appendChild(form);
       form.submit();
     } catch (error) {

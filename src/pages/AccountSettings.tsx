@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import BackIcon from '../assets/undo_24dp.svg?react';
@@ -8,6 +8,13 @@ import api, { apiBaseUrl } from '../api/index';
 function AccountSettings() {
   const { user, isAuthenticated } = useAuth();
   const [activeTab, setActiveTab] = useState('notifications');
+  
+  // Check if user has usable password
+  const [hasUsablePassword, setHasUsablePassword] = useState<boolean | null>(null);
+  const [isCheckingPassword, setIsCheckingPassword] = useState(true);
+  const [setPasswordLoading, setSetPasswordLoading] = useState(false);
+  const [setPasswordError, setSetPasswordError] = useState<string | null>(null);
+  const [setPasswordSuccess, setSetPasswordSuccess] = useState(false);
   
   // Security Settings State
   const [passwordData, setPasswordData] = useState({
@@ -41,6 +48,31 @@ function AccountSettings() {
     deliveryUpdates: true
   });
   
+  // Check has_usable_password from session
+  useEffect(() => {
+    const checkHasUsablePassword = async () => {
+      if (!isAuthenticated) return;
+      
+      setIsCheckingPassword(true);
+      try {
+        const response = await fetch(`${apiBaseUrl}/_allauth/browser/v1/auth/session`, {
+          credentials: 'include',
+        });
+        const data = await response.json();
+        const hasPassword = data.data?.user?.has_usable_password ?? false;
+        setHasUsablePassword(hasPassword);
+        console.log('has_usable_password:', hasPassword);
+      } catch (error) {
+        console.error('Failed to check has_usable_password:', error);
+        // Default to true if we can't check (safer assumption)
+        setHasUsablePassword(true);
+      } finally {
+        setIsCheckingPassword(false);
+      }
+    };
+    
+    checkHasUsablePassword();
+  }, [isAuthenticated]);
 
   // Redirect if not authenticated
   if (!isAuthenticated) {
@@ -66,6 +98,41 @@ function AccountSettings() {
     console.log('Password change requested');
     setPasswordData({ currentPassword: '', newPassword: '', confirmPassword: '' });
     alert('Password changed successfully');
+  };
+
+  const handleSetPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user?.email) {
+      setSetPasswordError('Email address not found. Please contact support.');
+      return;
+    }
+
+    setSetPasswordLoading(true);
+    setSetPasswordError(null);
+    setSetPasswordSuccess(false);
+
+    try {
+      await api.post('/_allauth/browser/v1/auth/password/request', {
+        email: user.email,
+      }, {
+        withCredentials: true,
+      });
+
+      setSetPasswordSuccess(true);
+      // Show success message for a few seconds
+      setTimeout(() => {
+        setSetPasswordSuccess(false);
+      }, 5000);
+    } catch (error: any) {
+      const errorMsg = error.response?.data?.errors?.[0]?.message || 
+                       error.response?.data?.message || 
+                       error.message || 
+                       'Failed to send password setup email. Please try again.';
+      setSetPasswordError(errorMsg);
+      console.error('Set password error:', error);
+    } finally {
+      setSetPasswordLoading(false);
+    }
   };
 
   const handleGetTOTPSetup = async () => {
@@ -319,49 +386,113 @@ function AccountSettings() {
                       <h2 className="text-lg sm:text-xl md:text-2xl font-bold mb-2 sm:mb-4">Security Settings</h2>
                     </div>
 
-                    {/* Change Password */}
+                    {/* Change Password / Set Password */}
                     <div className="card bg-base-200">
                       <div className="card-body p-3 sm:p-4 md:p-6">
-                        <h3 className="card-title text-base sm:text-lg">Change Password</h3>
-                        <form onSubmit={handlePasswordChange} className="space-y-3 sm:space-y-4">
-                          <div>
-                            <label className="label py-1 sm:py-2">
-                              <span className="label-text text-xs sm:text-sm">Current Password</span>
-                            </label>
-                            <input
-                              type="password"
-                              className="input input-bordered input-sm sm:input-md w-full"
-                              value={passwordData.currentPassword}
-                              onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
-                              required
-                            />
+                        {isCheckingPassword ? (
+                          <div className="flex items-center justify-center py-4">
+                            <span className="loading loading-spinner loading-md"></span>
+                            <span className="ml-2 text-sm">Checking password status...</span>
                           </div>
-                          <div>
-                            <label className="label py-1 sm:py-2">
-                              <span className="label-text text-xs sm:text-sm">New Password</span>
-                            </label>
-                            <input
-                              type="password"
-                              className="input input-bordered input-sm sm:input-md w-full"
-                              value={passwordData.newPassword}
-                              onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
-                              required
-                            />
-                          </div>
-                          <div>
-                            <label className="label py-1 sm:py-2">
-                              <span className="label-text text-xs sm:text-sm">Confirm New Password</span>
-                            </label>
-                            <input
-                              type="password"
-                              className="input input-bordered input-sm sm:input-md w-full"
-                              value={passwordData.confirmPassword}
-                              onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
-                              required
-                            />
-                          </div>
-                          <button type="submit" className="btn btn-primary btn-sm sm:btn-md">Update Password</button>
-                        </form>
+                        ) : hasUsablePassword === false ? (
+                          // Set Password (no password exists)
+                          <>
+                            <h3 className="card-title text-base sm:text-lg">Set Password</h3>
+                            <p className="text-xs sm:text-sm text-base-content/70 mb-3 sm:mb-4">
+                              You don't have a password set yet. We'll send you an email with instructions to set up your password.
+                            </p>
+                            
+                            {setPasswordSuccess && (
+                              <div className="alert alert-success mb-3 sm:mb-4 text-xs sm:text-sm py-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>Password setup email sent! Please check your email ({user?.email}) for instructions.</span>
+                              </div>
+                            )}
+                            
+                            {setPasswordError && (
+                              <div className="alert alert-error mb-3 sm:mb-4 text-xs sm:text-sm py-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>{setPasswordError}</span>
+                              </div>
+                            )}
+                            
+                            <form onSubmit={handleSetPassword} className="space-y-3 sm:space-y-4">
+                              <div className="alert alert-info text-xs sm:text-sm py-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" className="stroke-current shrink-0 w-5 h-5">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                                </svg>
+                                <div>
+                                  <div className="font-bold">Email will be sent to: {user?.email}</div>
+                                  <div>Click the button below to receive password setup instructions via email.</div>
+                                </div>
+                              </div>
+                              <button 
+                                type="submit" 
+                                className="btn btn-primary btn-sm sm:btn-md"
+                                disabled={setPasswordLoading || setPasswordSuccess}
+                              >
+                                {setPasswordLoading ? (
+                                  <>
+                                    <span className="loading loading-spinner loading-sm"></span>
+                                    <span className="text-xs sm:text-sm">Sending email...</span>
+                                  </>
+                                ) : setPasswordSuccess ? (
+                                  'Email Sent!'
+                                ) : (
+                                  'Send Password Setup Email'
+                                )}
+                              </button>
+                            </form>
+                          </>
+                        ) : (
+                          // Change Password (password exists)
+                          <>
+                            <h3 className="card-title text-base sm:text-lg">Change Password</h3>
+                            <form onSubmit={handlePasswordChange} className="space-y-3 sm:space-y-4">
+                              <div>
+                                <label className="label py-1 sm:py-2">
+                                  <span className="label-text text-xs sm:text-sm">Current Password</span>
+                                </label>
+                                <input
+                                  type="password"
+                                  className="input input-bordered input-sm sm:input-md w-full"
+                                  value={passwordData.currentPassword}
+                                  onChange={(e) => setPasswordData(prev => ({ ...prev, currentPassword: e.target.value }))}
+                                  required
+                                />
+                              </div>
+                              <div>
+                                <label className="label py-1 sm:py-2">
+                                  <span className="label-text text-xs sm:text-sm">New Password</span>
+                                </label>
+                                <input
+                                  type="password"
+                                  className="input input-bordered input-sm sm:input-md w-full"
+                                  value={passwordData.newPassword}
+                                  onChange={(e) => setPasswordData(prev => ({ ...prev, newPassword: e.target.value }))}
+                                  required
+                                />
+                              </div>
+                              <div>
+                                <label className="label py-1 sm:py-2">
+                                  <span className="label-text text-xs sm:text-sm">Confirm New Password</span>
+                                </label>
+                                <input
+                                  type="password"
+                                  className="input input-bordered input-sm sm:input-md w-full"
+                                  value={passwordData.confirmPassword}
+                                  onChange={(e) => setPasswordData(prev => ({ ...prev, confirmPassword: e.target.value }))}
+                                  required
+                                />
+                              </div>
+                              <button type="submit" className="btn btn-primary btn-sm sm:btn-md">Update Password</button>
+                            </form>
+                          </>
+                        )}
                       </div>
                     </div>
 
