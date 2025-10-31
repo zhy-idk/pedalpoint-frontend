@@ -124,7 +124,7 @@ class PayMongoService {
 
   /**
    * Create a PayMongo checkout session for hosted payment (supports multiple payment methods)
-   * This calls PayMongo API directly from the frontend
+   * This calls the backend API which uses the secret key (more secure)
    */
   async createPayMongoCheckoutSession(orderData: {
     orderId: number;
@@ -145,60 +145,14 @@ class PayMongoService {
   }): Promise<CheckoutSessionResponse> {
     const currentUrl = window.location.origin;
     
-    // Prepare the request body for PayMongo's Checkout Session API
-    const requestBody = {
-      data: {
-        attributes: {
-          billing: {
-            name: orderData.billing.name,
-            email: orderData.billing.email,
-            phone: orderData.billing.phone || null,
-          },
-          send_email_receipt: orderData.sendEmailReceipt ?? true,
-          show_description: true,
-          show_line_items: true,
-          line_items: orderData.lineItems.map(item => ({
-            currency: item.currency || "PHP",
-            amount: item.amount,
-            name: item.name,
-            quantity: item.quantity,
-          })),
-          payment_method_types: [
-            "card",
-            "gcash",
-            "paymaya",
-            "dob",
-            "qrph"
-          ],
-          success_url: orderData.successUrl || `${currentUrl}/payment/success?order_id=${orderData.orderId}`,
-          cancel_url: orderData.cancelUrl || `${currentUrl}/payment/cancel?order_id=${orderData.orderId}`,
-          description: `Order #${orderData.orderId}`,
-          metadata: {
-            order_id: orderData.orderId.toString(),
-            customer_name: orderData.billing.name,
-            customer_email: orderData.billing.email,
-            customer_phone: orderData.billing.phone || '',
-          }
-        }
-      }
-    };
-
-    // Call PayMongo API directly
-    const response = await fetch('https://api.paymongo.com/v1/checkout_sessions', {
+    // Call backend endpoint which handles PayMongo API with secret key
+    return this.makeRequest('/payments/create-checkout/', {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'authorization': `Basic ${btoa(import.meta.env.VITE_PAYMONGO_PUBLIC_KEY + ':')}`,
-      },
-      body: JSON.stringify(requestBody),
+      body: JSON.stringify({
+        order_id: orderData.orderId,
+        frontend_url: currentUrl,
+      }),
     });
-
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`PayMongo API error: ${JSON.stringify(errorData)}`);
-    }
-
-    return await response.json();
   }
 
   /**
