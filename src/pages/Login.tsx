@@ -51,7 +51,7 @@ function Login() {
         setIsLoggingIn(false);
         // Force a small delay to ensure context update propagates
         setTimeout(() => {
-          navigate("/");
+        navigate("/");
         }, 100);
       }, 1500);
     } catch (error: any) {
@@ -134,8 +134,8 @@ function Login() {
         // Navigate after showing success modal
         setTimeout(() => {
           console.log('Navigating to home after 2FA success');
-          navigate("/");
-        }, 2000);
+        navigate("/");
+      }, 2000);
       }, 300);
     } catch (error: any) {
       console.error("TOTP verification failed:", error);

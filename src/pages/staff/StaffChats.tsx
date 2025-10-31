@@ -13,6 +13,8 @@ interface ChatRoom {
   customerName: string;
   customerId: number | null;
   lastMessage: string;
+  lastMessageType?: 'customer' | 'staff' | 'system';
+  lastMessageSenderId?: number | null;
   timestamp: string;
   avatar: string;
   unreadCount: number;
@@ -62,6 +64,8 @@ function StaffChats() {
             customerName: room.customer_name || room.user_name || 'Customer',
             customerId: room.customer_id ?? null,
             lastMessage: room.last_message || '',
+            lastMessageType: room.last_message_type || null,
+            lastMessageSenderId: room.last_message_sender_id || null,
             timestamp: room.formatted_timestamp || room.timestamp || '',
             avatar: room.customer_avatar || room.user_avatar 
               ? (room.customer_avatar?.startsWith('/') || room.user_avatar?.startsWith('/') 
@@ -79,7 +83,22 @@ function StaffChats() {
 
           console.log(`Filtered from ${data.chat_rooms.length} to ${uniqueRooms.length} unique rooms`);
 
-          setChatRooms(uniqueRooms);
+          // Merge with existing rooms to preserve sender info from WebSocket updates
+          setChatRooms(prev => {
+            const merged = uniqueRooms.map(newRoom => {
+              const existingRoom = prev.find(r => r.id === newRoom.id);
+              // Use API's sender info if available, otherwise preserve existing sender info
+              if (existingRoom && !newRoom.lastMessageSenderId && existingRoom.lastMessageSenderId) {
+                return {
+                  ...newRoom,
+                  lastMessageSenderId: existingRoom.lastMessageSenderId,
+                  lastMessageType: existingRoom.lastMessageType || newRoom.lastMessageType,
+                };
+              }
+              return newRoom;
+            });
+            return merged;
+          });
 
           // Select first room by default if available and none selected
           if (uniqueRooms.length > 0 && !selectedChatRoom) {
@@ -113,12 +132,14 @@ function StaffChats() {
   // Update chat room message count when new messages arrive
   useEffect(() => {
     if (messages.length > 0 && selectedChatRoom) {
+      const lastMessage = messages[messages.length - 1];
       setChatRooms(prev => prev.map(room =>
         room.id === selectedChatRoom
           ? {
               ...room,
-              messageCount: messages.length,
-              lastMessage: messages[messages.length - 1]?.content || room.lastMessage
+              lastMessage: lastMessage?.content || room.lastMessage,
+              lastMessageType: lastMessage?.message_type || room.lastMessageType,
+              lastMessageSenderId: lastMessage?.sender?.id || lastMessage?.user || room.lastMessageSenderId,
             }
           : room
       ));
@@ -212,10 +233,11 @@ function StaffChats() {
                         )}
                       </div>
                     </div>
-                    <p className="text-xs text-base-content/70 truncate">{room.lastMessage}</p>
+                    <p className="text-xs text-base-content/70 truncate">
+                      {room.lastMessageSenderId === user?.id ? 'you: ' : ''}{room.lastMessage}
+                    </p>
                     <div className="flex items-center justify-between mt-1">
                       <span className="text-xs text-base-content/50">{room.timestamp}</span>
-                      <span className="text-xs text-base-content/50 hidden md:inline">{room.messageCount} messages</span>
                     </div>
                   </div>
                 </div>

@@ -32,12 +32,14 @@ function StaffSidebar() {
             <NavLink
               to="/manage"
               className={({ isActive, isPending }) =>
-                `tooltip tooltip-right flex items-center justify-center ${isActive && !isPending ? "bg-neutral-400/15" : ""}`
+                `tooltip tooltip-right flex items-center justify-center text-base-content ${isActive && !isPending ? "bg-neutral-400/15" : ""}`
               }
               end
               data-tip="Dashboard"
             >
-              <DashboardSVG width={35} height={35} />
+              <div className="text-base-content [&>svg]:fill-current [&>svg]:stroke-current">
+                <DashboardSVG width={35} height={35} />
+              </div>
             </NavLink>
           </li>
         )}
@@ -48,12 +50,14 @@ function StaffSidebar() {
             <NavLink
               to="/manage/sales"
               className={({ isActive, isPending }) =>
-                `tooltip tooltip-right flex items-center justify-center ${isActive && !isPending ? "bg-neutral-400/15" : ""}`
+                `tooltip tooltip-right flex items-center justify-center text-base-content ${isActive && !isPending ? "bg-neutral-400/15" : ""}`
               }
               end
               data-tip="Sales"
             >
-              <SalesSVG width={35} height={35} />
+              <div className="text-base-content [&>svg]:fill-current [&>svg]:stroke-current">
+                <SalesSVG width={35} height={35} />
+              </div>
             </NavLink>
           </li>
         )}
@@ -64,11 +68,13 @@ function StaffSidebar() {
             <NavLink
               to="/manage/pos"
               className={({ isActive }) =>
-                `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
+                `tooltip tooltip-right flex items-center justify-center text-base-content ${isActive ? "bg-neutral-400/15" : ""}`
               }
               data-tip="Point Of Sale"
             >
-              <PosSVG width={35} height={35} />
+              <div className="text-base-content [&>svg]:fill-current [&>svg]:stroke-current">
+                <PosSVG width={35} height={35} />
+              </div>
             </NavLink>
           </li>
         )}
@@ -79,11 +85,13 @@ function StaffSidebar() {
             <NavLink
               to="/manage/chats"
               className={({ isActive }) =>
-                `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
+                `tooltip tooltip-right flex items-center justify-center text-base-content ${isActive ? "bg-neutral-400/15" : ""}`
               }
               data-tip="Chats"
             >
-              <ChatsSVG width={35} height={35} />
+              <div className="text-base-content [&>svg]:fill-current [&>svg]:stroke-current">
+                <ChatsSVG width={35} height={35} />
+              </div>
             </NavLink>
           </li>
         )}
@@ -94,11 +102,13 @@ function StaffSidebar() {
             <NavLink
               to="/manage/orders"
               className={({ isActive }) =>
-                `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
+                `tooltip tooltip-right flex items-center justify-center text-base-content ${isActive ? "bg-neutral-400/15" : ""}`
               }
               data-tip="Orders"
             >
-              <OrdersSVG width={35} height={35} />
+              <div className="text-base-content [&>svg]:fill-current [&>svg]:stroke-current">
+                <OrdersSVG width={35} height={35} />
+              </div>
             </NavLink>
           </li>
         )}
@@ -109,11 +119,13 @@ function StaffSidebar() {
             <NavLink
               to="/manage/listings"
               className={({ isActive }) =>
-                `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
+                `tooltip tooltip-right flex items-center justify-center text-base-content ${isActive ? "bg-neutral-400/15" : ""}`
               }
               data-tip="Product Listings"
             >
-              <ListingsSVG width={35} height={35} />
+              <div className="text-base-content [&>svg]:fill-current [&>svg]:stroke-current">
+                <ListingsSVG width={35} height={35} />
+              </div>
             </NavLink>
           </li>
         )}
@@ -124,11 +136,13 @@ function StaffSidebar() {
             <NavLink
               to="/manage/inventory"
               className={({ isActive }) =>
-                `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
+                `tooltip tooltip-right flex items-center justify-center text-base-content ${isActive ? "bg-neutral-400/15" : ""}`
               }
               data-tip="Inventory"
             >
-              <InventorySVG width={35} height={35} />
+              <div className="text-base-content [&>svg]:fill-current [&>svg]:stroke-current">
+                <InventorySVG width={35} height={35} />
+              </div>
             </NavLink>
           </li>
         )}
@@ -139,11 +153,13 @@ function StaffSidebar() {
             <NavLink
               to="/manage/suppliers"
               className={({ isActive }) =>
-                `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
+                `tooltip tooltip-right flex items-center justify-center text-base-content ${isActive ? "bg-neutral-400/15" : ""}`
               }
               data-tip="Suppliers"
             >
-              <SupplierSVG width={35} height={35} />
+              <div className="text-base-content [&>svg]:fill-current [&>svg]:stroke-current">
+                <SupplierSVG width={35} height={35} />
+              </div>
             </NavLink>
           </li>
         )}
@@ -154,11 +170,13 @@ function StaffSidebar() {
             <NavLink
               to="/manage/reservations"
               className={({ isActive }) =>
-                `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
+                `tooltip tooltip-right flex items-center justify-center text-base-content ${isActive ? "bg-neutral-400/15" : ""}`
               }
               data-tip="Reservations"
             >
-              <ReserveSVG width={35} height={35} />
+              <div className="text-base-content [&>svg]:fill-current [&>svg]:stroke-current">
+                <ReserveSVG width={35} height={35} />
+              </div>
             </NavLink>
           </li>
         )}
@@ -169,17 +187,13 @@ function StaffSidebar() {
             <NavLink
               to="/manage/queueing"
               className={({ isActive }) =>
-                `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
+                `tooltip tooltip-right flex items-center justify-center text-base-content ${isActive ? "bg-neutral-400/15" : ""}`
               }
               data-tip="Service Queue"
             >
-              <QueueSVG
-                width={35}
-                height={35}
-                fill="#e3e3e3"
-                stroke="#e3e3e3"
-                strokeWidth={5}
-              />
+              <div className="text-base-content [&>svg]:fill-current [&>svg]:stroke-current">
+                <QueueSVG width={35} height={35} />
+              </div>
             </NavLink>
           </li>
         )}
@@ -190,17 +204,13 @@ function StaffSidebar() {
             <NavLink
               to="/manage/users"
               className={({ isActive }) =>
-                `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
+                `tooltip tooltip-right flex items-center justify-center text-base-content ${isActive ? "bg-neutral-400/15" : ""}`
               }
               data-tip="User Management"
             >
-              <UserSVG
-                width={35}
-                height={35}
-                fill="#e3e3e3"
-                stroke="#e3e3e3"
-                strokeWidth={5}
-              />
+              <div className="text-base-content [&>svg]:fill-current [&>svg]:stroke-current">
+                <UserSVG width={35} height={35} />
+              </div>
             </NavLink>
           </li>
         )}
@@ -210,11 +220,13 @@ function StaffSidebar() {
           <NavLink
             to="/"
             className={({ isActive }) =>
-              `tooltip tooltip-right flex items-center justify-center ${isActive ? "bg-neutral-400/15" : ""}`
+              `tooltip tooltip-right flex items-center justify-center text-base-content ${isActive ? "bg-neutral-400/15" : ""}`
             }
             data-tip="Return to Customer UI"
           >
-            <ReturnSVG width={35} height={35} />
+            <div className="text-base-content [&>svg]:fill-current [&>svg]:stroke-current">
+              <ReturnSVG width={35} height={35} />
+            </div>
           </NavLink>
         </li>
       </ul>

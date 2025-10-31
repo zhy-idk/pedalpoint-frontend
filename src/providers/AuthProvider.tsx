@@ -120,9 +120,9 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                         'Authentication failed. Please check your credentials and try again.';
         } else {
           // Other errors
-          errorMessage = error.response?.data?.message || 
-                        error.response?.data?.error || 
-                        error.message || 
+        errorMessage = error.response?.data?.message || 
+                      error.response?.data?.error || 
+                      error.message || 
                         'Login failed. Please try again.';
         }
       }

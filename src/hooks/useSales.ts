@@ -18,6 +18,9 @@ interface SalesItem {
     };
   };
   quantity_sold: number;
+  refunded_quantity: number;
+  refunded: boolean;
+  supplier_price: number | null;
   amount: number;
 }
 
@@ -26,10 +29,17 @@ export interface Sale {
   user: {
     username: string;
   };
+  salesperson: {
+    username: string;
+  } | null;
   sale_date: string;
+  last_modified: string;
   payment_method: 'cash' | 'card' | 'gcash' | 'paymaya' | 'bank_transfer';
+  order: number | null;
   sales_item: SalesItem[];
   total_amount: number;
+  net_revenue: number;
+  capital: number;
 }
 
 export interface TopProduct {
@@ -46,6 +56,8 @@ interface UseSalesReturn {
   error: string | null;
   refresh: () => Promise<void>;
   fetchTopProducts: () => Promise<TopProduct[]>;
+  refundFullSale: (saleId: number, reason?: string, notes?: string) => Promise<void>;
+  refundSaleItem: (saleId: number, itemId: number, quantity: number, reason?: string, notes?: string) => Promise<void>;
 }
 
 const getHeaders = () => {
@@ -111,6 +123,50 @@ export const useSales = (): UseSalesReturn => {
     }
   }, []);
 
+  const refundFullSale = useCallback(async (saleId: number, reason = '', notes = ''): Promise<void> => {
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/sales/${saleId}/refund/`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: getHeaders(),
+        body: JSON.stringify({ reason, notes }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(errorData.error || `Failed to refund sale: ${response.statusText}`);
+      }
+
+      // Refresh sales after refund
+      await fetchSales();
+    } catch (err) {
+      console.error('Refund full sale error:', err);
+      throw err;
+    }
+  }, [fetchSales]);
+
+  const refundSaleItem = useCallback(async (saleId: number, itemId: number, quantity: number, reason = '', notes = ''): Promise<void> => {
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/sales/${saleId}/items/${itemId}/refund/`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: getHeaders(),
+        body: JSON.stringify({ quantity, reason, notes }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ error: response.statusText }));
+        throw new Error(errorData.error || `Failed to refund item: ${response.statusText}`);
+      }
+
+      // Refresh sales after refund
+      await fetchSales();
+    } catch (err) {
+      console.error('Refund sale item error:', err);
+      throw err;
+    }
+  }, [fetchSales]);
+
   useEffect(() => {
     fetchSales();
   }, [fetchSales]);
@@ -121,6 +177,8 @@ export const useSales = (): UseSalesReturn => {
     error,
     refresh: fetchSales,
     fetchTopProducts,
+    refundFullSale,
+    refundSaleItem,
   };
 };
 

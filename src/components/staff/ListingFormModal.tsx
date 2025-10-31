@@ -285,7 +285,14 @@ function ListingFormModal({
         formDataToSubmit.append('builder_priority', formData.builder_priority.toString());
         
         // Add compatibility tags as JSON string
-        formDataToSubmit.append('compatibility_tag_ids', JSON.stringify(selectedCompatibilityTags));
+        const compatibilityTagsJSON = JSON.stringify(selectedCompatibilityTags);
+        formDataToSubmit.append('compatibility_tag_ids', compatibilityTagsJSON);
+        
+        console.log('Compatibility tags being sent:', {
+          raw: selectedCompatibilityTags,
+          stringified: compatibilityTagsJSON,
+          length: selectedCompatibilityTags.length
+        });
         
         // Add thumbnail
         if (thumbnailFile) {
@@ -297,10 +304,27 @@ function ListingFormModal({
           formDataToSubmit.append(`product_image_${index}`, image);
         });
         
+        // Log all FormData entries for debugging
+        console.log('FormData entries:');
+        for (const [key, value] of formDataToSubmit.entries()) {
+          if (value instanceof File) {
+            console.log(`  ${key}: [File] ${value.name}`);
+          } else {
+            console.log(`  ${key}: ${value}`);
+          }
+        }
+        
         // Call API directly with FormData
         const url = editingListing 
           ? `/api/listings/${editingListing.id}/update/`
           : '/api/listings/create/';
+        
+        console.log('Submitting listing with FormData:', {
+          url,
+          method: editingListing ? 'PUT' : 'POST',
+          hasThumbnail: !!thumbnailFile,
+          productImagesCount: productImages.length,
+        });
         
         const response = await api({
           method: editingListing ? 'PUT' : 'POST',
@@ -311,9 +335,12 @@ function ListingFormModal({
           },
         });
         
+        console.log('Listing save response:', response.status, response.data);
+        
         if (response.status === 200 || response.status === 201) {
           onClose();
         } else {
+          console.error('Unexpected response status:', response.status, response.data);
           setError('Failed to save listing. Please try again.');
         }
       } else {
@@ -338,7 +365,28 @@ function ListingFormModal({
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred');
+      console.error('Error saving listing:', err);
+      console.error('Error response:', (err as any)?.response);
+      console.error('Error response data:', (err as any)?.response?.data);
+      
+      const status = (err as any)?.response?.status;
+      const errorData = (err as any)?.response?.data;
+      
+      // Check for specific error types
+      if (status === 403) {
+        setError('Access denied. Please ensure you have staff permissions and are logged in.');
+      } else if (status === 400) {
+        // Validation error - show details
+        const validationErrors = errorData?.errors || errorData;
+        const errorMessage = typeof validationErrors === 'string' 
+          ? validationErrors 
+          : JSON.stringify(validationErrors, null, 2);
+        setError(`Validation error: ${errorMessage}`);
+        console.error('Validation errors:', validationErrors);
+      } else {
+        const errorMessage = err instanceof Error ? err.message : 'An error occurred';
+        setError(errorMessage);
+      }
     } finally {
       setIsSubmitting(false);
     }

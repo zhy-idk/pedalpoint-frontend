@@ -136,7 +136,7 @@ function StaffUserManagement() {
       }
 
       alert('User updated successfully!');
-      await refresh(); // Refresh user list
+        await refresh(); // Refresh user list
       
       const dialog = document.getElementById("edit_user_modal") as HTMLDialogElement;
       dialog?.close();
@@ -295,8 +295,8 @@ function StaffUserManagement() {
               <tr key={user.id} className="hover">
                 <th>{user.id}</th>
                 <td>
-                  <div className="font-bold">
-                    {user.full_name}
+                      <div className="font-bold">
+                        {user.full_name}
                   </div>
                 </td>
                 <td>

@@ -310,17 +310,17 @@ function Repair() {
 
             {/* Time Notice */}
             {(!date || queueCount === null || !queueFull) && (
-              <div className="alert alert-info mb-6">
-                <Clock size={16} />
-                <div>
-                  <div className="font-bold">
+            <div className="alert alert-info mb-6">
+              <Clock size={16} />
+              <div>
+                <div className="font-bold">
                     Service Hours: 8:00 AM - 5:00 PM, 7 days a week
-                  </div>
-                  <div className="text-xs">
-                    Same-day bookings available until 5:00 PM
-                  </div>
+                </div>
+                <div className="text-xs">
+                  Same-day bookings available until 5:00 PM
                 </div>
               </div>
+            </div>
             )}
 
             {/* Submit Button */}

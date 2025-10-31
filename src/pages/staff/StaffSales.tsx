@@ -16,6 +16,8 @@ import {
   PieChart,
   LineChart,
   AlertCircle,
+  RotateCcw,
+  X,
 } from "lucide-react";
 import { useSales, type Sale as APISale, type TopProduct } from "../../hooks/useSales";
 import {
@@ -53,35 +55,13 @@ interface Sale {
 
 function StaffSales() {
   // Fetch real sales data from API
-  const { sales: apiSales, loading: salesLoading, error: salesError, refresh, fetchTopProducts } = useSales();
+  const { sales: apiSales, loading: salesLoading, error: salesError, refresh, fetchTopProducts, refundFullSale, refundSaleItem } = useSales();
   
   // State for top products
   const [topProducts, setTopProducts] = useState<TopProduct[]>([]);
   
-  // Transform API sales data to match the component's expected format
-  const sales = useMemo(() => {
-    return apiSales.map(sale => {
-      const firstItem = sale.sales_item[0];
-      return {
-        id: `SALE-${sale.id.toString().padStart(3, '0')}`,
-        customerName: sale.user?.username || 'Walk-in Customer',
-        customerEmail: '',
-        productName: firstItem?.product?.product_listing?.name || 'Unknown Product',
-        productId: firstItem?.product?.id.toString() || '',
-        quantity: sale.sales_item.reduce((sum, item) => sum + item.quantity_sold, 0),
-        unitPrice: firstItem ? parseFloat(firstItem.product.price) : 0,
-        totalAmount: sale.total_amount,
-        saleDate: sale.sale_date,
-        paymentMethod: sale.payment_method as 'cash' | 'card' | 'online' | 'installment',
-        status: 'completed' as const,
-        salesperson: sale.user?.username || 'Staff',
-        discount: 0,
-        tax: 0,
-        notes: sale.sales_item.length > 1 ? `${sale.sales_item.length} items sold` : undefined,
-        items: sale.sales_item,
-      };
-    });
-  }, [apiSales]);
+  // Use API sales directly (no transformation needed)
+  const sales = apiSales;
 
   // Old mock data (keeping structure for reference, but not used)
   const [oldMockSales] = useState<Sale[]>([
@@ -209,46 +189,70 @@ function StaffSales() {
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [paymentFilter, setPaymentFilter] = useState("all");
-  const [dateFilter, setDateFilter] = useState("all");
-  const [selectedSale, setSelectedSale] = useState<Sale | null>(null);
+  const [dateFilterType, setDateFilterType] = useState<"all" | "yearly" | "quarterly" | "monthly" | "custom">("all");
+  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedQuarter, setSelectedQuarter] = useState(1);
+  const [selectedMonth, setSelectedMonth] = useState(new Date().getMonth() + 1);
+  const [customDateRange, setCustomDateRange] = useState<{ from?: Date; to?: Date }>({});
+  const [selectedSale, setSelectedSale] = useState<APISale | null>(null);
   const [showDetailsModal, setShowDetailsModal] = useState(false);
+  const [showRefundModal, setShowRefundModal] = useState(false);
+  const [showItemRefundModal, setShowItemRefundModal] = useState(false);
+  const [selectedItemForRefund, setSelectedItemForRefund] = useState<{ sale: APISale; item: APISale['sales_item'][0] } | null>(null);
+  const [refundQuantity, setRefundQuantity] = useState(1);
+  const [refundReason, setRefundReason] = useState("");
+  const [refundNotes, setRefundNotes] = useState("");
+  const [isProcessingRefund, setIsProcessingRefund] = useState(false);
 
   const filteredSales = useMemo(() => {
     return sales.filter((sale) => {
+      const searchLower = searchTerm.toLowerCase();
+      const customerName = sale.user?.username || 'Walk-in Customer';
+      const productNames = sale.sales_item.map(item => item.product?.product_listing?.name || item.product?.name || '').join(' ');
+      const saleId = `SALE-${sale.id.toString().padStart(3, '0')}`;
+      const salesperson = sale.salesperson?.username || '';
+      
       const matchesSearch = 
-        sale.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        sale.customerEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        sale.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        sale.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        sale.salesperson.toLowerCase().includes(searchTerm.toLowerCase());
+        customerName.toLowerCase().includes(searchLower) ||
+        productNames.toLowerCase().includes(searchLower) ||
+        saleId.toLowerCase().includes(searchLower) ||
+        salesperson.toLowerCase().includes(searchLower);
 
+      // Status filter: check if all items are refunded
+      const allItemsRefunded = sale.sales_item.every(item => item.refunded);
+      const someItemsRefunded = sale.sales_item.some(item => item.refunded);
+      let saleStatus = 'completed';
+      if (allItemsRefunded) saleStatus = 'refunded';
+      else if (someItemsRefunded) saleStatus = 'partially_refunded';
+      
       const matchesStatus = 
-        statusFilter === "all" || sale.status === statusFilter;
+        statusFilter === "all" || 
+        (statusFilter === "refunded" && allItemsRefunded) ||
+        (statusFilter === "completed" && !someItemsRefunded) ||
+        (statusFilter === "partially_refunded" && someItemsRefunded && !allItemsRefunded);
 
       const matchesPayment = 
-        paymentFilter === "all" || sale.paymentMethod === paymentFilter;
+        paymentFilter === "all" || sale.payment_method === paymentFilter;
 
       const matchesDate = (() => {
-        if (dateFilter === "all") return true;
-        const today = new Date();
-        const saleDate = new Date(sale.saleDate);
+        if (dateFilterType === "all") return true;
+        const saleDate = new Date(sale.sale_date);
         
-        switch (dateFilter) {
-          case "today":
-            return saleDate.toDateString() === today.toDateString();
-          case "yesterday":
-            const yesterday = new Date(today);
-            yesterday.setDate(today.getDate() - 1);
-            return saleDate.toDateString() === yesterday.toDateString();
-          case "this_week":
-            const weekStart = new Date(today);
-            weekStart.setDate(today.getDate() - today.getDay());
-            const weekEnd = new Date(weekStart);
-            weekEnd.setDate(weekStart.getDate() + 6);
-            return saleDate >= weekStart && saleDate <= weekEnd;
-          case "this_month":
-            return saleDate.getMonth() === today.getMonth() && 
-                   saleDate.getFullYear() === today.getFullYear();
+        switch (dateFilterType) {
+          case "yearly":
+            return saleDate.getFullYear() === selectedYear;
+          case "quarterly":
+            const quarter = Math.floor(saleDate.getMonth() / 3) + 1;
+            return saleDate.getFullYear() === selectedYear && quarter === selectedQuarter;
+          case "monthly":
+            return saleDate.getFullYear() === selectedYear && saleDate.getMonth() + 1 === selectedMonth;
+          case "custom":
+            if (customDateRange.from && customDateRange.to) {
+              return saleDate >= customDateRange.from && saleDate <= customDateRange.to;
+            } else if (customDateRange.from) {
+              return saleDate >= customDateRange.from;
+            }
+            return true;
           default:
             return true;
         }
@@ -256,7 +260,7 @@ function StaffSales() {
 
       return matchesSearch && matchesStatus && matchesPayment && matchesDate;
     });
-  }, [sales, searchTerm, statusFilter, paymentFilter, dateFilter]);
+  }, [sales, searchTerm, statusFilter, paymentFilter, dateFilterType, selectedYear, selectedQuarter, selectedMonth, customDateRange]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-PH', {
@@ -288,10 +292,11 @@ function StaffSales() {
       completed: { color: "badge-success", text: "Completed" },
       pending: { color: "badge-warning", text: "Pending" },
       refunded: { color: "badge-error", text: "Refunded" },
+      partially_refunded: { color: "badge-warning", text: "Partially Refunded" },
       cancelled: { color: "badge-neutral", text: "Cancelled" }
     };
 
-    const config = statusConfig[status as keyof typeof statusConfig];
+    const config = statusConfig[status as keyof typeof statusConfig] || { color: "badge-neutral", text: status };
 
     return (
       <span className={`badge ${config.color}`}>
@@ -300,15 +305,20 @@ function StaffSales() {
     );
   };
 
-  const getPaymentMethodBadge = (method: string) => {
+  const getPaymentMethodBadge = (method: string | undefined) => {
+    if (!method) return <span className="badge badge-neutral">Unknown</span>;
+    
     const methodConfig = {
       cash: { color: "badge-success", text: "Cash" },
       card: { color: "badge-info", text: "Card" },
+      gcash: { color: "badge-primary", text: "GCash" },
+      paymaya: { color: "badge-warning", text: "PayMaya" },
+      bank_transfer: { color: "badge-info", text: "Bank Transfer" },
       online: { color: "badge-primary", text: "Online" },
       installment: { color: "badge-warning", text: "Installment" }
     };
 
-    const config = methodConfig[method as keyof typeof methodConfig];
+    const config = methodConfig[method as keyof typeof methodConfig] || { color: "badge-neutral", text: method };
 
     return (
       <span className={`badge ${config.color}`}>
@@ -320,18 +330,26 @@ function StaffSales() {
   // Calculate statistics
   const stats = useMemo(() => {
     const totalSales = sales.length;
-    const totalRevenue = sales
-      .filter(sale => sale.status === 'completed')
-      .reduce((sum, sale) => sum + sale.totalAmount, 0);
-    const totalRefunded = 0; // Refunded sales tracking disabled
-    const netRevenue = totalRevenue - totalRefunded;
+    const totalRevenue = sales.reduce((sum, sale) => sum + sale.total_amount, 0);
+    const totalCapital = sales.reduce((sum, sale) => sum + sale.capital, 0);
+    const totalNetRevenue = sales.reduce((sum, sale) => sum + sale.net_revenue, 0);
+    const totalRefunded = sales.reduce((sum, sale) => {
+      return sum + sale.sales_item.reduce((itemSum, item) => {
+        if (item.refunded_quantity > 0) {
+          const itemPrice = parseFloat(item.amount) / item.quantity_sold;
+          return itemSum + (itemPrice * item.refunded_quantity);
+        }
+        return itemSum;
+      }, 0);
+    }, 0);
     const averageOrderValue = totalSales > 0 ? totalRevenue / totalSales : 0;
 
     return {
       totalSales,
       totalRevenue,
+      totalCapital,
+      totalNetRevenue,
       totalRefunded,
-      netRevenue,
       averageOrderValue
     };
   }, [sales]);
@@ -341,16 +359,16 @@ function StaffSales() {
     const monthlyData = new Map<string, { sales: number; orders: number }>();
     
     sales.forEach(sale => {
-      const date = new Date(sale.saleDate);
+      const date = new Date(sale.sale_date);
       const monthKey = date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
       
       if (monthlyData.has(monthKey)) {
         const existing = monthlyData.get(monthKey)!;
-        existing.sales += sale.totalAmount;
+        existing.sales += sale.total_amount;
         existing.orders += 1;
       } else {
         monthlyData.set(monthKey, {
-          sales: sale.totalAmount,
+          sales: sale.total_amount,
           orders: 1,
         });
       }
@@ -379,8 +397,10 @@ function StaffSales() {
     const methodCounts = new Map<string, number>();
     
     sales.forEach(sale => {
-      const method = sale.paymentMethod;
-      methodCounts.set(method, (methodCounts.get(method) || 0) + 1);
+      const method = sale.payment_method;
+      if (method) {
+        methodCounts.set(method, (methodCounts.get(method) || 0) + 1);
+      }
     });
 
     // Define colors for each payment method
@@ -468,16 +488,16 @@ function StaffSales() {
           <div className="stat-value text-success">{formatPrice(stats.totalRevenue)}</div>
         </div>
         <div className="stat bg-base-200 rounded-lg">
+          <div className="stat-title">Capital</div>
+          <div className="stat-value text-warning">{formatPrice(stats.totalCapital)}</div>
+        </div>
+        <div className="stat bg-base-200 rounded-lg">
           <div className="stat-title">Net Revenue</div>
-          <div className="stat-value text-info">{formatPrice(stats.netRevenue)}</div>
+          <div className="stat-value text-info">{formatPrice(stats.totalNetRevenue)}</div>
         </div>
         <div className="stat bg-base-200 rounded-lg">
           <div className="stat-title">Refunded</div>
           <div className="stat-value text-error">{formatPrice(stats.totalRefunded)}</div>
-        </div>
-        <div className="stat bg-base-200 rounded-lg">
-          <div className="stat-title">Avg Order Value</div>
-          <div className="stat-value text-warning">{formatPrice(stats.averageOrderValue)}</div>
         </div>
       </div>
 
@@ -613,9 +633,8 @@ function StaffSales() {
           >
             <option value="all">All Status</option>
             <option value="completed">Completed</option>
-            <option value="pending">Pending</option>
+            <option value="partially_refunded">Partially Refunded</option>
             <option value="refunded">Refunded</option>
-            <option value="cancelled">Cancelled</option>
           </select>
 
           <select
@@ -626,21 +645,100 @@ function StaffSales() {
             <option value="all">All Payment</option>
             <option value="cash">Cash</option>
             <option value="card">Card</option>
-            <option value="online">Online</option>
-            <option value="installment">Installment</option>
+            <option value="gcash">GCash</option>
+            <option value="paymaya">PayMaya</option>
+            <option value="bank_transfer">Bank Transfer</option>
           </select>
 
           <select
             className="select select-bordered select-sm"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
+            value={dateFilterType}
+            onChange={(e) => setDateFilterType(e.target.value as any)}
           >
-            <option value="all">All Dates</option>
-            <option value="today">Today</option>
-            <option value="yesterday">Yesterday</option>
-            <option value="this_week">This Week</option>
-            <option value="this_month">This Month</option>
+            <option value="all">All Time</option>
+            <option value="yearly">Yearly</option>
+            <option value="quarterly">Quarterly</option>
+            <option value="monthly">Monthly</option>
+            <option value="custom">Custom</option>
           </select>
+
+          {dateFilterType === "yearly" && (
+            <select
+              className="select select-bordered select-sm"
+              value={selectedYear}
+              onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+            >
+              {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                <option key={year} value={year}>{year}</option>
+              ))}
+            </select>
+          )}
+
+          {dateFilterType === "quarterly" && (
+            <>
+              <select
+                className="select select-bordered select-sm"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+              >
+                {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+              <select
+                className="select select-bordered select-sm"
+                value={selectedQuarter}
+                onChange={(e) => setSelectedQuarter(parseInt(e.target.value))}
+              >
+                <option value={1}>Q1</option>
+                <option value={2}>Q2</option>
+                <option value={3}>Q3</option>
+                <option value={4}>Q4</option>
+              </select>
+            </>
+          )}
+
+          {dateFilterType === "monthly" && (
+            <>
+              <select
+                className="select select-bordered select-sm"
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+              >
+                {Array.from({ length: 10 }, (_, i) => new Date().getFullYear() - i).map(year => (
+                  <option key={year} value={year}>{year}</option>
+                ))}
+              </select>
+              <select
+                className="select select-bordered select-sm"
+                value={selectedMonth}
+                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+              >
+                {Array.from({ length: 12 }, (_, i) => i + 1).map(month => (
+                  <option key={month} value={month}>{new Date(2000, month - 1).toLocaleString('default', { month: 'long' })}</option>
+                ))}
+              </select>
+            </>
+          )}
+
+          {dateFilterType === "custom" && (
+            <div className="flex gap-2">
+              <input
+                type="date"
+                className="input input-bordered input-sm"
+                value={customDateRange.from ? customDateRange.from.toISOString().split('T')[0] : ''}
+                onChange={(e) => setCustomDateRange({ ...customDateRange, from: e.target.value ? new Date(e.target.value) : undefined })}
+                placeholder="From"
+              />
+              <input
+                type="date"
+                className="input input-bordered input-sm"
+                value={customDateRange.to ? customDateRange.to.toISOString().split('T')[0] : ''}
+                onChange={(e) => setCustomDateRange({ ...customDateRange, to: e.target.value ? new Date(e.target.value) : undefined })}
+                placeholder="To"
+              />
+            </div>
+          )}
         </div>
 
         {/* Results Count */}
@@ -666,59 +764,69 @@ function StaffSales() {
             </tr>
           </thead>
           <tbody>
-            {filteredSales.map((sale) => (
-              <tr key={sale.id} className="hover">
-                <td>
-                  <div className="font-mono text-sm">{sale.id}</div>
-                </td>
-                <td>
-                  <div>
-                    <div className="font-semibold">{sale.customerName}</div>
-                    <div className="text-sm text-base-content/70">{sale.customerEmail}</div>
-                  </div>
-                </td>
-                <td>
-                  <div>
-                    <div className="font-medium">{sale.productName}</div>
-                    <div className="text-sm text-base-content/70">Qty: {sale.quantity}</div>
-                  </div>
-                </td>
-                <td>
-                  <div>
-                    <div className="font-semibold">{formatPrice(sale.totalAmount)}</div>
-                    {sale.discount > 0 && (
-                      <div className="text-sm text-success">-{formatPrice(sale.discount)}</div>
-                    )}
-                  </div>
-                </td>
-                <td>
-                  {getPaymentMethodBadge(sale.paymentMethod)}
-                </td>
-                <td>
-                  {getStatusBadge(sale.status)}
-                </td>
-                <td>
-                  <div className="text-sm">{sale.salesperson}</div>
-                </td>
-                <td>
-                  <div className="text-sm">{formatDate(sale.saleDate)}</div>
-                </td>
-                <td>
-                  <div className="flex gap-1">
-                    <button
-                      onClick={() => {
-                        setSelectedSale(sale);
-                        setShowDetailsModal(true);
-                      }}
-                      className="btn btn-ghost btn-sm"
-                      title="View details"
-                    >
-                      <Eye className="h-4 w-4" />
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
+            {filteredSales.map((sale) => {
+              const allItemsRefunded = sale.sales_item.every(item => item.refunded);
+              const someItemsRefunded = sale.sales_item.some(item => item.refunded);
+              let saleStatus = 'completed';
+              if (allItemsRefunded) saleStatus = 'refunded';
+              else if (someItemsRefunded) saleStatus = 'partially_refunded';
+              
+              const firstItem = sale.sales_item[0];
+              const customerName = sale.user?.username || 'Walk-in Customer';
+              const productName = firstItem?.product?.product_listing?.name || 'Unknown Product';
+              const totalQuantity = sale.sales_item.reduce((sum, item) => sum + item.quantity_sold, 0);
+              const salesperson = sale.salesperson?.username || 'N/A';
+              
+              return (
+                <tr key={sale.id} className="hover">
+                  <td>
+                    <div className="font-mono text-sm">SALE-{sale.id.toString().padStart(3, '0')}</div>
+                  </td>
+                  <td>
+                    <div>
+                      <div className="font-semibold">{customerName}</div>
+                    </div>
+                  </td>
+                  <td>
+                    <div>
+                      <div className="font-medium">{productName}</div>
+                      <div className="text-sm text-base-content/70">Qty: {totalQuantity}</div>
+                    </div>
+                  </td>
+                  <td>
+                    <div>
+                      <div className="font-semibold">{formatPrice(sale.total_amount)}</div>
+                    </div>
+                  </td>
+                  <td>
+                    {getPaymentMethodBadge(sale.payment_method)}
+                  </td>
+                  <td>
+                    {getStatusBadge(saleStatus)}
+                  </td>
+                  <td>
+                    <div className="text-sm">{salesperson}</div>
+                  </td>
+                  <td>
+                    <div className="text-sm">{formatDate(sale.sale_date)}</div>
+                  </td>
+                  <td>
+                    <div className="flex gap-1">
+                      <button
+                        onClick={() => {
+                          setSelectedSale(sale);
+                          setShowDetailsModal(true);
+                        }}
+                        className="btn btn-ghost btn-sm"
+                        title="View details"
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
 
@@ -729,7 +837,7 @@ function StaffSales() {
               No sales found
             </h3>
             <p className="text-base-content/60">
-              {searchTerm || statusFilter !== "all" || paymentFilter !== "all" || dateFilter !== "all"
+              {searchTerm || statusFilter !== "all" || paymentFilter !== "all" || dateFilterType !== "all"
                 ? "No sales match your search criteria."
                 : "No sales available."}
             </p>
@@ -741,72 +849,312 @@ function StaffSales() {
       {showDetailsModal && selectedSale && (
         <dialog className="modal modal-open">
           <div className="modal-box max-w-4xl">
-            <h3 className="font-bold text-lg mb-4">Sale Details</h3>
+            <h3 className="font-bold text-lg mb-4">Sale Details - SALE-{selectedSale.id.toString().padStart(3, '0')}</h3>
             
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
               {/* Customer Info */}
               <div>
                 <h4 className="font-semibold mb-3">Customer Information</h4>
                 <div className="space-y-2">
-                  <div><strong>Name:</strong> {selectedSale.customerName}</div>
-                  <div><strong>Email:</strong> {selectedSale.customerEmail}</div>
+                  <div><strong>Name:</strong> {selectedSale.user?.username || 'Walk-in Customer'}</div>
+                  <div><strong>Payment Method:</strong> {getPaymentMethodBadge(selectedSale.payment_method)}</div>
+                  <div><strong>Salesperson:</strong> {selectedSale.salesperson?.username || 'N/A'}</div>
+                  <div><strong>Date:</strong> {formatDateTime(selectedSale.sale_date)}</div>
+                  <div><strong>Last Modified:</strong> {formatDateTime(selectedSale.last_modified)}</div>
                 </div>
               </div>
 
-              {/* Sale Info */}
+              {/* Financial Summary */}
               <div>
-                <h4 className="font-semibold mb-3">Sale Information</h4>
+                <h4 className="font-semibold mb-3">Financial Summary</h4>
                 <div className="space-y-2">
-                  <div><strong>ID:</strong> {selectedSale.id}</div>
-                  <div><strong>Product:</strong> {selectedSale.productName}</div>
-                  <div><strong>Quantity:</strong> {selectedSale.quantity}</div>
-                  <div><strong>Unit Price:</strong> {formatPrice(selectedSale.unitPrice)}</div>
-                  <div><strong>Total Amount:</strong> {formatPrice(selectedSale.totalAmount)}</div>
-                  <div><strong>Payment Method:</strong> {getPaymentMethodBadge(selectedSale.paymentMethod)}</div>
-                  <div><strong>Status:</strong> {getStatusBadge(selectedSale.status)}</div>
-                  <div><strong>Salesperson:</strong> {selectedSale.salesperson}</div>
-                  <div><strong>Date:</strong> {formatDateTime(selectedSale.saleDate)}</div>
+                  <div><strong>Total:</strong> {formatPrice(selectedSale.total_amount)}</div>
+                  <div><strong>Capital:</strong> {formatPrice(selectedSale.capital)}</div>
+                  <div><strong>Net Revenue:</strong> {formatPrice(selectedSale.net_revenue)}</div>
                 </div>
               </div>
             </div>
 
-            {/* Financial Breakdown */}
+            {/* Items List */}
             <div className="mt-6">
-              <h4 className="font-semibold mb-3">Financial Breakdown</h4>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="stat bg-base-200 rounded-lg">
-                  <div className="stat-title">Subtotal</div>
-                  <div className="stat-value text-lg">{formatPrice(selectedSale.totalAmount - selectedSale.tax + selectedSale.discount)}</div>
-                </div>
-                <div className="stat bg-base-200 rounded-lg">
-                  <div className="stat-title">Discount</div>
-                  <div className="stat-value text-lg text-success">-{formatPrice(selectedSale.discount)}</div>
-                </div>
-                <div className="stat bg-base-200 rounded-lg">
-                  <div className="stat-title">Tax</div>
-                  <div className="stat-value text-lg text-warning">+{formatPrice(selectedSale.tax)}</div>
-                </div>
-                <div className="stat bg-base-200 rounded-lg">
-                  <div className="stat-title">Total</div>
-                  <div className="stat-value text-lg text-primary">{formatPrice(selectedSale.totalAmount)}</div>
-                </div>
+              <h4 className="font-semibold mb-3">Sale Items</h4>
+              <div className="overflow-x-auto">
+                <table className="table table-sm">
+                  <thead>
+                    <tr>
+                      <th>Product</th>
+                      <th>Quantity</th>
+                      <th>Unit Price</th>
+                      <th>Supplier Price</th>
+                      <th>Amount</th>
+                      <th>Refunded</th>
+                      <th>Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedSale.sales_item.map((item) => {
+                      const itemPrice = parseFloat(item.amount) / item.quantity_sold;
+                      const availableQty = item.quantity_sold - item.refunded_quantity;
+                      return (
+                        <tr key={item.id}>
+                          <td>
+                            <div className="font-medium">{item.product?.product_listing?.name || item.product?.name}</div>
+                            {item.product?.variant_attribute && (
+                              <div className="text-sm text-base-content/70">{item.product.variant_attribute}</div>
+                            )}
+                          </td>
+                          <td>
+                            {item.refunded_quantity > 0 ? (
+                              <div>
+                                <div>{item.quantity_sold - item.refunded_quantity} / {item.quantity_sold}</div>
+                                <div className="text-xs text-error">Refunded: {item.refunded_quantity}</div>
+                              </div>
+                            ) : (
+                              item.quantity_sold
+                            )}
+                          </td>
+                          <td>{formatPrice(itemPrice)}</td>
+                          <td>{item.supplier_price ? formatPrice(item.supplier_price) : 'N/A'}</td>
+                          <td>{formatPrice(parseFloat(item.amount))}</td>
+                          <td>
+                            {item.refunded ? (
+                              <span className="badge badge-error">Refunded</span>
+                            ) : item.refunded_quantity > 0 ? (
+                              <span className="badge badge-warning">Partial ({item.refunded_quantity})</span>
+                            ) : (
+                              <span className="badge badge-success">None</span>
+                            )}
+                          </td>
+                          <td>
+                            {!item.refunded && availableQty > 0 ? (
+                              <button
+                                className="btn btn-sm btn-outline btn-error"
+                                onClick={() => {
+                                  setSelectedItemForRefund({ sale: selectedSale, item });
+                                  setRefundQuantity(1);
+                                  setRefundReason('');
+                                  setRefundNotes('');
+                                  setShowItemRefundModal(true);
+                                }}
+                              >
+                                <RotateCcw className="h-3 w-3" /> Refund
+                              </button>
+                            ) : (
+                              <button className="btn btn-sm btn-disabled" disabled>
+                                <RotateCcw className="h-3 w-3" /> Refunded
+                              </button>
+                            )}
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
               </div>
             </div>
-
-            {/* Notes */}
-            {selectedSale.notes && (
-              <div className="mt-6">
-                <h4 className="font-semibold mb-3">Notes</h4>
-                <p className="p-3 bg-base-200 rounded-lg">{selectedSale.notes}</p>
-              </div>
-            )}
 
             <div className="modal-action">
+              {selectedSale.sales_item.some(item => !item.refunded && (item.quantity_sold - item.refunded_quantity > 0)) && (
+                <button
+                  className="btn btn-error"
+                  onClick={() => {
+                    setRefundReason('');
+                    setRefundNotes('');
+                    setShowRefundModal(true);
+                  }}
+                >
+                  <RotateCcw className="h-4 w-4" /> Refund Full Sale
+                </button>
+              )}
               <button 
                 className="btn"
                 onClick={() => setShowDetailsModal(false)}
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </dialog>
+      )}
+
+      {/* Full Sale Refund Modal */}
+      {showRefundModal && selectedSale && (
+        <dialog className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg mb-4">Refund Full Sale</h3>
+            <div className="space-y-4">
+              <div>
+                <label className="label">
+                  <span className="label-text">Refund Reason</span>
+                </label>
+                <input
+                  type="text"
+                  className="input input-bordered w-full"
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                  placeholder="Enter refund reason"
+                />
+              </div>
+              <div>
+                <label className="label">
+                  <span className="label-text">Notes</span>
+                </label>
+                <textarea
+                  className="textarea textarea-bordered w-full"
+                  value={refundNotes}
+                  onChange={(e) => setRefundNotes(e.target.value)}
+                  placeholder="Additional notes (optional)"
+                  rows={3}
+                />
+              </div>
+              <div className="alert alert-info">
+                <AlertCircle className="h-4 w-4" />
+                <span>This will refund all remaining non-refunded items in this sale.</span>
+              </div>
+            </div>
+            <div className="modal-action">
+              <button
+                className="btn"
+                onClick={() => setShowRefundModal(false)}
+                disabled={isProcessingRefund}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-error"
+                onClick={async () => {
+                  setIsProcessingRefund(true);
+                  try {
+                    await refundFullSale(selectedSale.id, refundReason, refundNotes);
+                    alert('Refund processed successfully!');
+                    setShowRefundModal(false);
+                    setShowDetailsModal(false);
+                    await refresh();
+                  } catch (error: any) {
+                    alert(`Refund failed: ${error.message}`);
+                  } finally {
+                    setIsProcessingRefund(false);
+                  }
+                }}
+                disabled={isProcessingRefund}
+              >
+                {isProcessingRefund ? (
+                  <>
+                    <span className="loading loading-spinner loading-sm"></span>
+                    Processing...
+                  </>
+                ) : (
+                  'Confirm Refund'
+                )}
+              </button>
+            </div>
+          </div>
+        </dialog>
+      )}
+
+      {/* Item Refund Modal */}
+      {showItemRefundModal && selectedItemForRefund && (
+        <dialog className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg mb-4">Refund Item</h3>
+            <div className="space-y-4">
+              <div>
+                <div className="font-semibold mb-2">
+                  {selectedItemForRefund.item.product?.product_listing?.name || selectedItemForRefund.item.product?.name}
+                </div>
+                <div className="text-sm text-base-content/70">
+                  Sold: {selectedItemForRefund.item.quantity_sold} | 
+                  Already Refunded: {selectedItemForRefund.item.refunded_quantity} |
+                  Available: {selectedItemForRefund.item.quantity_sold - selectedItemForRefund.item.refunded_quantity}
+                </div>
+              </div>
+              <div>
+                <label className="label">
+                  <span className="label-text">Refund Quantity</span>
+                </label>
+                <input
+                  type="number"
+                  className="input input-bordered w-full"
+                  value={refundQuantity}
+                  onChange={(e) => {
+                    const qty = parseInt(e.target.value) || 0;
+                    const maxQty = selectedItemForRefund.item.quantity_sold - selectedItemForRefund.item.refunded_quantity;
+                    setRefundQuantity(Math.min(Math.max(1, qty), maxQty));
+                  }}
+                  min={1}
+                  max={selectedItemForRefund.item.quantity_sold - selectedItemForRefund.item.refunded_quantity}
+                />
+              </div>
+              <div>
+                <label className="label">
+                  <span className="label-text">Refund Reason</span>
+                </label>
+                <input
+                  type="text"
+                  className="input input-bordered w-full"
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                  placeholder="Enter refund reason"
+                />
+              </div>
+              <div>
+                <label className="label">
+                  <span className="label-text">Notes</span>
+                </label>
+                <textarea
+                  className="textarea textarea-bordered w-full"
+                  value={refundNotes}
+                  onChange={(e) => setRefundNotes(e.target.value)}
+                  placeholder="Additional notes (optional)"
+                  rows={3}
+                />
+              </div>
+            </div>
+            <div className="modal-action">
+              <button
+                className="btn"
+                onClick={() => setShowItemRefundModal(false)}
+                disabled={isProcessingRefund}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-error"
+                onClick={async () => {
+                  setIsProcessingRefund(true);
+                  try {
+                    await refundSaleItem(
+                      selectedItemForRefund.sale.id,
+                      selectedItemForRefund.item.id,
+                      refundQuantity,
+                      refundReason,
+                      refundNotes
+                    );
+                    alert('Refund processed successfully!');
+                    setShowItemRefundModal(false);
+                    await refresh();
+                    // Reopen details modal with updated data
+                    const updatedSale = sales.find(s => s.id === selectedSale.id);
+                    if (updatedSale) {
+                      setSelectedSale(updatedSale);
+                      setShowDetailsModal(true);
+                    }
+                  } catch (error: any) {
+                    alert(`Refund failed: ${error.message}`);
+                  } finally {
+                    setIsProcessingRefund(false);
+                  }
+                }}
+                disabled={isProcessingRefund}
+              >
+                {isProcessingRefund ? (
+                  <>
+                    <span className="loading loading-spinner loading-sm"></span>
+                    Processing...
+                  </>
+                ) : (
+                  'Confirm Refund'
+                )}
               </button>
             </div>
           </div>

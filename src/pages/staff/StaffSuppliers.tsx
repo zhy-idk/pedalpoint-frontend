@@ -222,13 +222,13 @@ function StaffSuppliers() {
               <div className="card-body">
                 <div className="flex items-start justify-between mb-4">
                   <div className="flex-1">
-                    <h3 className="card-title text-lg">{supplier.name}</h3>
-                    {supplier.contact && (
-                      <div className="flex items-center gap-1 text-sm text-base-content/70">
-                        <Phone className="h-3 w-3" />
-                        {supplier.contact}
-                      </div>
-                    )}
+                      <h3 className="card-title text-lg">{supplier.name}</h3>
+                      {supplier.contact && (
+                        <div className="flex items-center gap-1 text-sm text-base-content/70">
+                          <Phone className="h-3 w-3" />
+                          {supplier.contact}
+                        </div>
+                      )}
                   </div>
                   {supplier.has_low_stock && (
                     <div className="badge badge-error gap-1">
