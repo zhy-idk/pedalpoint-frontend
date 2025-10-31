@@ -336,8 +336,9 @@ function StaffSales() {
     const totalRefunded = sales.reduce((sum, sale) => {
       return sum + sale.sales_item.reduce((itemSum, item) => {
         if (item.refunded_quantity > 0) {
-          const itemPrice = parseFloat(item.amount) / item.quantity_sold;
-          return itemSum + (itemPrice * item.refunded_quantity);
+          const itemPrice = typeof item.amount === 'string' ? parseFloat(item.amount) : item.amount;
+          const itemPricePerUnit = itemPrice / item.quantity_sold;
+          return itemSum + (itemPricePerUnit * item.refunded_quantity);
         }
         return itemSum;
       }, 0);
@@ -893,7 +894,9 @@ function StaffSales() {
                   </thead>
                   <tbody>
                     {selectedSale.sales_item.map((item) => {
-                      const itemPrice = parseFloat(item.amount) / item.quantity_sold;
+                      const itemAmount = typeof item.amount === 'string' ? parseFloat(item.amount) : item.amount;
+                      const itemPrice = itemAmount / item.quantity_sold;
+                      const supplierPrice = item.supplier_price ? (typeof item.supplier_price === 'string' ? parseFloat(item.supplier_price) : item.supplier_price) : null;
                       const availableQty = item.quantity_sold - item.refunded_quantity;
                       return (
                         <tr key={item.id}>
@@ -914,8 +917,8 @@ function StaffSales() {
                             )}
                           </td>
                           <td>{formatPrice(itemPrice)}</td>
-                          <td>{item.supplier_price ? formatPrice(item.supplier_price) : 'N/A'}</td>
-                          <td>{formatPrice(parseFloat(item.amount))}</td>
+                          <td>{supplierPrice !== null ? formatPrice(supplierPrice) : 'N/A'}</td>
+                          <td>{formatPrice(itemAmount)}</td>
                           <td>
                             {item.refunded ? (
                               <span className="badge badge-error">Refunded</span>

@@ -12,9 +12,9 @@ function AccountSettings() {
   // Check if user has usable password
   const [hasUsablePassword, setHasUsablePassword] = useState<boolean | null>(null);
   const [isCheckingPassword, setIsCheckingPassword] = useState(true);
-  const [setPasswordLoading, setSetPasswordLoading] = useState(false);
-  const [setPasswordError, setSetPasswordError] = useState<string | null>(null);
-  const [setPasswordSuccess, setSetPasswordSuccess] = useState(false);
+  const [isSetPasswordLoading, setIsSetPasswordLoading] = useState(false);
+  const [passwordErrorMsg, setPasswordErrorMsg] = useState<string | null>(null);
+  const [isSetPasswordSuccess, setIsSetPasswordSuccess] = useState(false);
   
   // Security Settings State
   const [passwordData, setPasswordData] = useState({
@@ -103,13 +103,13 @@ function AccountSettings() {
   const handleSetPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user?.email) {
-      setSetPasswordError('Email address not found. Please contact support.');
+      setPasswordErrorMsg('Email address not found. Please contact support.');
       return;
     }
 
-    setSetPasswordLoading(true);
-    setSetPasswordError(null);
-    setSetPasswordSuccess(false);
+    setIsSetPasswordLoading(true);
+    setPasswordErrorMsg(null);
+    setIsSetPasswordSuccess(false);
 
     try {
       await api.post('/_allauth/browser/v1/auth/password/request', {
@@ -118,20 +118,20 @@ function AccountSettings() {
         withCredentials: true,
       });
 
-      setSetPasswordSuccess(true);
+      setIsSetPasswordSuccess(true);
       // Show success message for a few seconds
       setTimeout(() => {
-        setSetPasswordSuccess(false);
+        setIsSetPasswordSuccess(false);
       }, 5000);
     } catch (error: any) {
       const errorMsg = error.response?.data?.errors?.[0]?.message || 
                        error.response?.data?.message || 
                        error.message || 
                        'Failed to send password setup email. Please try again.';
-      setSetPasswordError(errorMsg);
+      setPasswordErrorMsg(errorMsg);
       console.error('Set password error:', error);
     } finally {
-      setSetPasswordLoading(false);
+      setIsSetPasswordLoading(false);
     }
   };
 
@@ -402,7 +402,7 @@ function AccountSettings() {
                               You don't have a password set yet. We'll send you an email with instructions to set up your password.
                             </p>
                             
-                            {setPasswordSuccess && (
+                            {isSetPasswordSuccess && (
                               <div className="alert alert-success mb-3 sm:mb-4 text-xs sm:text-sm py-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -411,12 +411,12 @@ function AccountSettings() {
                               </div>
                             )}
                             
-                            {setPasswordError && (
+                            {passwordErrorMsg && (
                               <div className="alert alert-error mb-3 sm:mb-4 text-xs sm:text-sm py-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="stroke-current shrink-0 h-5 w-5" fill="none" viewBox="0 0 24 24">
                                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                 </svg>
-                                <span>{setPasswordError}</span>
+                                <span>{passwordErrorMsg}</span>
                               </div>
                             )}
                             
@@ -433,14 +433,14 @@ function AccountSettings() {
                               <button 
                                 type="submit" 
                                 className="btn btn-primary btn-sm sm:btn-md"
-                                disabled={setPasswordLoading || setPasswordSuccess}
+                                disabled={isSetPasswordLoading || isSetPasswordSuccess}
                               >
-                                {setPasswordLoading ? (
+                                {isSetPasswordLoading ? (
                                   <>
                                     <span className="loading loading-spinner loading-sm"></span>
                                     <span className="text-xs sm:text-sm">Sending email...</span>
                                   </>
-                                ) : setPasswordSuccess ? (
+                                ) : isSetPasswordSuccess ? (
                                   'Email Sent!'
                                 ) : (
                                   'Send Password Setup Email'
