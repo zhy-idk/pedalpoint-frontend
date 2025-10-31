@@ -42,13 +42,12 @@ function AccountSettings() {
   // Email Notifications State
   const [emailNotifications, setEmailNotifications] = useState({
     orderUpdates: true,
-    promotions: false,
-    newsletter: true,
-    securityAlerts: true,
-    deliveryUpdates: true
+    reservationUpdates: true,
+    serviceUpdates: true
   });
+  const [isSavingNotifications, setIsSavingNotifications] = useState(false);
   
-  // Check has_usable_password from session
+  // Check has_usable_password from session and load notification preferences
   useEffect(() => {
     const checkHasUsablePassword = async () => {
       if (!isAuthenticated) return;
@@ -71,8 +70,32 @@ function AccountSettings() {
       }
     };
     
+    const loadNotificationPreferences = async () => {
+      if (!isAuthenticated || !user) return;
+      
+      try {
+        // Get user profile which includes notification preferences
+        const response = await api.get('/api/user/profile/');
+        const userData = response.data;
+        
+        // Extract notification preferences from user_info
+        if (userData.user_info && userData.user_info.length > 0) {
+          const userInfo = userData.user_info[0];
+          setEmailNotifications({
+            orderUpdates: userInfo.email_order_updates ?? true,
+            reservationUpdates: userInfo.email_reservation_updates ?? true,
+            serviceUpdates: userInfo.email_service_updates ?? true,
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load notification preferences:', error);
+        // Keep defaults if we can't load
+      }
+    };
+    
     checkHasUsablePassword();
-  }, [isAuthenticated]);
+    loadNotificationPreferences();
+  }, [isAuthenticated, user]);
 
   // Redirect if not authenticated
   if (!isAuthenticated) {
@@ -262,12 +285,40 @@ function AccountSettings() {
     setDeleteConfirmText('');
   };
 
-  const handleEmailNotificationChange = (key: keyof typeof emailNotifications) => {
+  const handleEmailNotificationChange = async (key: keyof typeof emailNotifications) => {
+    const newValue = !emailNotifications[key];
+    
+    // Optimistically update UI
     setEmailNotifications(prev => ({
       ...prev,
-      [key]: !prev[key]
+      [key]: newValue
     }));
-    // TODO: Implement email notification preferences API call
+    
+    // Save to backend
+    setIsSavingNotifications(true);
+    try {
+      const preferenceMap: Record<string, string> = {
+        orderUpdates: 'email_order_updates',
+        reservationUpdates: 'email_reservation_updates',
+        serviceUpdates: 'email_service_updates',
+      };
+      
+      await api.put('/api/user/profile/update/', {
+        [preferenceMap[key]]: newValue
+      });
+      
+      console.log(`Notification preference ${key} updated to ${newValue}`);
+    } catch (error) {
+      console.error('Failed to save notification preference:', error);
+      // Revert on error
+      setEmailNotifications(prev => ({
+        ...prev,
+        [key]: !newValue
+      }));
+      alert('Failed to save notification preference. Please try again.');
+    } finally {
+      setIsSavingNotifications(false);
+    }
   };
 
   const handleTabClick = (tabId: string) => {
@@ -664,17 +715,13 @@ function AccountSettings() {
                               <div className="flex-1 min-w-0">
                                 <div className="font-medium text-sm sm:text-base truncate">
                                   {key === 'orderUpdates' && 'Order Updates'}
-                                  {key === 'promotions' && 'Promotions & Deals'}
-                                  {key === 'newsletter' && 'Newsletter'}
-                                  {key === 'securityAlerts' && 'Security Alerts'}
-                                  {key === 'deliveryUpdates' && 'Delivery Updates'}
+                                  {key === 'reservationUpdates' && 'Reservation Updates'}
+                                  {key === 'serviceUpdates' && 'Service Updates'}
                                 </div>
                                 <div className="text-xs sm:text-sm text-base-content/70">
                                   {key === 'orderUpdates' && 'Get notified about your order status changes'}
-                                  {key === 'promotions' && 'Receive emails about special offers and discounts'}
-                                  {key === 'newsletter' && 'Stay updated with our latest news and products'}
-                                  {key === 'securityAlerts' && 'Important security notifications (recommended)'}
-                                  {key === 'deliveryUpdates' && 'Real-time delivery tracking notifications'}
+                                  {key === 'reservationUpdates' && 'Get notified about your product reservation status'}
+                                  {key === 'serviceUpdates' && 'Get notified about your service queue appointments'}
                                 </div>
                               </div>
                               <div className="form-control flex-shrink-0">
@@ -683,6 +730,7 @@ function AccountSettings() {
                                     type="checkbox"
                                     className="toggle toggle-primary toggle-sm sm:toggle-md"
                                     checked={value}
+                                    disabled={isSavingNotifications}
                                     onChange={() => handleEmailNotificationChange(key as keyof typeof emailNotifications)}
                                   />
                                 </label>
