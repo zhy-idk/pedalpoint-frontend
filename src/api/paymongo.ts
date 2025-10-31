@@ -40,6 +40,8 @@ interface PaymentConfirmationResponse {
   payment_status: string;
 }
 
+import { getCSRFToken as getCSRFTokenUtil } from '../utils/csrf';
+
 class PayMongoService {
   private apiBaseUrl: string;
 
@@ -95,8 +97,8 @@ class PayMongoService {
   }
 
   private getAuthHeaders() {
-    // Get CSRF token from cookies
-    const csrfToken = this.getCSRFToken();
+    // Get CSRF token (supports meta tag and cookie via shared util)
+    const csrfToken = getCSRFTokenUtil();
     const headers: Record<string, string> = {};
     
     if (csrfToken) {
@@ -104,20 +106,6 @@ class PayMongoService {
     }
     
     return headers;
-  }
-
-  private getCSRFToken(): string | null {
-    const name = 'csrftoken';
-    const cookies = document.cookie.split(';');
-    
-    for (let cookie of cookies) {
-      const [cookieName, cookieValue] = cookie.trim().split('=');
-      if (cookieName === name) {
-        return decodeURIComponent(cookieValue);
-      }
-    }
-    
-    return null;
   }
 
 
