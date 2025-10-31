@@ -134,6 +134,18 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const handleSocialLogin = async (provider: "google" | "facebook") => {
     try {
+      // Facebook requires HTTPS - check if we're on HTTP and redirect or show error
+      const isLocalhost = window.location.hostname === 'localhost' || 
+                         window.location.hostname === '127.0.0.1' ||
+                         window.location.hostname.startsWith('192.168.');
+      
+      if (provider === "facebook" && window.location.protocol === 'http:' && !isLocalhost) {
+        // Redirect to HTTPS version of the page
+        const httpsUrl = window.location.href.replace(/^http:/, 'https:');
+        window.location.href = httpsUrl;
+        return;
+      }
+      
       // 1. Ensure CSRF cookie/session exists
       await fetch(`${apiBaseUrl}/_allauth/browser/v1/auth/session`, {
         credentials: "include",
@@ -165,7 +177,7 @@ const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       let callbackUrl = window.location.origin;
       
       // Force HTTPS if we're in production (not localhost)
-      if (!callbackUrl.includes('localhost') && !callbackUrl.includes('127.0.0.1')) {
+      if (!isLocalhost) {
         callbackUrl = callbackUrl.replace(/^http:/, 'https:');
       }
       

@@ -247,7 +247,21 @@ function Login() {
               type="button"
               className="btn w-full border-[#005fd8] bg-[#1A77F2] text-white shadow-xs shadow-[#005fd8]"
               disabled={isLoading}
-              onClick={() => handleSocialLogin("facebook")}
+              onClick={() => {
+                // Check if we're on HTTP (Facebook requires HTTPS)
+                const isLocalhost = window.location.hostname === 'localhost' || 
+                                   window.location.hostname === '127.0.0.1' ||
+                                   window.location.hostname.startsWith('192.168.');
+                
+                if (window.location.protocol === 'http:' && !isLocalhost) {
+                  alert('Facebook login requires HTTPS. Please access this page via HTTPS (https://) instead of HTTP.');
+                  // Try to redirect to HTTPS
+                  const httpsUrl = window.location.href.replace(/^http:/, 'https:');
+                  window.location.href = httpsUrl;
+                  return;
+                }
+                handleSocialLogin("facebook");
+              }}
             >
               <svg
                 aria-label="Facebook logo"
