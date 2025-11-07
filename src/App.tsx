@@ -45,6 +45,7 @@ import StaffUserManagement from './pages/staff/StaffUserManagement';
 import StaffReservations from './pages/staff/StaffReservations';
 import StaffSales from './pages/staff/StaffSales';
 import StaffSuppliers from './pages/staff/StaffSuppliers';
+import StaffAuditLog from './pages/staff/StaffAuditLog';
 
 function App() {
   return (
@@ -104,6 +105,11 @@ function App() {
               <StaffQueueing />
             </ProtectedModuleRoute>
           } />
+          <Route path="audit-log" element={
+            <ProtectedModuleRoute module="audit">
+              <StaffAuditLog />
+            </ProtectedModuleRoute>
+          } />
           <Route path="users" element={
             <ProtectedModuleRoute module="users">
               <StaffUserManagement />
@@ -113,9 +119,9 @@ function App() {
 
         {/* Regular customer routes */}
         <Route path="/*" element={
-          <>
+          <div className="flex flex-col min-h-screen">
             <NavBar />
-            <main className='bg-base-200'>
+            <main className='bg-base-200 flex-1'>
               <Routes>
                 <Route path="/" element={<Home />} />
                 <Route path="signup/" element={<Signup />} />
@@ -146,7 +152,7 @@ function App() {
             <ScrollToTopButton />
             <Chat />
             <Footer />
-          </>
+          </div>
         } />
       </Routes>
     </CartProvider>

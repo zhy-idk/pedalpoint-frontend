@@ -1,6 +1,6 @@
 import { NavLink } from "react-router-dom";
 import { useState } from "react";
-import { Menu, X } from "lucide-react";
+import { ClipboardList, Menu, X } from "lucide-react";
 import DashboardSVG from "../../assets/dashboard_24dp.svg?react";
 import PosSVG from "../../assets/point_of_sale_24dp.svg?react";
 import ChatsSVG from "../../assets/chat_24dp.svg?react";
@@ -210,6 +210,23 @@ function StaffSidebar() {
             >
               <div className="text-base-content [&>svg]:fill-current [&>svg]:stroke-current">
                 <UserSVG width={35} height={35} />
+              </div>
+            </NavLink>
+          </li>
+        )}
+
+        {/* Audit Log - Superuser only */}
+        {permissions.canAccessAuditLog && (
+          <li>
+            <NavLink
+              to="/manage/audit-log"
+              className={({ isActive }) =>
+                `tooltip tooltip-right flex items-center justify-center text-base-content ${isActive ? "bg-neutral-400/15" : ""}`
+              }
+              data-tip="Audit Log"
+            >
+              <div className="text-base-content">
+                <ClipboardList className="h-8 w-8" />
               </div>
             </NavLink>
           </li>

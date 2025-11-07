@@ -84,7 +84,7 @@ function NavBar() {
           ) : cart.totalItems > 0 ? (
             <>
               <span className="text-lg font-bold">{cart.totalItems} Item{cart.totalItems !== 1 ? 's' : ''}</span>
-              <span className="text-info">Subtotal: ${cart.totalPrice.toFixed(2)}</span>
+              <span className="text-info">Subtotal: ₱{cart.totalPrice.toFixed(2)}</span>
               <div className="card-actions">
                 <Link to="/cart" className="btn btn-primary btn-block">View Cart</Link>
               </div>

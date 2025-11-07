@@ -1519,7 +1519,11 @@ function StaffInventory() {
                       {selectedItem.product_images.map((image) => (
                         <div key={image.id} className="group relative">
                           <img
-                            src={`${apiBaseUrl}${image.image}`}
+                            src={
+                              image.image.startsWith('http://') || image.image.startsWith('https://')
+                                ? image.image
+                                : `${apiBaseUrl}${image.image}`
+                            }
                             alt={image.alt_text}
                             className="border-base-300 h-24 w-full rounded border object-cover"
                           />

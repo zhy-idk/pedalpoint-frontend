@@ -13,7 +13,21 @@ function ImageCarousel({ product }: { product?: Product }) {
     return null;
   }
 
-  type ImageType = { image: string; alt_text: string };
+  type ImageType = { image: string; alt_text: string; isThumbnail?: boolean };
+  
+  // Helper function to get proper image URL
+  const getImageUrl = (imagePath: string): string => {
+    if (!imagePath || imagePath.trim() === "") {
+      return PlaceholderIMG;
+    }
+    // If it's already a full URL (starts with http:// or https://), use it directly
+    if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+      return imagePath;
+    }
+    // Otherwise, prepend the API base URL
+    return `${apiBaseUrl}${imagePath}`;
+  };
+
   const getAllImages = (): ImageType[] => {
     let allImages: ImageType[] = [];
 
@@ -22,11 +36,12 @@ function ImageCarousel({ product }: { product?: Product }) {
     console.log("Product images:", product.images);
     console.log("Product products (variants):", product.products);
 
-    // First, add the main product image if it exists
+    // First, add the main product image/thumbnail if it exists
     if (product.image && product.image.trim() !== "") {
       const mainImage = {
-        image: `${apiBaseUrl}${product.image}`,
+        image: getImageUrl(product.image),
         alt_text: "Main Product Image",
+        isThumbnail: true,
       };
       allImages.push(mainImage);
       console.log("Added main image:", mainImage);
@@ -35,11 +50,9 @@ function ImageCarousel({ product }: { product?: Product }) {
     // Then, add product images if they exist
     if (product.images && product.images.length > 0) {
       const productImages = product.images.map((img) => ({
-        image:
-          img.image && img.image.trim() !== ""
-            ? `${apiBaseUrl}${img.image}`
-            : PlaceholderIMG,
+        image: getImageUrl(img.image),
         alt_text: img.alt_text || "Product Image",
+        isThumbnail: false,
       }));
       allImages = [...allImages, ...productImages];
       console.log("Added main product images:", productImages);
@@ -50,12 +63,10 @@ function ImageCarousel({ product }: { product?: Product }) {
       const variantImages = product.products.flatMap(
         (variant) =>
           variant.product_images?.map((img) => ({
-            image:
-              img.image && img.image.trim() !== ""
-                ? `${apiBaseUrl}${img.image}`
-                : PlaceholderIMG,
+            image: getImageUrl(img.image),
             alt_text:
               img.alt_text || `${variant.name} - ${variant.variant_attribute}`,
+            isThumbnail: false,
           })) || [],
       );
       allImages = [...allImages, ...variantImages];
@@ -74,6 +85,7 @@ function ImageCarousel({ product }: { product?: Product }) {
       uniqueImages.push({
         image: PlaceholderIMG,
         alt_text: "Placeholder Image",
+        isThumbnail: false,
       });
     }
 
@@ -110,7 +122,10 @@ function ImageCarousel({ product }: { product?: Product }) {
     goToSlide(prevIndex);
   };
 
-  const images = getAllImages();
+  const allImages = getAllImages();
+  
+  // Filter out thumbnail images - only show gallery images in the carousel
+  const images = allImages.filter(img => !img.isThumbnail);
   const totalImages = images.length;
 
   return (

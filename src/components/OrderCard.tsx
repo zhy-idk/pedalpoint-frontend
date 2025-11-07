@@ -65,7 +65,18 @@ function OrderCard({ order }: OrderCardProps) {
     if (imageErrors[itemId]) {
       return PlaceholderImg;
     }
-    return imageUrl ? `${apiBaseUrl}${imageUrl}` : PlaceholderImg;
+    
+    if (!imageUrl || imageUrl.trim() === '') {
+      return PlaceholderImg;
+    }
+    
+    // Check if it's already a full URL (starts with http:// or https://)
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://')) {
+      return imageUrl;
+    }
+    
+    // Otherwise, prepend the API base URL
+    return `${apiBaseUrl}${imageUrl}`;
   };
 
   return (

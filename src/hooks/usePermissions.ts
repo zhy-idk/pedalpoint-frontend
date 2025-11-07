@@ -12,6 +12,7 @@ export interface Permissions {
   canAccessSales: boolean;
   canAccessUserManagement: boolean;
   canAccessDashboard: boolean;
+  canAccessAuditLog: boolean;
 }
 
 export const usePermissions = (): Permissions => {
@@ -31,6 +32,7 @@ export const usePermissions = (): Permissions => {
       canAccessSales: true,
       canAccessUserManagement: true,
       canAccessDashboard: true,
+      canAccessAuditLog: true,
     };
   }
 
@@ -49,6 +51,7 @@ export const usePermissions = (): Permissions => {
       canAccessSales: false, // Only superusers
       canAccessUserManagement: false, // Only superusers
       canAccessDashboard: true, // All staff can see dashboard
+      canAccessAuditLog: false,
     };
   }
 
@@ -65,6 +68,7 @@ export const usePermissions = (): Permissions => {
     canAccessSales: false,
     canAccessUserManagement: false,
     canAccessDashboard: false,
+    canAccessAuditLog: false,
   };
 };
 

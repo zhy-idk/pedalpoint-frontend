@@ -3,7 +3,7 @@ import { LockKeyhole } from 'lucide-react';
 
 interface ProtectedModuleRouteProps {
   children: React.ReactNode;
-  module: 'pos' | 'chats' | 'orders' | 'listings' | 'inventory' | 'queueing' | 'reservations' | 'suppliers' | 'sales' | 'users';
+  module: 'pos' | 'chats' | 'orders' | 'listings' | 'inventory' | 'queueing' | 'reservations' | 'suppliers' | 'sales' | 'users' | 'audit';
   fallbackPath?: string;
 }
 
@@ -23,6 +23,7 @@ function ProtectedModuleRoute({ children, module, fallbackPath = '/manage' }: Pr
       case 'suppliers': return permissions.canAccessSuppliers;
       case 'sales': return permissions.canAccessSales;
       case 'users': return permissions.canAccessUserManagement;
+      case 'audit': return permissions.canAccessAuditLog;
       default: return false;
     }
   })();

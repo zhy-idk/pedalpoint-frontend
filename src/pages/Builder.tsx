@@ -10,7 +10,7 @@ import {
   Star
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import api from '../api';
+import api, { apiBaseUrl } from '../api';
 import { useBikeBuilderProducts } from '../hooks/useBikeBuilderProducts';
 import { useCart } from '../providers/CartProvider';
 import type { Product } from '../types/product';
@@ -638,7 +638,11 @@ function Builder() {
                         <div className="w-24 h-24 bg-base-300 rounded-lg flex items-center justify-center overflow-hidden flex-shrink-0">
                           {product.image ? (
                             <img
-                              src={product.image}
+                              src={
+                                product.image.startsWith('http://') || product.image.startsWith('https://')
+                                  ? product.image
+                                  : `${apiBaseUrl}${product.image}`
+                              }
                               alt={product.name}
                               className="w-full h-full object-cover"
                             />

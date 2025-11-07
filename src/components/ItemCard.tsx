@@ -17,8 +17,13 @@ function ItemCard({ product } : ItemCardProps) {
       return PlaceholderIMG;
     }
     
-    // Check if it's already a full URL or local path
-    if (product.image.startsWith('http') || product.image.startsWith('/src/') || product.image === PlaceholderIMG) {
+    // Check if it's already a full URL (starts with http:// or https://)
+    if (product.image.startsWith('http://') || product.image.startsWith('https://')) {
+      return product.image;
+    }
+    
+    // Check if it's a local path
+    if (product.image.startsWith('/src/') || product.image === PlaceholderIMG) {
       return product.image;
     }
     

@@ -4,7 +4,7 @@ import { useCategories, type Category } from '../../hooks/useCategories.js';
 import { useBrands } from '../../hooks/useBrands.js';
 import ListingFormModal from '../../components/staff/ListingFormModal';
 import { Plus, Edit2, Trash2, ChevronDown, ChevronRight, Settings, FolderPlus, Folder } from 'lucide-react';
-import api from '../../api';
+import api, { apiBaseUrl } from '../../api';
 import type { CompatibilityGroup, CompatibilityAttribute, CompatibilityAttributeValue } from '../../types/product';
 
 interface ProductListingCardProps {
@@ -27,7 +27,11 @@ function ProductListingCard({ listing, onEdit, onDelete }: ProductListingCardPro
           <div className="w-16 h-16 bg-base-300 rounded-lg flex items-center justify-center overflow-hidden">
             {listing.image ? (
               <img 
-                src={listing.image} 
+                src={
+                  listing.image.startsWith('http://') || listing.image.startsWith('https://')
+                    ? listing.image
+                    : `${apiBaseUrl}${listing.image}`
+                }
                 alt={listing.name}
                 className="w-full h-full object-cover"
               />

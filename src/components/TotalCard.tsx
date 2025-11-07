@@ -16,10 +16,10 @@ function TotalCard() {
   if (cart.loading) {
     return (
       <div className="card bg-base-100 h-fit shadow-xl">
-        <div className="card-body">
-          <div className="py-8 text-center">
-            <div className="loading loading-spinner loading-lg mb-4"></div>
-            <p className="text-base-content/70">Calculating totals...</p>
+        <div className="card-body p-4 sm:p-6">
+          <div className="py-4 sm:py-8 text-center">
+            <div className="loading loading-spinner loading-md sm:loading-lg mb-4"></div>
+            <p className="text-xs sm:text-sm text-base-content/70">Calculating totals...</p>
           </div>
         </div>
       </div>
@@ -28,33 +28,33 @@ function TotalCard() {
 
   return (
     <div className="card bg-base-100 h-fit w-full shadow-xl">
-      <div className="card-body">
-        <h2 className="card-title mb-4 text-xl">Order Summary</h2>
+      <div className="card-body p-4 sm:p-6">
+        <h2 className="card-title mb-3 sm:mb-4 text-lg sm:text-xl">Order Summary</h2>
 
         {/* Cart Totals */}
-        <div className="mb-6 space-y-3">
-          <div className="flex justify-between">
-            <span>Items ({cart.totalItems}):</span>
-            <span>${cart.totalPrice.toFixed(2)}</span>
+        <div className="mb-4 sm:mb-6 space-y-2 sm:space-y-3">
+          <div className="flex justify-between text-sm sm:text-base">
+            <span className="text-base-content/80">Subtotal ({cart.totalItems} {cart.totalItems === 1 ? 'item' : 'items'}):</span>
+            <span className="font-medium">₱{cart.totalPrice.toFixed(2)}</span>
           </div>
 
-          <div className="flex justify-between">
-            <span>Shipping:</span>
-            <span className="text-success">Free</span>
+          <div className="flex justify-between text-sm sm:text-base">
+            <span className="text-base-content/80">Shipping:</span>
+            <span className="text-success font-medium">Free</span>
           </div>
 
-          <div className="divider"></div>
+          <div className="divider my-2 sm:my-3"></div>
 
-          <div className="flex justify-between text-lg font-bold">
+          <div className="flex justify-between text-base sm:text-lg font-bold">
             <span>Total:</span>
-            <span className="text-primary">${cart.totalPrice.toFixed(2)}</span>
+            <span className="text-primary">₱{cart.totalPrice.toFixed(2)}</span>
           </div>
         </div>
 
         {/* Action Buttons */}
-        <div className="space-y-3">
+        <div className="space-y-2 sm:space-y-3">
           <button
-            className="btn btn-primary btn-block"
+            className="btn btn-primary btn-block btn-sm sm:btn-md"
             onClick={handleCheckout}
             disabled={cart.totalItems === 0}
           >
@@ -62,11 +62,18 @@ function TotalCard() {
           </button>
 
           <button
-            className="btn btn-outline btn-block"
+            className="btn btn-outline btn-block btn-sm sm:btn-md"
             onClick={handleContinueShopping}
           >
             Continue Shopping
           </button>
+        </div>
+
+        {/* Additional Info - Mobile */}
+        <div className="mt-4 pt-4 border-t border-base-300 sm:hidden">
+          <p className="text-xs text-base-content/60 text-center">
+            Free shipping on all orders
+          </p>
         </div>
       </div>
     </div>
