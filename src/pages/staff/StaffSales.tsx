@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import {
   Search,
   Filter,
@@ -20,6 +20,8 @@ import {
   X,
 } from "lucide-react";
 import { useSales, type Sale as APISale, type TopProduct } from "../../hooks/useSales";
+import { apiBaseUrl } from "../../api";
+import { getCSRFToken } from "../../utils/csrf";
 import {
   LineChart as RechartsLineChart,
   Line,
@@ -203,6 +205,52 @@ function StaffSales() {
   const [refundReason, setRefundReason] = useState("");
   const [refundNotes, setRefundNotes] = useState("");
   const [isProcessingRefund, setIsProcessingRefund] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = useCallback(async () => {
+    setIsExporting(true);
+
+    try {
+      const headers: Record<string, string> = {
+        Accept: "text/csv",
+      };
+      const csrfToken = getCSRFToken();
+      if (csrfToken) {
+        headers["X-CSRFToken"] = csrfToken;
+      }
+
+      const response = await fetch(`${apiBaseUrl}/api/sales/export/`, {
+        method: "GET",
+        credentials: "include",
+        headers,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || "Failed to export sales");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const timestamp = new Date().toISOString().replace(/[:T]/g, "-").split(".")[0];
+      link.href = url;
+      link.download = `sales_export_${timestamp}.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Sales export error:", error);
+      alert(
+        error instanceof Error
+          ? error.message
+          : "Failed to export sales. Please try again."
+      );
+    } finally {
+      setIsExporting(false);
+    }
+  }, []);
 
   const filteredSales = useMemo(() => {
     return sales.filter((sale) => {
@@ -463,9 +511,22 @@ function StaffSales() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button className="btn btn-outline gap-2">
-            <Download className="h-4 w-4" />
-            Export
+          <button
+            className="btn btn-outline gap-2"
+            onClick={handleExport}
+            disabled={isExporting}
+          >
+            {isExporting ? (
+              <>
+                <span className="loading loading-spinner loading-sm" />
+                Exporting...
+              </>
+            ) : (
+              <>
+                <Download className="h-4 w-4" />
+                Export
+              </>
+            )}
           </button>
           <button 
             className="btn btn-outline gap-2"

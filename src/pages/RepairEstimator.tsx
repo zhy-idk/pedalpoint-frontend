@@ -1,6 +1,5 @@
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { GoogleGenAI } from "@google/genai";
 import {
   AlertCircle,
   Bot,
@@ -12,137 +11,7 @@ import {
   Wrench,
 } from "lucide-react";
 import { apiBaseUrl } from "../api";
-import type { ProductListing } from "../types/product";
-
-interface ListingSummary {
-  id: number;
-  name: string;
-  price: number;
-  categoryName: string;
-  categorySlug: string;
-  slug: string;
-  description?: string | null;
-}
-
-interface ScoredListing extends ListingSummary {
-  score: number;
-}
-
-const aiClient = (() => {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!apiKey) {
-    return null;
-  }
-  return new GoogleGenAI({ apiKey });
-})();
-
-const formatPeso = (value: number) =>
-  new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: value % 1 === 0 ? 0 : 2,
-  }).format(value);
-
-const normalizePrice = (listing: ProductListing): number => {
-  if (listing.price) {
-    const parsed = parseFloat(String(listing.price));
-    if (!Number.isNaN(parsed)) return parsed;
-  }
-
-  const variantPrice = listing.products
-    ?.map((variant) => {
-      const price =
-        typeof variant.price === "number"
-          ? variant.price
-          : parseFloat(String(variant.price));
-      return Number.isNaN(price) ? null : price;
-    })
-    .filter((price): price is number => price !== null);
-
-  if (variantPrice && variantPrice.length > 0) {
-    return Math.min(...variantPrice);
-  }
-
-  return 0;
-};
-
-const tokenize = (text: string) =>
-  text
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, " ")
-    .split(/\s+/)
-    .filter((token) => token.length > 2);
-
-function scoreListing(listing: ListingSummary, queryTokens: string[]): number {
-  const haystackTokens = new Set([
-    ...tokenize(listing.name),
-    ...tokenize(listing.categoryName),
-    ...(listing.description ? tokenize(listing.description) : []),
-  ]);
-
-  let score = 0;
-  queryTokens.forEach((token) => {
-    if (haystackTokens.has(token)) {
-      score += 2;
-    } else {
-      const match = Array.from(haystackTokens).some((value) =>
-        value.startsWith(token.slice(0, 4))
-      );
-      if (match) {
-        score += 1;
-      }
-    }
-  });
-
-  return score;
-}
-
-function buildInventoryContext(listings: ScoredListing[]): string {
-  if (listings.length === 0) {
-    return "No closely matching inventory items were found.";
-  }
-
-  return listings
-    .map(
-      (item) =>
-        `- ${item.name} | Category: ${item.categoryName} | Price: ${formatPeso(
-          item.price
-        )} | Product URL: ${item.categorySlug}/${item.slug}`
-    )
-    .join("\n");
-}
-
-function buildPrompt(options: {
-  issue: string;
-  bikeType: string;
-  ridingStyle: string;
-  budget: string;
-  inventory: ScoredListing[];
-}): string {
-  const { issue, bikeType, ridingStyle, budget, inventory } = options;
-  const inventoryContext = buildInventoryContext(inventory);
-
-  return `
-You are PedalPoint's AI repair estimator. Provide professional but friendly guidance based strictly on the official PedalPoint inventory provided below.
-
-Customer info:
-- Bike type: ${bikeType}
-- Riding style: ${ridingStyle}
-- Budget guidance: ${budget || "Not specified"}
-- Reported issue: ${issue}
-
-Inventory items you may recommend (use exact names & prices, do not fabricate): 
-${inventoryContext}
-
-Instructions:
-1. Give a concise diagnosis (2-3 sentences max).
-2. Recommend up to 4 relevant parts. Use bullet points and include part name and ${"price"} from the list above. If nothing matches, state that no exact parts are available and recommend a manual inspection.
-3. Provide an estimated total cost range using the recommended parts (include labor estimate of ₱300-600 unless the user says they will DIY).
-4. Suggest next steps (booking repair, diagnostic check, etc.).
-
-Formatting: Use Markdown with headings (### Diagnosis, ### Recommended Parts, ### Estimated Cost, ### Next Steps). Keep the response under 180 words.
-`;
-}
+import { getCSRFToken } from "../utils/csrf";
 
 const bikeTypes = [
   "Mountain",
@@ -169,83 +38,26 @@ function RepairEstimator() {
   const [bikeType, setBikeType] = useState(bikeTypes[0]);
   const [ridingStyle, setRidingStyle] = useState(ridingStyles[0]);
   const [budget, setBudget] = useState("");
-  const [inventory, setInventory] = useState<ListingSummary[]>([]);
-  const [inventoryLoading, setInventoryLoading] = useState(true);
-  const [inventoryError, setInventoryError] = useState<string | null>(null);
   const [aiResponse, setAiResponse] = useState<string>("");
-  const [recommendedListings, setRecommendedListings] = useState<ScoredListing[]>(
-    []
-  );
+  const [recommendedListings, setRecommendedListings] = useState<
+    Array<{
+      id: number;
+      name: string;
+      price: number;
+      category: string;
+      category_slug: string;
+      slug: string;
+      score: number;
+    }>
+  >([]);
   const [isEstimating, setIsEstimating] = useState(false);
   const [estimateError, setEstimateError] = useState<string | null>(null);
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchInventory = async () => {
-      try {
-        setInventoryLoading(true);
-        setInventoryError(null);
-
-        const response = await fetch(`${apiBaseUrl}/api/listings/`);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch inventory (${response.status})`);
-        }
-
-        const data: ProductListing[] = await response.json();
-        if (!isMounted) return;
-
-        const summaries = data
-          .filter((listing) => listing.available !== false)
-          .map((listing) => ({
-            id: listing.id,
-            name: listing.name,
-            price: normalizePrice(listing),
-            categoryName: listing.category?.name || "General",
-            categorySlug: listing.category?.slug || "products",
-            slug: listing.slug,
-            description: listing.description,
-          }))
-          .filter((listing) => listing.name && listing.slug);
-
-        setInventory(summaries);
-      } catch (error) {
-        console.error("Failed to load inventory:", error);
-        if (isMounted) {
-          setInventoryError(
-            error instanceof Error ? error.message : "Failed to load inventory."
-          );
-        }
-      } finally {
-        if (isMounted) {
-          setInventoryLoading(false);
-        }
-      }
-    };
-
-    fetchInventory();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  const canEstimate = useMemo(
-    () =>
-      issue.trim().length >= 20 &&
-      !inventoryLoading &&
-      !inventoryError &&
-      !!aiClient,
-    [issue, inventoryLoading, inventoryError]
-  );
+  const canEstimate = issue.trim().length >= 20 && !isEstimating;
 
   const handleEstimate = async () => {
-    if (!canEstimate || !aiClient) {
-      setEstimateError(
-        !aiClient
-          ? "AI service is not configured. Please contact support."
-          : "Please describe the issue in at least 20 characters."
-      );
+    if (!canEstimate) {
+      setEstimateError("Please describe the issue in at least 20 characters.");
       return;
     }
 
@@ -253,44 +65,30 @@ function RepairEstimator() {
     setIsEstimating(true);
 
     try {
-      const queryTokens = tokenize(issue);
-      const scored = inventory
-        .map<ScoredListing>((listing) => ({
-          ...listing,
-          score: scoreListing(listing, queryTokens),
-        }))
-        .filter((listing) => listing.score > 0 || queryTokens.length === 0)
-        .sort((a, b) => b.score - a.score || a.price - b.price)
-        .slice(0, 12);
-
-      if (scored.length === 0) {
-        scored.push(
-          ...inventory
-            .slice(0, 6)
-            .map((listing) => ({ ...listing, score: 0 }))
-        );
-      }
-
-      const prompt = buildPrompt({
-        issue,
-        bikeType,
-        ridingStyle,
-        budget: budget.trim(),
-        inventory: scored,
+      const csrfToken = getCSRFToken();
+      const response = await fetch(`${apiBaseUrl}/api/repair-estimator/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken ? { "X-CSRFToken": csrfToken } : {}),
+        },
+        credentials: "include",
+        body: JSON.stringify({
+          issue: issue.trim(),
+          bike_type: bikeType,
+          riding_style: ridingStyle,
+          budget: budget.trim(),
+        }),
       });
 
-      const result = await aiClient.models.generateContent({
-        model: "gemini-2.0-flash-exp",
-        contents: prompt,
-      });
+      const data = await response.json();
 
-      const responseText = result.text?.trim();
-      if (!responseText) {
-        throw new Error("AI did not return a response. Please try again.");
+      if (!response.ok) {
+        throw new Error(data?.error || "Failed to generate estimate.");
       }
 
-      setAiResponse(responseText);
-      setRecommendedListings(scored);
+      setAiResponse(data.ai_summary || "");
+      setRecommendedListings(data.recommendations || []);
     } catch (error) {
       console.error("Failed to generate estimate:", error);
       setEstimateError(
@@ -388,38 +186,6 @@ function RepairEstimator() {
             booking a service.
           </p>
         </div>
-
-        {inventoryError && (
-          <div className="alert alert-error mb-6">
-            <AlertCircle className="h-5 w-5" />
-            <div>
-              <p className="font-semibold">Unable to load inventory</p>
-              <p className="text-sm">
-                {inventoryError}. Try refreshing the page or contact support if
-                this persists.
-              </p>
-            </div>
-            <button
-              className="btn btn-sm"
-              onClick={() => window.location.reload()}
-            >
-              Reload
-            </button>
-          </div>
-        )}
-
-        {!aiClient && (
-          <div className="alert alert-warning mb-6">
-            <AlertCircle className="h-5 w-5" />
-            <div>
-              <p className="font-semibold">AI service not configured</p>
-              <p className="text-sm">
-                Set the <code>VITE_GEMINI_API_KEY</code> environment variable to
-                enable AI-powered repair estimates.
-              </p>
-            </div>
-          </div>
-        )}
 
         <div className="grid gap-6 lg:grid-cols-[3fr,2fr]">
           <div className="card bg-base-100 shadow-xl">
@@ -529,12 +295,6 @@ function RepairEstimator() {
                   Reset form
                 </button>
               </div>
-              {inventoryLoading && (
-                <div className="alert alert-info mt-4 text-xs">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Loading live inventory data…</span>
-                </div>
-              )}
 
               <div className="divider">How it works</div>
               <ol className="space-y-2 text-sm text-base-content/70">
@@ -607,7 +367,7 @@ function RepairEstimator() {
                 )}
                 <div className="mt-4 space-y-3">
                   {recommendedListings.map((listing) => {
-                    const link = `/${listing.categorySlug}/${listing.slug}`;
+                    const link = `/${listing.category_slug}/${listing.slug}`;
                     return (
                       <div
                         key={listing.id}
@@ -619,7 +379,7 @@ function RepairEstimator() {
                               {listing.name}
                             </h4>
                             <p className="text-xs text-base-content/60">
-                              {listing.categoryName}
+                              {listing.category}
                             </p>
                           </div>
                           <span className="badge badge-outline">
@@ -629,7 +389,12 @@ function RepairEstimator() {
                         <div className="mt-2 flex items-center justify-between text-sm">
                           <span className="font-semibold">
                             {listing.price > 0
-                              ? formatPeso(listing.price)
+                              ? new Intl.NumberFormat("en-PH", {
+                                  style: "currency",
+                                  currency: "PHP",
+                                  maximumFractionDigits:
+                                    listing.price % 1 === 0 ? 0 : 2,
+                                }).format(listing.price)
                               : "See product page"}
                           </span>
                           <Link to={link} className="btn btn-xs btn-primary">
@@ -646,13 +411,12 @@ function RepairEstimator() {
           </div>
         )}
 
-        {!aiResponse && !inventoryLoading && (
+        {!aiResponse && !isEstimating && (
           <div className="mt-10 rounded-lg bg-base-100 p-6 shadow-lg">
             <h3 className="text-lg font-semibold">Live inventory coverage</h3>
             <p className="text-sm text-base-content/70 mt-1">
-              We currently track{" "}
-              <span className="font-semibold">{inventory.length}</span> service
-              parts, consumables, and upgrade components for accurate estimates.
+              Recommendations are generated from PedalPoint&apos;s product
+              catalog in real time, so prices and availability stay accurate.
             </p>
             <div className="mt-4 grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
               <div className="bg-base-200 rounded-lg p-3">
