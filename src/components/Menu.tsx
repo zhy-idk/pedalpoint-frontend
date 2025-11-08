@@ -115,6 +115,7 @@ function Menu() {
         <details>
           <summary>Services</summary>
           <ul className="z-10">
+            <li><Link to="/repair-estimator">Repair Estimator (AI)</Link></li>
             <li><Link to="/repair">Schedule Repair</Link></li>
             <li><Link to="/builder">Build a Bike</Link></li>
           </ul>

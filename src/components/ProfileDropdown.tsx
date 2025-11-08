@@ -4,6 +4,7 @@ import { useTheme } from "../hooks/useTheme";
 import ThemeSwitch from "./ThemeSwitch";
 import NoProfileIcon from "../assets/account_circle_24dp.svg?react"
 import { useAuth } from "../hooks/useAuth";
+import buildProfileImageUrl from "../utils/profileImage";
 
 function ProfileDropdown(){
   const navigate = useNavigate();
@@ -37,8 +38,13 @@ function ProfileDropdown(){
           <div className="w-10 rounded-full">
             {isAuthenticated ? (
               <img
-                alt="Tailwind CSS Navbar component"
-                src="https://img.daisyui.com/images/stock/photo-1534528741775-53994a69daeb.webp" />
+                alt="User avatar"
+                src={buildProfileImageUrl(user?.primaryUserInfo?.image)}
+                onError={(event) => {
+                  const target = event.target as HTMLImageElement;
+                  target.src = buildProfileImageUrl();
+                }}
+              />
             ) : (
               <NoProfileIcon className="w-full h-full" fill={theme === "dark" ? "currentColor" : "black"}/>
             )}

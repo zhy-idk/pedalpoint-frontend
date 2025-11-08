@@ -13,7 +13,8 @@ import {
   Check,
 } from "lucide-react";
 import { useAuth } from "../hooks/useAuth";
-import api, { apiBaseUrl } from "../api";
+import api from "../api";
+import buildProfileImageUrl from "../utils/profileImage";
 import PlaceholderProfile from "../assets/placeholder_profile.png";
 
 function Profile() {
@@ -32,9 +33,7 @@ function Profile() {
     lastName: user?.last_name || "",
     phone: user?.primaryUserInfo?.contact_number || "",
     address: user?.primaryUserInfo?.address || "",
-    profilePicture: user?.primaryUserInfo?.image 
-      ? `${apiBaseUrl}${user.primaryUserInfo.image}`
-      : PlaceholderProfile,
+    profilePicture: buildProfileImageUrl(user?.primaryUserInfo?.image),
   });
 
   const [editInfo, setEditInfo] = useState(userInfo);
@@ -49,9 +48,7 @@ function Profile() {
         lastName: user.last_name || "",
         phone: user.primaryUserInfo?.contact_number || "",
         address: user.primaryUserInfo?.address || "",
-        profilePicture: user.primaryUserInfo?.image 
-          ? `${apiBaseUrl}${user.primaryUserInfo.image}`
-          : PlaceholderProfile,
+        profilePicture: buildProfileImageUrl(user.primaryUserInfo?.image),
       };
       setUserInfo(updatedUserInfo);
       setEditInfo(updatedUserInfo);
@@ -149,7 +146,10 @@ function Profile() {
 
       if (response.status === 200) {
         alert('Profile updated successfully!');
-        setUserInfo(editInfo);
+        setUserInfo({
+          ...editInfo,
+          profilePicture: imagePreview || editInfo.profilePicture,
+        });
         setIsEditing(false);
         setSelectedImage(null);
         setImagePreview(null);

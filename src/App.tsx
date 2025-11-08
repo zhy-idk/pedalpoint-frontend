@@ -6,6 +6,7 @@ import ForgotPassword from './pages/ForgotPassword'
 import ResetPassword from './pages/ResetPassword'
 import ProductDetail from './pages/ProductDetail'
 import Repair from './pages/Repair'
+import RepairEstimator from './pages/RepairEstimator'
 import Builder from './pages/Builder'
 import Category from './pages/Category'
 import SearchResult from './pages/SearchResult'
@@ -129,6 +130,7 @@ function App() {
                 <Route path="forgot-password/" element={<ForgotPassword />} />
                 <Route path="reset-password/:key" element={<ResetPassword />} />
                 <Route path="repair/" element={<Repair />} />
+                <Route path="repair-estimator/" element={<RepairEstimator />} />
                 <Route path="builder/" element={<Builder />} />
                 <Route path="search" element={<SearchResult />} />
                 <Route path="cart/" element={<Cart />} />
