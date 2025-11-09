@@ -4,6 +4,8 @@ import { useOrderDetail } from '../hooks/useOrderDetail';
 import BackIcon from '../assets/undo_24dp.svg?react';
 import PlaceholderImg from '../assets/placeholder_img.jpg';
 import api, { apiBaseUrl } from '../api';
+import { createProductReview } from '../api/reviews';
+import type { OrderItem } from '../types/order';
 
 function OrderDetail() {
   const { id } = useParams<{ id: string }>();
@@ -13,6 +15,12 @@ function OrderDetail() {
   const [cancelling, setCancelling] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [selectedReviewItem, setSelectedReviewItem] = useState<OrderItem | null>(null);
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewText, setReviewText] = useState('');
+  const [submittingReview, setSubmittingReview] = useState(false);
+  const [reviewedListings, setReviewedListings] = useState<number[]>([]);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -71,6 +79,73 @@ function OrderDetail() {
       return PlaceholderImg;
     }
     return imageUrl ? `${apiBaseUrl}${imageUrl}` : PlaceholderImg;
+  };
+
+  const handleOpenReviewModal = (item: OrderItem) => {
+    if (!item.product.product_listing?.id) {
+      alert('This product cannot be reviewed at the moment.');
+      return;
+    }
+    setSelectedReviewItem(item);
+    setReviewRating(5);
+    setReviewText('');
+    setShowReviewModal(true);
+  };
+
+  const handleCloseReviewModal = () => {
+    setShowReviewModal(false);
+    setSelectedReviewItem(null);
+    setReviewText('');
+    setReviewRating(5);
+  };
+
+  const handleSubmitReview = async () => {
+    if (!order || !selectedReviewItem) {
+      return;
+    }
+
+    const listingId = selectedReviewItem.product.product_listing?.id;
+    if (!listingId) {
+      alert('Unable to determine the product for this review.');
+      return;
+    }
+
+    const trimmedReview = reviewText.trim();
+    if (trimmedReview && trimmedReview.length < 10) {
+      alert('Please provide at least 10 characters for your review or leave it blank.');
+      return;
+    }
+
+    setSubmittingReview(true);
+    try {
+      await createProductReview({
+        orderId: order.id,
+        productListingId: listingId,
+        star: reviewRating,
+        review: trimmedReview,
+      });
+      alert('Thank you for your review!');
+      setReviewedListings((prev) =>
+        prev.includes(listingId) ? prev : [...prev, listingId]
+      );
+      handleCloseReviewModal();
+      if (refetch) {
+        refetch();
+      }
+    } catch (err: any) {
+      const message =
+        err?.response?.data?.error ||
+        err?.message ||
+        'Failed to submit review. Please try again.';
+      alert(message);
+      if (message === 'You have already reviewed this product.') {
+        setReviewedListings((prev) =>
+          prev.includes(listingId) ? prev : [...prev, listingId]
+        );
+      }
+    } finally {
+      setSubmittingReview(false);
+    }
   };
 
   const handleOpenCancelModal = () => {
@@ -158,6 +233,9 @@ function OrderDetail() {
     );
   }
 
+  const canReviewOrder =
+    ['completed', 'returned'].includes(order.status) || order.payment_status === 'refunded';
+
   return (
     <div className="bg-base-100 p-3 mx-3 rounded-sm xs:mx-[clamp(0.75rem,6vw,7.5rem)] xl:mx-30">
       {/* Header */}
@@ -193,6 +271,7 @@ function OrderDetail() {
                       <th>Price</th>
                       <th>Quantity</th>
                       <th>Total</th>
+                      <th className="text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -229,6 +308,26 @@ function OrderDetail() {
                         <td>{item.quantity}</td>
                         <td className="font-medium">
                           ₱{((typeof item.product.price === 'number' ? item.product.price : parseFloat(item.product.price)) * item.quantity).toFixed(2)}
+                        </td>
+                        <td className="text-right">
+                          {item.product.product_listing?.id && canReviewOrder ? (
+                            <button
+                              className="btn btn-xs btn-outline"
+                              onClick={() => handleOpenReviewModal(item)}
+                              disabled={
+                                reviewedListings.includes(item.product.product_listing.id) ||
+                                (submittingReview &&
+                                  selectedReviewItem?.product.product_listing?.id ===
+                                    item.product.product_listing.id)
+                              }
+                            >
+                              {reviewedListings.includes(item.product.product_listing.id)
+                                ? 'Reviewed'
+                                : 'Write Review'}
+                            </button>
+                          ) : (
+                            <span className="text-xs text-base-content/60">—</span>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -344,13 +443,10 @@ function OrderDetail() {
 
           {/* Action Buttons */}
           <div className="space-y-2">
-            {order.status === 'completed' && (
-              <Link
-                to={`/${order.items[0]?.product.product_listing.category?.slug || 'uncategorized'}/${order.items[0]?.product.product_listing.slug || ''}#reviews`}
-                className="btn btn-primary w-full"
-              >
-                Write a Review
-              </Link>
+            {canReviewOrder && (
+              <div className="alert alert-info text-sm">
+                Select an item above and click <strong>Write Review</strong> to share your feedback.
+              </div>
             )}
             {order.status === 'to_pay' && (
               order.payment_method === 'cash_on_delivery' ? (
@@ -443,6 +539,80 @@ function OrderDetail() {
             </div>
           </div>
           <div className="modal-backdrop" onClick={handleCloseCancelModal}></div>
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {showReviewModal && selectedReviewItem && (
+        <div className="modal modal-open">
+          <div className="modal-box">
+            <h3 className="font-bold text-lg mb-2">Write a Review</h3>
+            <p className="text-sm text-base-content/70 mb-4">
+              {selectedReviewItem.product.product_listing.name}
+              {selectedReviewItem.product.variant_attribute
+                ? ` • ${selectedReviewItem.product.variant_attribute}`
+                : ''}
+            </p>
+
+            <div className="form-control mb-4">
+              <label className="label">
+                <span className="label-text">Rating *</span>
+              </label>
+              <select
+                className="select select-bordered"
+                value={reviewRating}
+                onChange={(e) => setReviewRating(Number(e.target.value))}
+              >
+                {[5, 4, 3, 2, 1].map((value) => (
+                  <option key={value} value={value}>
+                    {value} Star{value > 1 ? 's' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className="form-control">
+              <label className="label">
+                <span className="label-text">Share your experience</span>
+              </label>
+              <textarea
+                className="textarea textarea-bordered h-32"
+                placeholder="Tell us about product quality, installation, and overall experience..."
+                value={reviewText}
+                onChange={(e) => setReviewText(e.target.value)}
+                maxLength={1000}
+              />
+              <label className="label">
+                <span className="label-text-alt text-base-content/60">
+                  Optional, but please write at least 10 characters if you leave a review.
+                </span>
+              </label>
+            </div>
+
+            <div className="modal-action">
+              <button
+                className="btn btn-ghost"
+                onClick={handleCloseReviewModal}
+                disabled={submittingReview}
+              >
+                Cancel
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={handleSubmitReview}
+                disabled={submittingReview}
+              >
+                {submittingReview ? (
+                  <>
+                    <span className="loading loading-spinner loading-sm mr-2" />
+                    Submitting...
+                  </>
+                ) : (
+                  'Submit Review'
+                )}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

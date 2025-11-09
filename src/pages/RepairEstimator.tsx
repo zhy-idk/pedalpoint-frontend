@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertCircle,
@@ -24,20 +24,9 @@ const bikeTypes = [
   "Kids",
 ];
 
-const ridingStyles = [
-  "Daily commute",
-  "Weekend rides",
-  "Competitive",
-  "Off-road / Trails",
-  "Delivery / Cargo",
-  "Leisure / Casual",
-];
-
 function RepairEstimator() {
   const [issue, setIssue] = useState("");
   const [bikeType, setBikeType] = useState(bikeTypes[0]);
-  const [ridingStyle, setRidingStyle] = useState(ridingStyles[0]);
-  const [budget, setBudget] = useState("");
   const [aiResponse, setAiResponse] = useState<string>("");
   const [recommendedListings, setRecommendedListings] = useState<
     Array<{
@@ -52,12 +41,83 @@ function RepairEstimator() {
   >([]);
   const [isEstimating, setIsEstimating] = useState(false);
   const [estimateError, setEstimateError] = useState<string | null>(null);
+  const [isLoadingSaved, setIsLoadingSaved] = useState(true);
+  const [authRequired, setAuthRequired] = useState(false);
+  const [updatedAt, setUpdatedAt] = useState<string | null>(null);
 
-  const canEstimate = issue.trim().length >= 20 && !isEstimating;
+  const canEstimate =
+    issue.trim().length >= 20 && !isEstimating && !authRequired && !isLoadingSaved;
+
+  const fetchExistingEstimate = async () => {
+    setIsLoadingSaved(true);
+    setEstimateError(null);
+
+    try {
+      const response = await fetch(`${apiBaseUrl}/api/repair-estimator/`, {
+        method: "GET",
+        credentials: "include",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.status === 401) {
+        setAuthRequired(true);
+        setEstimateError("Please log in to use the repair estimator.");
+        setIssue("");
+        setBikeType(bikeTypes[0]);
+        setAiResponse("");
+        setRecommendedListings([]);
+        setUpdatedAt(null);
+        return;
+      }
+
+      if (response.status === 404) {
+        setIssue("");
+        setBikeType(bikeTypes[0]);
+        setAiResponse("");
+        setRecommendedListings([]);
+        setUpdatedAt(null);
+        setAuthRequired(false);
+        return;
+      }
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data?.error || "Failed to load saved estimate.");
+      }
+
+      setIssue(data.issue || "");
+      setBikeType(data.bike_type || bikeTypes[0]);
+      setAiResponse(data.ai_summary || "");
+      setRecommendedListings(data.recommendations || []);
+      setUpdatedAt(data.updated_at || null);
+      setAuthRequired(false);
+    } catch (error) {
+      console.error("Failed to load estimate:", error);
+      setEstimateError(
+        error instanceof Error
+          ? error.message
+          : "Unable to load your saved estimate. Please try again."
+      );
+    } finally {
+      setIsLoadingSaved(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchExistingEstimate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const handleEstimate = async () => {
     if (!canEstimate) {
-      setEstimateError("Please describe the issue in at least 20 characters.");
+      setEstimateError(
+        authRequired
+          ? "Log in to PedalPoint so we can save your repair estimates."
+          : "Please describe the issue in at least 20 characters."
+      );
       return;
     }
 
@@ -65,6 +125,7 @@ function RepairEstimator() {
     setIsEstimating(true);
 
     try {
+      setAuthRequired(false);
       const csrfToken = getCSRFToken();
       const response = await fetch(`${apiBaseUrl}/api/repair-estimator/`, {
         method: "POST",
@@ -76,10 +137,13 @@ function RepairEstimator() {
         body: JSON.stringify({
           issue: issue.trim(),
           bike_type: bikeType,
-          riding_style: ridingStyle,
-          budget: budget.trim(),
         }),
       });
+
+      if (response.status === 401) {
+        setAuthRequired(true);
+        throw new Error("Please log in to use the repair estimator.");
+      }
 
       const data = await response.json();
 
@@ -87,8 +151,11 @@ function RepairEstimator() {
         throw new Error(data?.error || "Failed to generate estimate.");
       }
 
+      setIssue(data.issue || issue);
+      setBikeType(data.bike_type || bikeType);
       setAiResponse(data.ai_summary || "");
       setRecommendedListings(data.recommendations || []);
+      setUpdatedAt(data.updated_at || null);
     } catch (error) {
       console.error("Failed to generate estimate:", error);
       setEstimateError(
@@ -101,14 +168,47 @@ function RepairEstimator() {
     }
   };
 
-  const resetEstimator = () => {
-    setIssue("");
-    setBudget("");
-    setBikeType(bikeTypes[0]);
-    setRidingStyle(ridingStyles[0]);
-    setAiResponse("");
-    setRecommendedListings([]);
+  const handleReset = async () => {
     setEstimateError(null);
+    setIsEstimating(true);
+    try {
+      const csrfToken = getCSRFToken();
+      const response = await fetch(`${apiBaseUrl}/api/repair-estimator/`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+          ...(csrfToken ? { "X-CSRFToken": csrfToken } : {}),
+        },
+        credentials: "include",
+      });
+
+      if (response.status === 401) {
+        setAuthRequired(true);
+        throw new Error("Please log in to remove your saved estimate.");
+      }
+
+      if (response.status !== 200 && response.status !== 204 && response.status !== 404) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error(data?.error || "Failed to reset saved estimate.");
+      }
+
+      setIssue("");
+      setBikeType(bikeTypes[0]);
+      setAiResponse("");
+      setRecommendedListings([]);
+      setEstimateError(null);
+      setUpdatedAt(null);
+      setAuthRequired(false);
+    } catch (error) {
+      console.error("Failed to reset estimate:", error);
+      setEstimateError(
+        error instanceof Error
+          ? error.message
+          : "We couldn't reset the estimate. Please try again."
+      );
+    } finally {
+      setIsEstimating(false);
+    }
   };
 
   const renderAiResponse = (text: string): ReactNode[] => {
@@ -187,6 +287,28 @@ function RepairEstimator() {
           </p>
         </div>
 
+        {isLoadingSaved && !authRequired && (
+          <div className="alert alert-info mb-6">
+            <Loader2 className="h-5 w-5 animate-spin" />
+            <span>Loading your saved repair estimate…</span>
+          </div>
+        )}
+
+        {authRequired && (
+          <div className="alert alert-warning mb-6 items-center gap-3">
+            <AlertCircle className="h-5 w-5" />
+            <div className="flex-1 text-left">
+              <p className="font-semibold">Log in to use the repair estimator</p>
+              <p className="text-sm text-base-content/70">
+                Sign in so we can store repair suggestions for you and sync them across devices.
+              </p>
+            </div>
+            <Link to="/login" className="btn btn-sm btn-primary">
+              Log in
+            </Link>
+          </div>
+        )}
+
         <div className="grid gap-6 lg:grid-cols-[3fr,2fr]">
           <div className="card bg-base-100 shadow-xl">
             <div className="card-body">
@@ -195,53 +317,20 @@ function RepairEstimator() {
                 Tell us about the bike issue
               </h2>
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <label className="form-control">
-                  <span className="label-text font-semibold">Bike type</span>
-                  <select
-                    className="select select-bordered"
-                    value={bikeType}
-                    onChange={(event) => setBikeType(event.target.value)}
-                  >
-                    {bikeTypes.map((type) => (
-                      <option key={type} value={type}>
-                        {type}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-
-                <label className="form-control">
-                  <span className="label-text font-semibold">Riding style</span>
-                  <select
-                    className="select select-bordered"
-                    value={ridingStyle}
-                    onChange={(event) => setRidingStyle(event.target.value)}
-                  >
-                    {ridingStyles.map((style) => (
-                      <option key={style} value={style}>
-                        {style}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-
               <label className="form-control">
-                <span className="label-text font-semibold">
-                  Budget guidance (optional)
-                </span>
-                <input
-                  type="text"
-                  className="input input-bordered"
-                  placeholder="e.g. I can spend around ₱3,000"
-                  value={budget}
-                  onChange={(event) => setBudget(event.target.value)}
-                />
-                <span className="label-text-alt text-base-content/70">
-                  Mention if you want the most affordable option, premium parts,
-                  or a specific price range.
-                </span>
+                <span className="label-text font-semibold">Bike type</span>
+                <select
+                  className="select select-bordered"
+                  value={bikeType}
+                  onChange={(event) => setBikeType(event.target.value)}
+                  disabled={isEstimating || authRequired || isLoadingSaved}
+                >
+                  {bikeTypes.map((type) => (
+                    <option key={type} value={type}>
+                      {type}
+                    </option>
+                  ))}
+                </select>
               </label>
 
               <label className="form-control">
@@ -253,6 +342,7 @@ function RepairEstimator() {
                   placeholder="Include noises, when it happens, affected parts, recent crashes, upgrades, etc."
                   value={issue}
                   onChange={(event) => setIssue(event.target.value)}
+                  disabled={isEstimating || authRequired || isLoadingSaved}
                 />
                 <span className="label-text-alt flex justify-between text-xs text-base-content/60">
                   <span>Minimum 20 characters for accurate results.</span>
@@ -288,8 +378,8 @@ function RepairEstimator() {
                 <button
                   type="button"
                   className="btn btn-outline"
-                  onClick={resetEstimator}
-                  disabled={isEstimating}
+                  onClick={handleReset}
+                  disabled={isEstimating || authRequired || isLoadingSaved}
                 >
                   <RefreshCcw className="h-4 w-4" />
                   Reset form
@@ -300,7 +390,8 @@ function RepairEstimator() {
               <ol className="space-y-2 text-sm text-base-content/70">
                 <li>1. We match your description to parts in stock.</li>
                 <li>2. AI suggests the best fix, parts, and cost range.</li>
-                <li>3. You can add parts to cart or schedule a repair.</li>
+                <li>3. We save the estimate so you can revisit it anytime.</li>
+                <li>4. Add parts to cart or schedule a repair when you&apos;re ready.</li>
               </ol>
             </div>
           </div>
@@ -342,6 +433,18 @@ function RepairEstimator() {
                   <Bot size={20} />
                   AI Repair Estimate
                 </h2>
+                {updatedAt && (
+                  <p className="text-xs text-base-content/60">
+                    Last updated:{" "}
+                    {new Date(updatedAt).toLocaleString(undefined, {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
+                  </p>
+                )}
                 <div className="space-y-2">
                   {renderAiResponse(aiResponse)}
                 </div>

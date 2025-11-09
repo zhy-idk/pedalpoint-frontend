@@ -10,6 +10,7 @@ export interface OrderItem {
       alt_text?: string;
     }>;
     product_listing: {
+      id: number;
       name: string;
       image: string;
       slug: string;
