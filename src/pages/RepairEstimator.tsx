@@ -317,10 +317,12 @@ function RepairEstimator() {
                 Tell us about the bike issue
               </h2>
 
-              <label className="form-control">
-                <span className="label-text font-semibold">Bike type</span>
+              <label className="form-control w-full">
+                <span className="label-text font-semibold mb-1 inline-block">
+                  Bike type
+                </span>
                 <select
-                  className="select select-bordered"
+                  className="select select-bordered w-full"
                   value={bikeType}
                   onChange={(event) => setBikeType(event.target.value)}
                   disabled={isEstimating || authRequired || isLoadingSaved}
@@ -333,18 +335,18 @@ function RepairEstimator() {
                 </select>
               </label>
 
-              <label className="form-control">
-                <span className="label-text font-semibold">
+              <label className="form-control w-full">
+                <span className="label-text font-semibold mb-1 inline-block">
                   Describe the symptoms
                 </span>
                 <textarea
-                  className="textarea textarea-bordered h-36 resize-none"
+                  className="textarea textarea-bordered h-36 w-full resize-none"
                   placeholder="Include noises, when it happens, affected parts, recent crashes, upgrades, etc."
                   value={issue}
                   onChange={(event) => setIssue(event.target.value)}
                   disabled={isEstimating || authRequired || isLoadingSaved}
                 />
-                <span className="label-text-alt flex justify-between text-xs text-base-content/60">
+                <span className="label-text-alt flex justify-between text-xs text-base-content/60 mt-1">
                   <span>Minimum 20 characters for accurate results.</span>
                   <span>{issue.length}/500</span>
                 </span>
