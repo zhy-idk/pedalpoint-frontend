@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertCircle,
@@ -12,6 +12,23 @@ import {
 } from "lucide-react";
 import { apiBaseUrl } from "../api";
 import { getCSRFToken } from "../utils/csrf";
+
+interface AiSections {
+  diagnosis?: string;
+  estimated_cost?: Record<string, string>;
+  next_steps?: string;
+}
+
+interface RecommendedPart {
+  id: number;
+  name: string;
+  price: number;
+  category: string;
+  category_slug: string;
+  slug: string;
+  product_url: string;
+  notes?: string;
+}
 
 const bikeTypes = [
   "Mountain",
@@ -27,18 +44,8 @@ const bikeTypes = [
 function RepairEstimator() {
   const [issue, setIssue] = useState("");
   const [bikeType, setBikeType] = useState(bikeTypes[0]);
-  const [aiResponse, setAiResponse] = useState<string>("");
-  const [recommendedListings, setRecommendedListings] = useState<
-    Array<{
-      id: number;
-      name: string;
-      price: number;
-      category: string;
-      category_slug: string;
-      slug: string;
-      score: number;
-    }>
-  >([]);
+  const [aiSections, setAiSections] = useState<AiSections | null>(null);
+  const [recommendedParts, setRecommendedParts] = useState<RecommendedPart[]>([]);
   const [isEstimating, setIsEstimating] = useState(false);
   const [estimateError, setEstimateError] = useState<string | null>(null);
   const [isLoadingSaved, setIsLoadingSaved] = useState(true);
@@ -47,6 +54,26 @@ function RepairEstimator() {
 
   const canEstimate =
     issue.trim().length >= 20 && !isEstimating && !authRequired && !isLoadingSaved;
+
+  const normalizeSections = (sections: any): AiSections | null => {
+    if (!sections || typeof sections !== "object") {
+      return null;
+    }
+
+    const estimated: Record<string, string> = {};
+    const rawEstimated = sections.estimated_cost;
+    if (rawEstimated && typeof rawEstimated === "object") {
+      Object.entries(rawEstimated).forEach(([key, value]) => {
+        estimated[key] = typeof value === "string" ? value : String(value);
+      });
+    }
+
+    return {
+      diagnosis: typeof sections.diagnosis === "string" ? sections.diagnosis : "",
+      estimated_cost: Object.keys(estimated).length > 0 ? estimated : undefined,
+      next_steps: typeof sections.next_steps === "string" ? sections.next_steps : "",
+    };
+  };
 
   const fetchExistingEstimate = async () => {
     setIsLoadingSaved(true);
@@ -66,8 +93,8 @@ function RepairEstimator() {
         setEstimateError("Please log in to use the repair estimator.");
         setIssue("");
         setBikeType(bikeTypes[0]);
-        setAiResponse("");
-        setRecommendedListings([]);
+        setAiSections(null);
+        setRecommendedParts([]);
         setUpdatedAt(null);
         return;
       }
@@ -75,8 +102,8 @@ function RepairEstimator() {
       if (response.status === 404) {
         setIssue("");
         setBikeType(bikeTypes[0]);
-        setAiResponse("");
-        setRecommendedListings([]);
+        setAiSections(null);
+        setRecommendedParts([]);
         setUpdatedAt(null);
         setAuthRequired(false);
         return;
@@ -90,8 +117,8 @@ function RepairEstimator() {
 
       setIssue(data.issue || "");
       setBikeType(data.bike_type || bikeTypes[0]);
-      setAiResponse(data.ai_summary || "");
-      setRecommendedListings(data.recommendations || []);
+      setAiSections(normalizeSections(data.ai_sections));
+      setRecommendedParts(data.recommended_parts || []);
       setUpdatedAt(data.updated_at || null);
       setAuthRequired(false);
     } catch (error) {
@@ -153,8 +180,8 @@ function RepairEstimator() {
 
       setIssue(data.issue || issue);
       setBikeType(data.bike_type || bikeType);
-      setAiResponse(data.ai_summary || "");
-      setRecommendedListings(data.recommendations || []);
+      setAiSections(normalizeSections(data.ai_sections));
+      setRecommendedParts(data.recommended_parts || []);
       setUpdatedAt(data.updated_at || null);
     } catch (error) {
       console.error("Failed to generate estimate:", error);
@@ -194,8 +221,8 @@ function RepairEstimator() {
 
       setIssue("");
       setBikeType(bikeTypes[0]);
-      setAiResponse("");
-      setRecommendedListings([]);
+      setAiSections(null);
+      setRecommendedParts([]);
       setEstimateError(null);
       setUpdatedAt(null);
       setAuthRequired(false);
@@ -209,64 +236,6 @@ function RepairEstimator() {
     } finally {
       setIsEstimating(false);
     }
-  };
-
-  const renderAiResponse = (text: string): ReactNode[] => {
-    const lines = text.split("\n");
-    const elements: ReactNode[] = [];
-    let currentList: string[] = [];
-
-    const flushList = () => {
-      if (currentList.length === 0) return;
-      elements.push(
-        <ul className="list-disc space-y-1 pl-4" key={`list-${elements.length}`}>
-          {currentList.map((item, index) => (
-            <li key={index}>{item.replace(/^-+\s*/, "")}</li>
-          ))}
-        </ul>
-      );
-      currentList = [];
-    };
-
-    lines.forEach((rawLine, index) => {
-      const line = rawLine.trim();
-
-      if (!line) {
-        flushList();
-        if (
-          elements.length > 0 &&
-          typeof elements[elements.length - 1] !== "string"
-        ) {
-          elements.push(<div key={`spacer-${index}`} className="h-3" />);
-        }
-        return;
-      }
-
-      if (line.startsWith("### ")) {
-        flushList();
-        elements.push(
-          <h3 key={`heading-${index}`} className="text-lg font-semibold text-base-content">
-            {line.replace("### ", "").trim()}
-          </h3>
-        );
-        return;
-      }
-
-      if (line.startsWith("- ")) {
-        currentList.push(line);
-        return;
-      }
-
-      flushList();
-      elements.push(
-        <p key={`paragraph-${index}`} className="text-sm leading-relaxed text-base-content/80">
-          {line}
-        </p>
-      );
-    });
-
-    flushList();
-    return elements;
   };
 
   return (
@@ -427,7 +396,7 @@ function RepairEstimator() {
           </div>
         )}
 
-        {aiResponse && (
+        {(aiSections || recommendedParts.length > 0) && (
           <div className="mt-10 grid gap-6 lg:grid-cols-[3fr,2fr]">
             <div className="card bg-base-100 shadow-xl">
               <div className="card-body">
@@ -447,8 +416,44 @@ function RepairEstimator() {
                     })}
                   </p>
                 )}
-                <div className="space-y-2">
-                  {renderAiResponse(aiResponse)}
+                <div className="space-y-4">
+                  {aiSections?.diagnosis && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-base-content">
+                        Diagnosis
+                      </h3>
+                      <p className="text-sm leading-relaxed text-base-content/80 whitespace-pre-line">
+                        {aiSections.diagnosis}
+                      </p>
+                    </div>
+                  )}
+                  {aiSections?.estimated_cost && Object.keys(aiSections.estimated_cost).length > 0 && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-base-content">
+                        Estimated Cost
+                      </h3>
+                      <ul className="list-disc space-y-1 pl-5 text-sm text-base-content/80">
+                        {Object.entries(aiSections.estimated_cost).map(([label, value]) => (
+                          <li key={label}>
+                            <span className="font-semibold capitalize">
+                              {label.replace(/_/g, " ")}:
+                            </span>{" "}
+                            {value}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {aiSections?.next_steps && (
+                    <div>
+                      <h3 className="text-lg font-semibold text-base-content">
+                        Next Steps
+                      </h3>
+                      <p className="text-sm leading-relaxed text-base-content/80 whitespace-pre-line">
+                        {aiSections.next_steps}
+                      </p>
+                    </div>
+                  )}
                 </div>
                 <div className="alert alert-info mt-4 text-xs">
                   <Sparkles className="h-4 w-4" />
@@ -464,14 +469,14 @@ function RepairEstimator() {
             <div className="card bg-base-100 shadow-xl">
               <div className="card-body">
                 <h3 className="card-title text-lg">Recommended parts</h3>
-                {recommendedListings.length === 0 && (
+                {recommendedParts.length === 0 && (
                   <p className="text-sm text-base-content/70">
                     No matching parts found in current inventory. Try rephrasing the
                     issue or contact our staff for a manual review.
                   </p>
                 )}
                 <div className="mt-4 space-y-3">
-                  {recommendedListings.map((listing) => {
+                  {recommendedParts.map((listing) => {
                     const link = `/${listing.category_slug}/${listing.slug}`;
                     return (
                       <div
@@ -487,9 +492,6 @@ function RepairEstimator() {
                               {listing.category}
                             </p>
                           </div>
-                          <span className="badge badge-outline">
-                            Score {Math.max(0, listing.score)}
-                          </span>
                         </div>
                         <div className="mt-2 flex items-center justify-between text-sm">
                           <span className="font-semibold">
@@ -507,6 +509,11 @@ function RepairEstimator() {
                             <ExternalLink className="ml-1 h-3 w-3" />
                           </Link>
                         </div>
+                        {listing.notes && listing.notes.length > 0 && (
+                          <p className="text-xs text-base-content/60 mt-2">
+                            {listing.notes}
+                          </p>
+                        )}
                       </div>
                     );
                   })}
@@ -516,7 +523,7 @@ function RepairEstimator() {
           </div>
         )}
 
-        {!aiResponse && !isEstimating && (
+        {!aiSections && !isEstimating && (
           <div className="mt-10 rounded-lg bg-base-100 p-6 shadow-lg">
             <h3 className="text-lg font-semibold">Live inventory coverage</h3>
             <p className="text-sm text-base-content/70 mt-1">
