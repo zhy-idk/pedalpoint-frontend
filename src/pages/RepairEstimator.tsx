@@ -37,7 +37,6 @@ const bikeTypes = [
   "BMX",
   "Gravel",
   "Folding",
-  "E-Bike",
   "Kids",
 ];
 
