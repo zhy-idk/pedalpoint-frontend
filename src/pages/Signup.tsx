@@ -148,26 +148,6 @@ function Signup() {
               </svg>
               Signup with Google
             </button>
-
-            <button
-              type="button"
-              className="btn w-full border-[#005fd8] bg-[#1A77F2] text-white shadow-xs shadow-[#005fd8]"
-              disabled={isLoading}
-              onClick={() => handleSocialLogin("facebook")}
-            >
-              <svg
-                aria-label="Facebook logo"
-                width="16"
-                height="16"
-                viewBox="0 0 32 32"
-              >
-                <path
-                  fill="white"
-                  d="M8 12h5V8c0-6 4-7 11-6v5c-4 0-5 0-5 3v2h5l-1 6h-4v12h-6V18H8z"
-                />
-              </svg>
-              Signup with Facebook
-            </button>
           </div>
         </form>
 

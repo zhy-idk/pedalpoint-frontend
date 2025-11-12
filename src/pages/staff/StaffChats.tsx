@@ -227,7 +227,6 @@ function StaffChats() {
                     <div className="flex items-center justify-between">
                       <p className="font-semibold text-xs md:text-sm truncate">{room.customerName}</p>
                       <div className="flex items-center gap-1">
-                        {room.isOnline && <div className="w-2 h-2 bg-green-500 rounded-full"></div>}
                         {room.unreadCount > 0 && (
                           <span className="badge badge-error badge-xs">{room.unreadCount}</span>
                         )}
@@ -269,12 +268,6 @@ function StaffChats() {
           </div>
           <div className="flex flex-col">
                 <span className="text-xl font-semibold">{selectedRoom.customerName}</span>
-                <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-500">
-                    {isConnected ? 'Connected' : 'Disconnected'}
-                  </span>
-                  {isConnected && <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>}
-                </div>
           </div>
         </div>
 

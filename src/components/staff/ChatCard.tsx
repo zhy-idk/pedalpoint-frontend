@@ -4,7 +4,6 @@ interface ChatCardProps {
   timestamp: string;
   avatar?: string;
   unreadCount?: number;
-  isOnline?: boolean;
 }
 
 function ChatCard({
@@ -13,7 +12,6 @@ function ChatCard({
   timestamp,
   avatar = "https://img.daisyui.com/images/profile/demo/yellingcat@192.webp",
   unreadCount = 0,
-  isOnline = false,
 }: ChatCardProps) {
   return (
     <div className="card bg-base-100 cursor-pointer flex-row p-3 shadow-md transition-shadow hover:shadow-lg">
@@ -21,9 +19,6 @@ function ChatCard({
         <div className="w-12 rounded-full">
           <img src={avatar} alt={`${customerName}'s avatar`} />
         </div>
-        {isOnline && (
-          <div className="border-base-100 absolute -right-1 -bottom-1 h-4 w-4 rounded-full border-2 bg-green-500"></div>
-        )}
       </div>
       <div className="ml-3 flex w-full flex-col">
         <div className="flex items-center justify-between">
