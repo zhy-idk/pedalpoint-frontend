@@ -29,7 +29,7 @@ export default function Chat() {
   // AI Assistant messages (local only)
   const [aiMessages, setAiMessages] = useState([
     {
-      text: "Welcome to PedalPoint! How can I help you today? Ask about bikes, services, or general assistance.",
+      text: "Welcome to PedalPoint! How can I help you today? Ask about bikes, services, or general assistance. For quick repair diagnostics, open the Repair Estimator, or switch to Chat Support for detailed help from our team.",
       isUser: false,
     },
   ]);
@@ -58,6 +58,8 @@ export default function Chat() {
         contents: `You are a professional bike shop assistant for PedalPoint. Always act like a friendly, knowledgeable shop associate while providing accurate information.
 
 Focus on helping customers with questions about bikes, accessories, services, maintenance tips, and scheduling repairs. Offer helpful guidance, recommend appropriate services, and invite customers to visit or book an appointment for detailed diagnostics or pricing.
+
+If a customer needs a quick repair diagnosis, politely direct them to the Repair Estimator tool for faster self-service guidance. If they want more tailored assistance, encourage them to switch to Chat Support to speak with a PedalPoint team member.
 
 Here's our conversation so far:
 ${aiMessages.map((msg) => `${msg.isUser ? "Customer" : "Assistant"}: ${msg.text}`).join("\n")}

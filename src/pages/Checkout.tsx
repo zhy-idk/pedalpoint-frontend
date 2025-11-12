@@ -641,31 +641,8 @@ function Checkout() {
                   {orderItems.map((item, index) => (
                     <div
                       key={buyNowData?.buyNow ? `buynow-${item.product.id}` : `${item.product.id}-${item.product.sku}`}
-                      className="flex items-center gap-3"
+                      className="flex items-start gap-3"
                     >
-                      <div className="avatar">
-                        <div className="h-12 w-12 rounded">
-                          {item.product.images &&
-                          item.product.images.length > 0 ? (
-                            <img
-                              src={item.product.images[0].image}
-                              alt={
-                                item.product.images[0].alt_text ||
-                                item.product.name
-                              }
-                            />
-                          ) : buyNowData?.buyNow && buyNowData.productListing?.image ? (
-                            <img
-                              src={buyNowData.productListing.image}
-                              alt={buyNowData.productListing.name}
-                            />
-                          ) : (
-                            <div className="bg-base-300 flex h-full w-full items-center justify-center">
-                              <span className="text-xs">No Image</span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
                       <div className="flex-1">
                         <h4 className="text-sm font-medium">
                           {item.product.name}
