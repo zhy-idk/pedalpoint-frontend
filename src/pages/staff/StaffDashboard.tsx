@@ -85,7 +85,7 @@ function StaffDashboard() {
       activities.push({
         id: `sale-${sale.id}`,
         type: 'sale',
-        description: `New sale to ${sale.user.username}`,
+        description: `New sale to ${sale.user?.username || 'Walk-in Customer'}`,
         time: new Date(sale.sale_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
         amount: Number(sale.total_amount)
       });
@@ -126,7 +126,7 @@ function StaffDashboard() {
       tasks.push({
         id: `queue-${item.id}`,
         type: 'Service Queue',
-        customer: `${item.user.first_name} ${item.user.last_name}`.trim() || item.user.username,
+        customer: item.user ? (`${item.user.first_name} ${item.user.last_name}`.trim() || item.user.username) : 'Unknown Customer',
         service: item.info.substring(0, 30) + (item.info.length > 30 ? '...' : ''),
         time: new Date(item.queue_date).toLocaleDateString(),
         priority: 'high'
@@ -412,7 +412,7 @@ function StaffDashboard() {
                         </div>
                       </div>
                       <div>
-                        <div className="font-semibold">{sale.user.username}</div>
+                        <div className="font-semibold">{sale.user?.username || 'Walk-in Customer'}</div>
                         <div className="text-sm text-base-content/70">
                           {sale.sales_item.length} item{sale.sales_item.length !== 1 ? 's' : ''}
                         </div>
