@@ -571,14 +571,14 @@ function Repair() {
               </label>
             </div>
 
-            {/* AI Chat Notice */}
+            {/* AI Repair Estimator Notice */}
             <div className="alert alert-info mb-6">
               <Bot size={16} />
               <div>
-                <div className="font-bold">Need a cost estimate?</div>
+                <div className="font-bold">Need a quick repair estimate?</div>
                 <div className="text-sm">
-                  Use our AI chat assistant to get instant repair cost estimates
-                  and parts recommendations before scheduling your appointment.
+                  Use the AI Repair Estimator to get instant cost projections
+                  and parts recommendations before booking your appointment.
                 </div>
               </div>
             </div>
@@ -593,39 +593,29 @@ function Repair() {
               </div>
             )}
 
-            {/* Queue Status */}
-            {date && queueCount !== null && (
-              <div className={`alert mb-6 ${queueFull ? 'alert-error' : 'alert-info'}`}>
-                <Clock size={16} />
-                <div>
-                  <div className="font-bold">
-                    {queueFull 
-                      ? `Date Fully Booked (${queueCount}/10 customers)`
-                      : `Available: ${10 - queueCount} spots remaining (${queueCount}/10 booked)`}
-                  </div>
-                  <div className="text-xs">
-                    {queueFull 
-                      ? "Please choose another date or contact staff for assistance"
-                      : "Service Hours: 7:30 AM - 6:00 PM, 7 days a week"}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Time Notice */}
-            {(!date || queueCount === null || !queueFull) && (
+            {/* Service Hours / Availability */}
             <div className="alert alert-info mb-6">
               <Clock size={16} />
               <div>
                 <div className="font-bold">
-                    Service Hours: 7:30 AM - 6:00 PM, 7 days a week
+                  Service Hours: 7:30 AM - 6:00 PM, 7 days a week
                 </div>
                 <div className="text-xs">
                   Same-day bookings available until 6:00 PM
                 </div>
+                {date && queueCount !== null && (
+                  <div
+                    className={`mt-2 text-sm font-semibold ${
+                      queueFull ? "text-error" : "text-success"
+                    }`}
+                  >
+                    {queueFull
+                      ? `This date is fully booked (${queueCount}/10). Please pick another schedule or contact chat support.`
+                      : `Available slots: ${10 - queueCount} remaining (${queueCount}/10 booked)`}
+                  </div>
+                )}
               </div>
             </div>
-            )}
 
             {/* Submit Button */}
             {!isAuthenticated ? (
