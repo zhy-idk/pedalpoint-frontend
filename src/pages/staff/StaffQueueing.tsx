@@ -369,9 +369,6 @@ function StaffQueueing() {
                                     ? "Completed"
                                     : "Pending"}
                                 </span>
-                                <span className="text-base-content/50 text-xs">
-                                  Est. 1-2 hours
-                                </span>
                               </div>
                             </div>
                             <div className="dropdown dropdown-end">
@@ -474,8 +471,16 @@ function StaffQueueing() {
                     </div>
 
                     <div className="flex gap-2 pt-4">
-                      <button className="btn btn-success btn-sm flex-1">
-                        Start Service
+                      <button
+                        className="btn btn-success btn-sm flex-1"
+                        disabled={selectedQueue.status === "completed"}
+                        onClick={() =>
+                          handleStatusUpdate(selectedQueue.id, "completed")
+                        }
+                      >
+                        {selectedQueue.status === "completed"
+                          ? "Service Completed"
+                          : "Complete Service"}
                       </button>
                       <button className="btn btn-outline btn-sm">Edit</button>
                     </div>
