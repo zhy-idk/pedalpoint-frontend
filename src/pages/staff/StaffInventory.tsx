@@ -83,6 +83,7 @@ function StaffInventory() {
     variant_attribute: "",
     brand: "",
     price: 0,
+    supplier_price: undefined,
     stock: 0,
     sku: "",
     available: true,
@@ -273,6 +274,9 @@ function StaffInventory() {
         (parseInt(newItem.brand as string) || 1).toString(),
       );
       formData.append("price", newItem.price.toString());
+      if (newItem.supplier_price !== undefined && newItem.supplier_price !== null) {
+        formData.append("supplier_price", newItem.supplier_price.toString());
+      }
       formData.append("stock", newItem.stock.toString());
       formData.append("sku", newItem.sku);
       formData.append("available", newItem.available ? "1" : "0");
@@ -298,6 +302,7 @@ function StaffInventory() {
         variant_attribute: "",
         brand: "",
         price: 0,
+        supplier_price: undefined,
         stock: 0,
         sku: "",
         available: true,
@@ -337,6 +342,9 @@ function StaffInventory() {
       formData.append("variant_attribute", item.variant_attribute);
       formData.append("brand", item.brand_id.toString());
       formData.append("price", item.price.toString());
+      if (item.supplier_price !== undefined && item.supplier_price !== null) {
+        formData.append("supplier_price", item.supplier_price.toString());
+      }
       formData.append("stock", item.stock.toString());
       formData.append("sku", item.sku);
       formData.append("available", item.available ? "1" : "0");
@@ -613,6 +621,7 @@ function StaffInventory() {
       variant_attribute: "",
       brand: "",
       price: 0,
+      supplier_price: undefined,
       stock: 0,
       sku: "",
       available: true,
@@ -1258,6 +1267,28 @@ function StaffInventory() {
             </label>
 
             <label className="floating-label">
+              <span>Supplier Price</span>
+              <label className="input w-full">
+                <input
+                  type="number"
+                  placeholder="Supplier Price"
+                  value={newItem.supplier_price ?? ""}
+                  onChange={(e) =>
+                    setNewItem({
+                      ...newItem,
+                      supplier_price: e.target.value
+                        ? Number(e.target.value)
+                        : undefined,
+                    })
+                  }
+                />
+              </label>
+              <span className="text-base-content/60 mt-1 text-xs">
+                Optional cost used for margin calculations
+              </span>
+            </label>
+
+            <label className="floating-label">
               <span>Price</span>
               <label className="input w-full">
                 <input
@@ -1490,6 +1521,28 @@ function StaffInventory() {
                     </option>
                   ))}
                 </select>
+              </label>
+
+              <label className="floating-label">
+                <span>Supplier Price</span>
+                <label className="input w-full">
+                  <input
+                    type="number"
+                    placeholder="Supplier Price"
+                    value={selectedItem.supplier_price ?? ""}
+                    onChange={(e) =>
+                      setSelectedItem({
+                        ...selectedItem,
+                        supplier_price: e.target.value
+                          ? Number(e.target.value)
+                          : undefined,
+                      })
+                    }
+                  />
+                </label>
+                <span className="text-base-content/60 mt-1 text-xs">
+                  Optional cost used for margin calculations
+                </span>
               </label>
 
               <label className="floating-label">
