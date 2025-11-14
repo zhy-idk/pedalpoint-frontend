@@ -421,6 +421,23 @@ function StaffInventory() {
     }
   };
 
+  const normalizeBrandValue = (brandValue: InventoryItem["brand"]) => {
+    if (brandValue === null || brandValue === undefined) return "";
+    return typeof brandValue === "string" ? brandValue : brandValue.toString();
+  };
+
+  const findBrandByValue = (brandValue: InventoryItem["brand"]) => {
+    if (!brands.length || brandValue === null || brandValue === undefined)
+      return undefined;
+
+    const brandId =
+      typeof brandValue === "number" ? brandValue : parseInt(brandValue, 10);
+
+    if (Number.isNaN(brandId)) return undefined;
+
+    return brands.find((b) => b.id === brandId);
+  };
+
   const filteredItems = items.filter((item) => {
     // Text search
     const matchesSearch = (() => {
@@ -438,16 +455,13 @@ function StaffInventory() {
       if (item.variant_attribute.toLowerCase().includes(term)) return true;
 
       // Search in brand (both ID and name)
-      if (item.brand) {
-        // Check brand ID
-        if (typeof item.brand === 'string' && item.brand.toLowerCase().includes(term)) return true;
+      const normalizedBrand = normalizeBrandValue(item.brand);
+      if (normalizedBrand && normalizedBrand.toLowerCase().includes(term))
+        return true;
 
-        // Check brand name if brands are loaded
-        if (brands.length > 0) {
-          const brandObj = brands.find((b) => b.id === parseInt(item.brand));
-          if (brandObj && brandObj.name.toLowerCase().includes(term)) return true;
-        }
-      }
+      // Check brand name if brands are loaded
+      const brandObj = findBrandByValue(item.brand);
+      if (brandObj && brandObj.name.toLowerCase().includes(term)) return true;
 
       return false;
     })();
@@ -467,16 +481,23 @@ function StaffInventory() {
     // Brand filter
     const matchesBrand = (() => {
       if (!filters.brand) return true;
-      if (!item.brand) return false;
+
+      const normalizedBrand = normalizeBrandValue(item.brand);
+      if (!normalizedBrand) return false;
 
       // Check if the filter matches the brand ID directly (for backward compatibility)
-      if (typeof item.brand === 'string' && item.brand.toLowerCase().includes(filters.brand.toLowerCase())) return true;
+      if (
+        normalizedBrand.toLowerCase().includes(filters.brand.toLowerCase())
+      )
+        return true;
 
       // If brands are loaded, check if the filter matches the brand name
-      if (brands.length > 0) {
-        const brandObj = brands.find((b) => b.id === parseInt(item.brand));
-        if (brandObj && brandObj.name.toLowerCase().includes(filters.brand.toLowerCase())) return true;
-      }
+      const brandObj = findBrandByValue(item.brand);
+      if (
+        brandObj &&
+        brandObj.name.toLowerCase().includes(filters.brand.toLowerCase())
+      )
+        return true;
 
       return false;
     })();
@@ -535,13 +556,21 @@ function StaffInventory() {
   const uniqueVariants = [
     ...new Set(items.map((item) => item.variant_attribute)),
   ];
-  const uniqueBrands = brands.length > 0 ? [...new Set(
-    items.map((item) => {
-      if (!item.brand) return null;
-      const brandObj = brands.find((b) => b.id === parseInt(item.brand));
-      return brandObj ? brandObj.name : item.brand;
-    }).filter(Boolean)
-  )] : [];
+  const uniqueBrands =
+    brands.length > 0
+      ? [
+          ...new Set(
+            items
+              .map((item) => {
+                const brandObj = findBrandByValue(item.brand);
+                if (brandObj) return brandObj.name;
+                const normalizedBrand = normalizeBrandValue(item.brand);
+                return normalizedBrand || null;
+              })
+              .filter(Boolean),
+          ),
+        ]
+      : [];
 
   const clearAllFilters = () => {
     setFilters({
