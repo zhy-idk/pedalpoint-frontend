@@ -423,11 +423,32 @@ function StaffInventory() {
 
   const filteredItems = items.filter((item) => {
     // Text search
-    const matchesSearch =
-      item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.brand && typeof item.brand === 'string' && item.brand.toLowerCase().includes(searchTerm.toLowerCase())) ||
-      item.variant_attribute.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.sku.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = (() => {
+      if (!searchTerm) return true;
+
+      const term = searchTerm.toLowerCase();
+
+      // Search in product name
+      if (item.name.toLowerCase().includes(term)) return true;
+
+      // Search in SKU
+      if (item.sku.toLowerCase().includes(term)) return true;
+
+      // Search in variant attribute
+      if (item.variant_attribute.toLowerCase().includes(term)) return true;
+
+      // Search in brand (both ID and name)
+      if (item.brand) {
+        // Check brand ID
+        if (item.brand.toLowerCase().includes(term)) return true;
+
+        // Check brand name
+        const brandObj = brands.find((b) => b.id === parseInt(item.brand));
+        if (brandObj && brandObj.name.toLowerCase().includes(term)) return true;
+      }
+
+      return false;
+    })();
 
     // Product Name filter
     const matchesProductName =
@@ -442,9 +463,17 @@ function StaffInventory() {
         .includes(filters.variant.toLowerCase());
 
     // Brand filter
-    const matchesBrand =
-      !filters.brand ||
-      (item.brand && typeof item.brand === 'string' && item.brand.toLowerCase().includes(filters.brand.toLowerCase()));
+    const matchesBrand = (() => {
+      if (!filters.brand) return true;
+      if (!item.brand) return false;
+
+      // Check if the filter matches the brand ID directly (for backward compatibility)
+      if (item.brand.toLowerCase().includes(filters.brand.toLowerCase())) return true;
+
+      // Check if the filter matches the brand name
+      const brandObj = brands.find((b) => b.id === parseInt(item.brand));
+      return brandObj && brandObj.name.toLowerCase().includes(filters.brand.toLowerCase());
+    })();
 
     // Stock range filter
     const matchesStockRange = () => {
@@ -500,7 +529,13 @@ function StaffInventory() {
   const uniqueVariants = [
     ...new Set(items.map((item) => item.variant_attribute)),
   ];
-  const uniqueBrands = [...new Set(items.map((item) => item.brand))];
+  const uniqueBrands = [...new Set(
+    items.map((item) => {
+      if (!item.brand) return null;
+      const brandObj = brands.find((b) => b.id === parseInt(item.brand));
+      return brandObj ? brandObj.name : item.brand;
+    }).filter(Boolean)
+  )];
 
   const clearAllFilters = () => {
     setFilters({
