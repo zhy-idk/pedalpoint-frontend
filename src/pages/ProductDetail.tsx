@@ -148,6 +148,13 @@ function ProductDetailContent() {
     );
   }
 
+  const reviewCount = product.reviews?.length ?? 0;
+  const averageRating =
+    reviewCount > 0
+      ? product.reviews!.reduce((sum, review) => sum + (review.star || 0), 0) /
+        reviewCount
+      : 0;
+
   return (
     <div className="bg-base-100 p-3 mx-3 rounded-sm xs:mx-[clamp(0.75rem,6vw,7.5rem)] lg:mx-30 shadow-xl">
       {/* Breadcrumbs Section */}
@@ -358,18 +365,26 @@ function ProductDetailContent() {
       <div className="flex flex-col border-y-1 border-gray-600 my-4 py-2">
         <div className="border-b-1 border-gray-600 w-full items-center pb-2">
           <div className="flex flex-col sm:flex-row">
-            <div className="flex items-center py-1">
-              <div className="font-medium">4.6</div>
-              <div className="rating rating-xs items-center ml-1 mr-2">
-                <div
-                  className="mask mask-star-2 bg-orange-400"
-                  aria-current="true"
-                ></div>
-              </div>
-              <div className="font-medium">
-                User Reviews ({product.reviews?.length || 0})
-              </div>
+          <div className="flex items-center py-1">
+            <div className="font-medium">
+              {reviewCount > 0 ? averageRating.toFixed(1) : "No ratings"}
             </div>
+            {reviewCount > 0 && (
+              <div className="rating rating-xs items-center ml-1 mr-2">
+                {Array.from({ length: 5 }).map((_, index) => (
+                  <div
+                    key={index}
+                    className={`mask mask-star-2 bg-orange-400 w-4 h-4 ${
+                      index < Math.round(averageRating) ? "opacity-100" : "opacity-20"
+                    }`}
+                  />
+                ))}
+              </div>
+            )}
+            <div className="font-medium">
+              User Reviews ({reviewCount})
+            </div>
+          </div>
 
             {/* Star Filter Section */}
             <div className="sm:ml-2">
