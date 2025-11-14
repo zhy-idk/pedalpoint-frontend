@@ -526,7 +526,7 @@ function Repair() {
                 />
 
                 <div className="bg-base-200 text-base-content/70 mt-4 rounded-lg p-3 text-center text-xs">
-                  <p className="font-medium">Service Hours: 8AM-5PM</p>
+                  <p className="font-medium">Service Hours: 7:30 AM - 6:00 PM</p>
                   <p>Available 7 days a week</p>
                   {queueCount !== null && (
                     <p className={`mt-2 font-semibold ${queueFull ? 'text-error' : 'text-success'}`}>
@@ -606,7 +606,7 @@ function Repair() {
                   <div className="text-xs">
                     {queueFull 
                       ? "Please choose another date or contact staff for assistance"
-                      : "Service Hours: 8:00 AM - 5:00 PM, 7 days a week"}
+                      : "Service Hours: 7:30 AM - 6:00 PM, 7 days a week"}
                   </div>
                 </div>
               </div>
@@ -618,10 +618,10 @@ function Repair() {
               <Clock size={16} />
               <div>
                 <div className="font-bold">
-                    Service Hours: 8:00 AM - 5:00 PM, 7 days a week
+                    Service Hours: 7:30 AM - 6:00 PM, 7 days a week
                 </div>
                 <div className="text-xs">
-                  Same-day bookings available until 5:00 PM
+                  Same-day bookings available until 6:00 PM
                 </div>
               </div>
             </div>
