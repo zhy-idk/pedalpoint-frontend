@@ -366,24 +366,23 @@ function ProductDetailContent() {
         <div className="border-b-1 border-gray-600 w-full items-center pb-2">
           <div className="flex flex-col sm:flex-row">
           <div className="flex items-center py-1">
-            <div className="font-medium">
-              {reviewCount > 0 ? averageRating.toFixed(1) : "No ratings"}
-            </div>
-            {reviewCount > 0 && (
-              <div className="rating rating-xs items-center ml-1 mr-2">
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <div
-                    key={index}
-                    className={`mask mask-star-2 bg-orange-400 w-4 h-4 ${
-                      index < Math.round(averageRating) ? "opacity-100" : "opacity-20"
-                    }`}
-                  />
-                ))}
+            {reviewCount > 0 ? (
+              <>
+                <div className="font-medium">
+                  {averageRating.toFixed(1)}
+                </div>
+                <div className="rating rating-xs items-center ml-1 mr-2">
+                  <div className="mask mask-star-2 bg-orange-400 w-4 h-4"></div>
+                </div>
+                <div className="font-medium">
+                  User Reviews ({reviewCount})
+                </div>
+              </>
+            ) : (
+              <div className="font-medium">
+                User Reviews ({reviewCount})
               </div>
             )}
-            <div className="font-medium">
-              User Reviews ({reviewCount})
-            </div>
           </div>
 
             {/* Star Filter Section */}

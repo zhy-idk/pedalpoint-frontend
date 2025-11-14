@@ -354,7 +354,7 @@ function OrderDetail() {
                               }
                             >
                               {reviewedListings.includes(item.product.product_listing.id)
-                                ? 'Reviewed'
+                                ? 'Read Review'
                                 : 'Write Review'}
                             </button>
                           ) : (

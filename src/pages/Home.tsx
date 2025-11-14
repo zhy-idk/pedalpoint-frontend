@@ -169,22 +169,22 @@ function Home() {
         {/* Sort Filter */}
         {transformedProducts.length > 0 && (
           <div className="mb-4">
-            <label className="label">
+            <label className="label flex flex-col gap-2 sm:flex-row sm:items-center">
               <span className="label-text font-semibold">Sort by:</span>
+              <select 
+                className="select select-bordered w-full max-w-xs sm:max-w-sm"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortOption)}
+              >
+                <option value="newest">Newest</option>
+                <option value="oldest">Oldest</option>
+                <option value="price-low-high">Price: Low to High</option>
+                <option value="price-high-low">Price: High to Low</option>
+                <option value="name-a-z">Name: A-Z</option>
+                <option value="name-z-a">Name: Z-A</option>
+                <option value="bestselling">Best Selling</option>
+              </select>
             </label>
-            <select 
-              className="select select-bordered w-full max-w-xs"
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as SortOption)}
-            >
-              <option value="newest">Newest</option>
-              <option value="oldest">Oldest</option>
-              <option value="price-low-high">Price: Low to High</option>
-              <option value="price-high-low">Price: High to Low</option>
-              <option value="name-a-z">Name: A-Z</option>
-              <option value="name-z-a">Name: Z-A</option>
-              <option value="bestselling">Best Selling</option>
-            </select>
           </div>
         )}
         
