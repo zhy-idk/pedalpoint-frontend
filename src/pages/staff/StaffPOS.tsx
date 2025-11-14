@@ -3,7 +3,7 @@ import ProductCard from "../../components/staff/ProductCard";
 import ScannedItem from "../../components/staff/ScannedItem";
 import { usePOS } from "../../providers/POSProvider";
 import { useProducts } from "../../hooks/useProducts";
-import { usePOSSales } from "../../hooks/usePOSSales";
+import { usePOSSales, type POSSaleData } from "../../hooks/usePOSSales";
 import { useCSRF } from "../../hooks/useCSRF";
 import PlaceholderIMG from "../../assets/placeholder_img.jpg";
 
@@ -18,6 +18,11 @@ function StaffPOS() {
   const [cashReceived, setCashReceived] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerContact, setCustomerContact] = useState("");
+  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
+  const [qrPaymentData, setQrPaymentData] = useState<any>(null);
+  const [qrPaymentError, setQrPaymentError] = useState<string | null>(null);
+  const [qrSaleId, setQrSaleId] = useState<number | null>(null);
+  const [qrSaleTotal, setQrSaleTotal] = useState<number | null>(null);
   // Transform products for POS display - show individual products only
   const posProducts = useMemo(() => {
     if (!productListings) return [];
@@ -144,7 +149,7 @@ function StaffPOS() {
     }
 
     // Prepare sale data
-    const saleData: Record<string, unknown> = {
+    const saleData: POSSaleData = {
       items: state.cart.map(item => ({
         product_id: item.id,
         quantity: item.quantity

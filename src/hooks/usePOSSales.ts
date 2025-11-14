@@ -12,6 +12,7 @@ interface POSSaleData {
   payment_method: string;
   customer_name?: string;
   customer_contact?: string;
+  [key: string]: unknown;
 }
 
 interface POSSaleResponse {
@@ -21,10 +22,11 @@ interface POSSaleResponse {
   total_amount: number;
   message: string;
   qrph?: any;
+  checkout_url?: string;
 }
 
 // Export the type for use in other files
-export type { POSSaleResponse };
+export type { POSSaleResponse, POSSaleData };
 
 export const usePOSSales = () => {
   const [isLoading, setIsLoading] = useState(false);
