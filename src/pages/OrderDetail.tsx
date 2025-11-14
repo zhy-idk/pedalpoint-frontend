@@ -449,15 +449,23 @@ function OrderDetail() {
               </div>
             )}
             {order.status === 'to_pay' && (
-              order.payment_method === 'cash_on_delivery' ? (
-                <button className="btn btn-disabled w-full" disabled>
-                  Waiting Approval
-                </button>
-              ) : (
-                <button className="btn btn-primary w-full">
+              <>
+                <button
+                  className={`btn w-full ${
+                    order.payment_method === 'cash_on_delivery'
+                      ? 'btn-disabled cursor-not-allowed'
+                      : 'btn-primary'
+                  }`}
+                  disabled={order.payment_method === 'cash_on_delivery'}
+                >
                   Pay Now
                 </button>
-              )
+                {order.payment_method === 'cash_on_delivery' && (
+                  <p className="text-center text-xs text-base-content/60">
+                    Pay Now is unavailable for cash-on-delivery orders.
+                  </p>
+                )}
+              </>
             )}
             {order.status === 'to_deliver' && (
               <button className="btn btn-success w-full">
