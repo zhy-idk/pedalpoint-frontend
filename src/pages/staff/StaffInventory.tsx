@@ -440,7 +440,7 @@ function StaffInventory() {
       // Search in brand (both ID and name)
       if (item.brand) {
         // Check brand ID
-        if (item.brand.toLowerCase().includes(term)) return true;
+        if (typeof item.brand === 'string' && item.brand.toLowerCase().includes(term)) return true;
 
         // Check brand name if brands are loaded
         if (brands.length > 0) {
@@ -470,7 +470,7 @@ function StaffInventory() {
       if (!item.brand) return false;
 
       // Check if the filter matches the brand ID directly (for backward compatibility)
-      if (item.brand.toLowerCase().includes(filters.brand.toLowerCase())) return true;
+      if (typeof item.brand === 'string' && item.brand.toLowerCase().includes(filters.brand.toLowerCase())) return true;
 
       // If brands are loaded, check if the filter matches the brand name
       if (brands.length > 0) {
