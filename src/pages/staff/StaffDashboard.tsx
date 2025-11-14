@@ -76,65 +76,73 @@ function StaffDashboard() {
     return inventory.filter(item => item.stock <= LOW_STOCK_THRESHOLD && item.available);
   }, [inventory]);
 
-  // Build recent activity from sales and orders
+  // Build recent activity from sales and orders (only from modules user can access)
   const recentActivity = useMemo(() => {
     const activities: any[] = [];
     
-    // Add recent sales
-    todaySales.slice(0, 3).forEach(sale => {
-      activities.push({
-        id: `sale-${sale.id}`,
-        type: 'sale',
-        description: `New sale to ${sale.user?.username || 'Walk-in Customer'}`,
-        time: new Date(sale.sale_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        amount: Number(sale.total_amount)
+    // Add recent sales (only if user has sales access)
+    if (permissions.canAccessSales) {
+      todaySales.slice(0, 3).forEach(sale => {
+        activities.push({
+          id: `sale-${sale.id}`,
+          type: 'sale',
+          description: `New sale to ${sale.user?.username || 'Walk-in Customer'}`,
+          time: new Date(sale.sale_date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          amount: Number(sale.total_amount)
+        });
       });
-    });
+    }
     
-    // Add recent orders
-    pendingOrders.slice(0, 2).forEach(order => {
-      activities.push({
-        id: `order-${order.id}`,
-        type: 'order',
-        description: `Order #${order.id} - ${order.status}`,
-        time: new Date(order.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        amount: 0
+    // Add recent orders (only if user has orders access)
+    if (permissions.canAccessOrders) {
+      pendingOrders.slice(0, 2).forEach(order => {
+        activities.push({
+          id: `order-${order.id}`,
+          type: 'order',
+          description: `Order #${order.id} - ${order.status}`,
+          time: new Date(order.created_at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+          amount: 0
+        });
       });
-    });
+    }
     
     return activities.sort((a, b) => b.time.localeCompare(a.time)).slice(0, 4);
-  }, [todaySales, pendingOrders]);
+  }, [todaySales, pendingOrders, permissions.canAccessSales, permissions.canAccessOrders]);
 
-  // Build urgent tasks
+  // Build urgent tasks (only from modules user can access)
   const urgentTasks = useMemo(() => {
     const tasks: any[] = [];
     
-    // Add low stock alerts
-    lowStockItems.slice(0, 3).forEach(item => {
-      tasks.push({
-        id: `stock-${item.id}`,
-        type: 'Low Stock Alert',
-        item: item.name,
-        stock: item.stock,
-        threshold: LOW_STOCK_THRESHOLD,
-        priority: item.stock === 0 ? 'urgent' : item.stock <= 2 ? 'high' : 'medium'
+    // Add low stock alerts (only if user has inventory access)
+    if (permissions.canAccessInventory) {
+      lowStockItems.slice(0, 3).forEach(item => {
+        tasks.push({
+          id: `stock-${item.id}`,
+          type: 'Low Stock Alert',
+          item: item.name,
+          stock: item.stock,
+          threshold: LOW_STOCK_THRESHOLD,
+          priority: item.stock === 0 ? 'urgent' : item.stock <= 2 ? 'high' : 'medium'
+        });
       });
-    });
+    }
     
-    // Add pending queue items
-    todayQueue.filter(q => q.status === 'pending').slice(0, 2).forEach(item => {
-      tasks.push({
-        id: `queue-${item.id}`,
-        type: 'Service Queue',
-        customer: item.user ? (`${item.user.first_name} ${item.user.last_name}`.trim() || item.user.username) : 'Unknown Customer',
-        service: item.info.substring(0, 30) + (item.info.length > 30 ? '...' : ''),
-        time: new Date(item.queue_date).toLocaleDateString(),
-        priority: 'high'
+    // Add pending queue items (only if user has queueing access)
+    if (permissions.canAccessQueueing) {
+      todayQueue.filter(q => q.status === 'pending').slice(0, 2).forEach(item => {
+        tasks.push({
+          id: `queue-${item.id}`,
+          type: 'Service Queue',
+          customer: item.user ? (`${item.user.first_name} ${item.user.last_name}`.trim() || item.user.username) : 'Unknown Customer',
+          service: item.info.substring(0, 30) + (item.info.length > 30 ? '...' : ''),
+          time: new Date(item.queue_date).toLocaleDateString(),
+          priority: 'high'
+        });
       });
-    });
+    }
     
     return tasks.slice(0, 5);
-  }, [lowStockItems, todayQueue, LOW_STOCK_THRESHOLD]);
+  }, [lowStockItems, todayQueue, LOW_STOCK_THRESHOLD, permissions.canAccessInventory, permissions.canAccessQueueing]);
 
   // Refresh all data
   const handleRefreshAll = async () => {
