@@ -18,12 +18,6 @@ function StaffPOS() {
   const [cashReceived, setCashReceived] = useState("");
   const [customerName, setCustomerName] = useState("");
   const [customerContact, setCustomerContact] = useState("");
-  const [qrPaymentData, setQrPaymentData] = useState<any>(null);
-  const [qrPaymentError, setQrPaymentError] = useState<string | null>(null);
-  const [qrSaleId, setQrSaleId] = useState<number | null>(null);
-  const [qrSaleTotal, setQrSaleTotal] = useState<number | null>(null);
-  const [isGeneratingQR, setIsGeneratingQR] = useState(false);
-
   // Transform products for POS display - show individual products only
   const posProducts = useMemo(() => {
     if (!productListings) return [];
@@ -90,11 +84,49 @@ function StaffPOS() {
       alert("Cart is empty!");
       return;
     }
-    setQrPaymentData(null);
-    setQrPaymentError(null);
-    setQrSaleId(null);
-    setQrSaleTotal(null);
     setShowPaymentModal(true);
+  };
+
+  const handleStartQrphCheckout = async () => {
+    if (state.cart.length === 0) {
+      alert("Cart is empty!");
+      return;
+    }
+
+    const origin = window.location.origin;
+    const successUrl = `${origin}/staff/pos?payment=qrph-success`;
+    const cancelUrl = `${origin}/staff/pos?payment=qrph-cancelled`;
+
+    const result = await processPayment("qrph", {
+      keepPaymentModalOpen: false,
+      suppressSuccessAlert: true,
+      suppressFailureAlert: true,
+      extraData: {
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+      },
+    });
+
+    if (result?.checkout_url) {
+      const checkoutWindow = window.open(result.checkout_url, "_blank");
+      if (!checkoutWindow) {
+        alert(
+          "Popup blocked. Please allow popups for this site to open the PayMongo checkout.",
+        );
+      } else {
+        checkoutWindow.focus();
+      }
+      alert(
+        "QR Ph checkout generated. Ask the customer to complete payment in the PayMongo window.",
+      );
+      setShowPaymentModal(false);
+    } else if (result) {
+      alert("Unable to retrieve the PayMongo checkout URL. Please try again.");
+    } else if (saleError) {
+      alert(`Failed to start QR Ph checkout: ${saleError}`);
+    } else {
+      alert("Failed to start QR Ph checkout. Please try again.");
+    }
   };
 
   const processPayment = async (
@@ -103,6 +135,7 @@ function StaffPOS() {
       keepPaymentModalOpen?: boolean;
       suppressSuccessAlert?: boolean;
       suppressFailureAlert?: boolean;
+      extraData?: Record<string, unknown>;
     },
   ) => {
     if (state.cart.length === 0) {
@@ -111,7 +144,7 @@ function StaffPOS() {
     }
 
     // Prepare sale data
-    const saleData = {
+    const saleData: Record<string, unknown> = {
       items: state.cart.map(item => ({
         product_id: item.id,
         quantity: item.quantity
@@ -120,6 +153,10 @@ function StaffPOS() {
       customer_name: customerName || 'Walk-in Customer',
       customer_contact: customerContact || ''
     };
+
+    if (options?.extraData) {
+      Object.assign(saleData, options.extraData);
+    }
 
     console.log('Cart items:', state.cart);
     console.log('Sale data being sent:', saleData);
@@ -375,8 +412,8 @@ function StaffPOS() {
           <div className="modal-box">
             <h3 className="font-bold text-lg mb-2">QR Ph Payment</h3>
             <p className="text-sm text-base-content/70 mb-4">
-              Enter optional customer details, then generate a PayMongo QR Ph code for the
-              customer to scan using their banking app.
+              Enter optional customer details, then start a PayMongo QR Ph checkout. A new
+              tab will open where the customer can complete the payment.
             </p>
             
             <div className="form-control mb-4">
@@ -406,74 +443,25 @@ function StaffPOS() {
             </div>
 
             <div className="mb-4">
-              <p className="text-lg font-medium">
-                Total: ₱{(qrSaleTotal ?? state.total).toFixed(2)}
-              </p>
+              <p className="text-lg font-medium">Total: ₱{state.total.toFixed(2)}</p>
             </div>
-
-            {qrPaymentError && (
-              <div className="alert alert-error mb-4">
-                <span>{qrPaymentError}</span>
-              </div>
-            )}
-
-            {qrPaymentData && (
-              <div className="bg-base-200 rounded-lg p-4 mb-4">
-                <p className="font-semibold text-sm mb-2">
-                  Sale #{qrSaleId ?? "—"} • Total ₱{(qrSaleTotal ?? state.total).toFixed(2)}
-                </p>
-                {qrPaymentData?.data?.attributes?.qr_code && (
-                  <div className="flex flex-col items-center mb-4">
-                    <img
-                      src={`data:image/png;base64,${qrPaymentData.data.attributes.qr_code}`}
-                      alt="QR Ph Code"
-                      className="w-60 h-60 object-contain bg-white p-4 rounded-lg"
-                    />
-                    <p className="text-xs text-base-content/70 mt-2 text-center">
-                      Ask the customer to scan this QR using their QR Ph-compatible banking app.
-                    </p>
-                  </div>
-                )}
-                {qrPaymentData?.data?.attributes?.qr_string && (
-                  <div>
-                    <label className="label">
-                      <span className="label-text text-xs uppercase tracking-wide">
-                        QR String
-                      </span>
-                    </label>
-                    <textarea
-                      className="textarea textarea-bordered w-full text-xs"
-                      rows={3}
-                      readOnly
-                      value={qrPaymentData.data.attributes.qr_string}
-                    />
-                  </div>
-                )}
-                <p className="text-xs text-base-content/60 mt-3">
-                  Once the payment is confirmed in PayMongo, update the sale status accordingly.
-                </p>
-              </div>
-            )}
 
             <div className="modal-action">
               <button
                 className="btn btn-primary"
-                onClick={handleGenerateQRPayment}
-                disabled={isProcessingSale || isGeneratingQR}
+                onClick={handleStartQrphCheckout}
+                disabled={isProcessingSale}
               >
-                {isGeneratingQR ? (
-                  <>
-                    <div className="loading loading-spinner loading-sm"></div>
-                    Generating...
-                  </>
+                {isProcessingSale ? (
+                  <div className="loading loading-spinner loading-sm"></div>
                 ) : (
-                  'Generate QR Ph Payment'
+                  'Start QR Ph Checkout'
                 )}
               </button>
               <button
                 className="btn btn-outline"
-                onClick={handleCloseQRModal}
-                disabled={isProcessingSale || isGeneratingQR}
+                onClick={() => setShowPaymentModal(false)}
+                disabled={isProcessingSale}
               >
                 Close
               </button>

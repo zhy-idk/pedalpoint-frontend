@@ -291,11 +291,11 @@ function OrderDetail() {
         {/* Order Items */}
         <div className="lg:col-span-2">
           <div className="card bg-base-100 border border-base-300">
-            <div className="card-header">
+            <div className="px-6 py-4 border-b border-base-200">
               <h2 className="card-title">Order Items ({order.items.length})</h2>
             </div>
             <div className="card-body p-0">
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto p-4">
                 <table className="table table-zebra w-full">
                   <thead>
                     <tr>
@@ -374,10 +374,10 @@ function OrderDetail() {
         <div className="space-y-6">
           {/* Order Information */}
           <div className="card bg-base-100 border border-base-300">
-            <div className="card-header">
+            <div className="px-6 py-4 border-b border-base-200">
               <h2 className="card-title">Order Information</h2>
             </div>
-            <div className="card-body space-y-4">
+            <div className="card-body p-6 space-y-4">
               <div>
                 <label className="text-sm font-medium text-base-content/70">Order ID</label>
                 <p className="font-mono">#{order.id}</p>
@@ -434,10 +434,10 @@ function OrderDetail() {
 
           {/* Shipping Information */}
           <div className="card bg-base-100 border border-base-300">
-            <div className="card-header">
+            <div className="px-6 py-4 border-b border-base-200">
               <h2 className="card-title">Shipping Information</h2>
             </div>
-            <div className="card-body space-y-4">
+            <div className="card-body p-6 space-y-4">
               <div>
                 <label className="text-sm font-medium text-base-content/70">Shipping Address</label>
                 <p className="text-sm">{order.shipping_address}</p>
@@ -451,11 +451,11 @@ function OrderDetail() {
 
           {/* Order Total */}
           <div className="card bg-base-100 border border-base-300">
-            <div className="card-header">
+            <div className="px-6 py-4 border-b border-base-200">
               <h2 className="card-title">Order Total</h2>
             </div>
-            <div className="card-body">
-              <div className="space-y-2">
+            <div className="card-body p-6">
+              <div className="space-y-3">
                 <div className="flex justify-between">
                   <span>Subtotal:</span>
                   <span>₱{order.total_amount.toFixed(2)}</span>
@@ -477,7 +477,7 @@ function OrderDetail() {
           <div className="space-y-2">
             {canReviewOrder && (
               <div className="alert alert-info text-sm">
-                Select an item above and click <strong>Write Review</strong> to share your feedback.
+                Select an item above and click the Write Review button to share your feedback.
               </div>
             )}
             {order.status === 'to_pay' && (

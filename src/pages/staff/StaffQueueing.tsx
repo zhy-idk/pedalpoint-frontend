@@ -91,6 +91,27 @@ function StaffQueueing() {
   const currentDateKey = formatDate(selectedDate);
   const currentQueue = queueData[currentDateKey] || [];
 
+  const pastDueQueueItems = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return queueItems
+      .filter((item) => {
+        const itemDate = new Date(item.queue_date);
+        itemDate.setHours(0, 0, 0, 0);
+        return itemDate < today && item.status !== "completed";
+      })
+      .map((item) => ({
+        ...item,
+        displayDate: new Date(item.queue_date).toLocaleDateString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }),
+      }));
+  }, [queueItems]);
+
   const handleStatusUpdate = async (
     itemId: number,
     newStatus: "pending" | "completed",
@@ -427,6 +448,70 @@ function StaffQueueing() {
                                 </li>
                               </ul>
                             </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {/* Past Due Queue */}
+            {!loading && (
+              <div className="card bg-base-100 shadow-lg">
+                <div className="card-body">
+                  <div className="mb-4 flex items-center justify-between">
+                    <h2 className="card-title">
+                      Past-Due Services ({pastDueQueueItems.length})
+                    </h2>
+                    <p className="text-xs text-base-content/60">
+                      Showing services scheduled before today that are still pending.
+                    </p>
+                  </div>
+
+                  {pastDueQueueItems.length === 0 ? (
+                    <div className="py-6 text-center text-sm text-base-content/70">
+                      Great! No overdue services right now.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {pastDueQueueItems.map((item) => (
+                        <div
+                          key={`past-${item.id}`}
+                          className="border border-warning/40 bg-warning/5 rounded-lg p-4"
+                        >
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <p className="font-semibold">{item.user?.first_name || item.user?.username || "Unknown"}</p>
+                              <p className="text-sm text-base-content/70">{item.info}</p>
+                              <p className="text-xs text-warning mt-1">
+                                Scheduled for {item.displayDate}
+                              </p>
+                            </div>
+                            <button
+                              className="btn btn-sm btn-primary"
+                              onClick={() => {
+                                setSelectedQueue({
+                                  id: item.id,
+                                  customer:
+                                    `${item.user?.first_name || ""} ${item.user?.last_name || ""}`.trim() ||
+                                    item.user?.username ||
+                                    "Unknown",
+                                  description:
+                                    item.info && item.info.length > 50
+                                      ? `${item.info.substring(0, 50)}...`
+                                      : item.info || "",
+                                  fullDescription: item.info || "",
+                                  phone: "N/A",
+                                  email: item.user?.email || "N/A",
+                                  status: item.status,
+                                });
+                                setSelectedDate(new Date(item.queue_date));
+                              }}
+                            >
+                              View Details
+                            </button>
                           </div>
                         </div>
                       ))}
