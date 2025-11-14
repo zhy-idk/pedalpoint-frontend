@@ -20,6 +20,7 @@ interface POSSaleResponse {
   sale_id?: number;  // Added for compatibility
   total_amount: number;
   message: string;
+  qrph?: any;
 }
 
 // Export the type for use in other files
