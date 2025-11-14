@@ -442,9 +442,11 @@ function StaffInventory() {
         // Check brand ID
         if (item.brand.toLowerCase().includes(term)) return true;
 
-        // Check brand name
-        const brandObj = brands.find((b) => b.id === parseInt(item.brand));
-        if (brandObj && brandObj.name.toLowerCase().includes(term)) return true;
+        // Check brand name if brands are loaded
+        if (brands.length > 0) {
+          const brandObj = brands.find((b) => b.id === parseInt(item.brand));
+          if (brandObj && brandObj.name.toLowerCase().includes(term)) return true;
+        }
       }
 
       return false;
@@ -470,9 +472,13 @@ function StaffInventory() {
       // Check if the filter matches the brand ID directly (for backward compatibility)
       if (item.brand.toLowerCase().includes(filters.brand.toLowerCase())) return true;
 
-      // Check if the filter matches the brand name
-      const brandObj = brands.find((b) => b.id === parseInt(item.brand));
-      return brandObj && brandObj.name.toLowerCase().includes(filters.brand.toLowerCase());
+      // If brands are loaded, check if the filter matches the brand name
+      if (brands.length > 0) {
+        const brandObj = brands.find((b) => b.id === parseInt(item.brand));
+        if (brandObj && brandObj.name.toLowerCase().includes(filters.brand.toLowerCase())) return true;
+      }
+
+      return false;
     })();
 
     // Stock range filter
@@ -529,13 +535,13 @@ function StaffInventory() {
   const uniqueVariants = [
     ...new Set(items.map((item) => item.variant_attribute)),
   ];
-  const uniqueBrands = [...new Set(
+  const uniqueBrands = brands.length > 0 ? [...new Set(
     items.map((item) => {
       if (!item.brand) return null;
       const brandObj = brands.find((b) => b.id === parseInt(item.brand));
       return brandObj ? brandObj.name : item.brand;
     }).filter(Boolean)
-  )];
+  )] : [];
 
   const clearAllFilters = () => {
     setFilters({
@@ -878,8 +884,11 @@ function StaffInventory() {
               onChange={(e) =>
                 setFilters({ ...filters, brand: e.target.value })
               }
+              disabled={brands.length === 0}
             >
-              <option value="">All Brands</option>
+              <option value="">
+                {brands.length === 0 ? "Loading brands..." : "All Brands"}
+              </option>
               {uniqueBrands.map((brand) => (
                 <option key={brand} value={brand}>
                   {brand}
