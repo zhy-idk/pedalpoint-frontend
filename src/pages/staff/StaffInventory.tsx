@@ -69,7 +69,6 @@ function StaffInventory() {
   const [isCreatingNewBrandEdit, setIsCreatingNewBrandEdit] = useState(false);
   const [newBrandNameEdit, setNewBrandNameEdit] = useState("");
   const [filters, setFilters] = useState({
-    productName: "",
     variant: "",
     brand: "",
     stockRange: "all", // all, low, out, in
@@ -466,11 +465,6 @@ function StaffInventory() {
       return false;
     })();
 
-    // Product Name filter
-    const matchesProductName =
-      !filters.productName ||
-      item.name.toLowerCase().includes(filters.productName.toLowerCase());
-
     // Variant filter
     const matchesVariant =
       !filters.variant ||
@@ -541,7 +535,6 @@ function StaffInventory() {
 
     return (
       matchesSearch &&
-      matchesProductName &&
       matchesVariant &&
       matchesBrand &&
       matchesStockRange() &&
@@ -552,7 +545,6 @@ function StaffInventory() {
   });
 
   // Get unique values for filter dropdowns
-  const uniqueProductNames = [...new Set(items.map((item) => item.name))];
   const uniqueVariants = [
     ...new Set(items.map((item) => item.variant_attribute)),
   ];
@@ -574,7 +566,6 @@ function StaffInventory() {
 
   const clearAllFilters = () => {
     setFilters({
-      productName: "",
       variant: "",
       brand: "",
       stockRange: "all",
@@ -859,28 +850,7 @@ function StaffInventory() {
           </button>
         </div>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-          {/* Product Name Filter */}
-          <div className="form-control">
-            <label className="label">
-              <span className="label-text text-sm">Product Name</span>
-            </label>
-            <select
-              className="select select-sm select-bordered w-full"
-              value={filters.productName}
-              onChange={(e) =>
-                setFilters({ ...filters, productName: e.target.value })
-              }
-            >
-              <option value="">All Products</option>
-              {uniqueProductNames.map((name) => (
-                <option key={name} value={name}>
-                  {name}
-                </option>
-              ))}
-            </select>
-          </div>
-
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
           {/* Variant Filter */}
           <div className="form-control">
             <label className="label">
@@ -993,17 +963,6 @@ function StaffInventory() {
 
         {/* Active filters display */}
         <div className="mt-3 flex flex-wrap gap-2">
-          {filters.productName && (
-            <div className="badge badge-primary gap-1">
-              Product: {filters.productName}
-              <button
-                onClick={() => setFilters({ ...filters, productName: "" })}
-                className="hover:text-primary-content text-xs"
-              >
-                ×
-              </button>
-            </div>
-          )}
           {filters.variant && (
             <div className="badge badge-secondary gap-1">
               Variant: {filters.variant}

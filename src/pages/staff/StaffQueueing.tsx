@@ -32,7 +32,7 @@ interface Customer {
 function StaffQueueing() {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [selectedQueue, setSelectedQueue] = useState<QueueItem | null>(null);
-  const { queueItems, loading, error, refresh, updateQueueItem, addService } =
+  const { queueItems, loading, error, refresh, updateQueueItem, rescheduleQueueItem, addService } =
     useServiceQueue();
 
   // Add Service Modal State
@@ -44,6 +44,13 @@ function StaffQueueing() {
   );
   const [serviceConcern, setServiceConcern] = useState("");
   const [addingService, setAddingService] = useState(false);
+
+  // Reschedule Modal State
+  const [showRescheduleModal, setShowRescheduleModal] = useState(false);
+  const [rescheduleItem, setRescheduleItem] = useState<QueueItem | null>(null);
+  const [rescheduleDate, setRescheduleDate] = useState<Date>(new Date());
+  const [originalQueueDate, setOriginalQueueDate] = useState<string>("");
+  const [rescheduling, setRescheduling] = useState(false);
 
   // Transform API data to the expected format and group by date
   const queueData: QueueData = useMemo(() => {
@@ -196,6 +203,50 @@ function StaffQueueing() {
       alert(errorMsg);
     } finally {
       setAddingService(false);
+    }
+  };
+
+  const handleOpenRescheduleModal = (item: QueueItem) => {
+    setRescheduleItem(item);
+    // Set initial reschedule date to the item's current date or today
+    const originalItem = queueItems.find(qi => qi.id === item.id);
+    const itemDate = originalItem?.queue_date;
+    setOriginalQueueDate(itemDate || "");
+    setRescheduleDate(itemDate ? new Date(itemDate) : new Date());
+    setShowRescheduleModal(true);
+  };
+
+  const handleCloseRescheduleModal = () => {
+    setShowRescheduleModal(false);
+    setRescheduleItem(null);
+    setRescheduleDate(new Date());
+    setOriginalQueueDate("");
+  };
+
+  const handleReschedule = async () => {
+    if (!rescheduleItem) return;
+
+    setRescheduling(true);
+
+    try {
+      const newDate = formatDate(rescheduleDate);
+      const success = await rescheduleQueueItem(rescheduleItem.id, newDate);
+
+      if (success) {
+        alert("Service rescheduled successfully");
+        handleCloseRescheduleModal();
+        // Update selected date to the new date
+        setSelectedDate(rescheduleDate);
+      } else {
+        const errorMsg = error || "Failed to reschedule service. Please try again.";
+        alert(errorMsg);
+      }
+    } catch (error) {
+      console.error("Error rescheduling service:", error);
+      const errorMsg = error instanceof Error ? error.message : "Failed to reschedule service";
+      alert(errorMsg);
+    } finally {
+      setRescheduling(false);
     }
   };
 
@@ -447,7 +498,15 @@ function StaffQueueing() {
                                   </li>
                                 )}
                                 <li>
-                                  <a className="text-warning">Reschedule</a>
+                                  <a 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenRescheduleModal(item);
+                                    }}
+                                    className="text-warning"
+                                  >
+                                    Reschedule
+                                  </a>
                                 </li>
                                 <li>
                                   <a className="text-error">Cancel</a>
@@ -744,6 +803,113 @@ function StaffQueueing() {
               </div>
             </div>
             <div className="modal-backdrop" onClick={handleCloseAddModal}></div>
+          </div>
+        )}
+
+        {/* Reschedule Modal */}
+        {showRescheduleModal && rescheduleItem && (
+          <div className="modal modal-open">
+            <div className="modal-box max-w-md">
+              <div className="mb-4 flex items-center justify-between">
+                <h3 className="text-lg font-bold">Reschedule Service</h3>
+                <button
+                  onClick={handleCloseRescheduleModal}
+                  className="btn btn-sm btn-circle btn-ghost"
+                  disabled={rescheduling}
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* Service Info */}
+                <div className="alert alert-info">
+                  <div className="text-sm">
+                    <p className="font-semibold">Customer: {rescheduleItem.customer}</p>
+                    <p className="text-xs mt-1">{rescheduleItem.description}</p>
+                  </div>
+                </div>
+
+                {/* Current Date */}
+                <div>
+                  <label className="text-base-content/70 text-sm font-semibold">
+                    Current Scheduled Date
+                  </label>
+                  <p className="text-sm">
+                    {originalQueueDate
+                      ? new Date(originalQueueDate).toLocaleDateString("en-US", {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })
+                      : "N/A"}
+                  </p>
+                </div>
+
+                {/* Calendar Picker */}
+                <div className="form-control">
+                  <label className="label">
+                    <span className="label-text font-semibold">Select New Date *</span>
+                  </label>
+                  <div className="flex justify-center">
+                    <DayPicker
+                      className="react-day-picker"
+                      mode="single"
+                      selected={rescheduleDate}
+                      onSelect={(date) => {
+                        if (date) {
+                          setRescheduleDate(date);
+                        }
+                      }}
+                      disabled={(date) => {
+                        // Disable past dates
+                        const today = new Date();
+                        today.setHours(0, 0, 0, 0);
+                        return date < today;
+                      }}
+                    />
+                  </div>
+                  <div className="mt-2 text-center text-sm text-base-content/70">
+                    Selected:{" "}
+                    {rescheduleDate.toLocaleDateString("en-US", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
+                  </div>
+                </div>
+
+                {/* Modal Actions */}
+                <div className="modal-action">
+                  <button
+                    type="button"
+                    className="btn"
+                    onClick={handleCloseRescheduleModal}
+                    disabled={rescheduling}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="button"
+                    className="btn btn-primary"
+                    onClick={handleReschedule}
+                    disabled={rescheduling}
+                  >
+                    {rescheduling ? (
+                      <>
+                        <span className="loading loading-spinner loading-sm"></span>
+                        Rescheduling...
+                      </>
+                    ) : (
+                      "Reschedule"
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="modal-backdrop" onClick={handleCloseRescheduleModal}></div>
           </div>
         )}
       </div>

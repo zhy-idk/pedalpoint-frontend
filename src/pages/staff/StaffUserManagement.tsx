@@ -175,8 +175,6 @@ function StaffUserManagement() {
 
     if (
       newUser.email &&
-      newUser.firstName &&
-      newUser.lastName &&
       newUser.password
     ) {
       // TODO: Replace with actual API call to create user
@@ -403,13 +401,12 @@ function StaffUserManagement() {
                 </label>
                 <input
                   type="text"
-                  placeholder="First Name"
+                  placeholder="First Name (Optional)"
                   className="input input-bordered"
                   value={newUser.firstName}
                   onChange={(e) =>
                     setNewUser({ ...newUser, firstName: e.target.value })
                   }
-                  required
                 />
               </div>
               <div className="form-control">
@@ -418,13 +415,12 @@ function StaffUserManagement() {
                 </label>
                 <input
                   type="text"
-                  placeholder="Last Name"
+                  placeholder="Last Name (Optional)"
                   className="input input-bordered"
                   value={newUser.lastName}
                   onChange={(e) =>
                     setNewUser({ ...newUser, lastName: e.target.value })
                   }
-                  required
                 />
               </div>
             </div>
@@ -541,16 +537,15 @@ function StaffUserManagement() {
                   </label>
                   <input
                     type="text"
-                    placeholder="First Name"
+                    placeholder="First Name (Optional)"
                     className="input input-bordered"
-                    value={selectedUser.first_name}
+                    value={selectedUser.first_name || ""}
                     onChange={(e) =>
                       setSelectedUser({
                         ...selectedUser,
                         first_name: e.target.value,
                       })
                     }
-                    required
                   />
                 </div>
                 <div className="form-control">
@@ -559,16 +554,15 @@ function StaffUserManagement() {
                   </label>
                   <input
                     type="text"
-                    placeholder="Last Name"
+                    placeholder="Last Name (Optional)"
                     className="input input-bordered"
-                    value={selectedUser.last_name}
+                    value={selectedUser.last_name || ""}
                     onChange={(e) =>
                       setSelectedUser({
                         ...selectedUser,
                         last_name: e.target.value,
                       })
                     }
-                    required
                   />
                 </div>
               </div>

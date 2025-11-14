@@ -22,6 +22,7 @@ interface UseServiceQueueReturn {
   error: string | null;
   refresh: () => Promise<void>;
   updateQueueItem: (itemId: number, status: 'pending' | 'completed') => Promise<boolean>;
+  rescheduleQueueItem: (itemId: number, newDate: string) => Promise<boolean>;
   addService: (queueDate: string, info: string, userId: number) => Promise<boolean>;
 }
 
@@ -91,6 +92,37 @@ export const useServiceQueue = (): UseServiceQueueReturn => {
     }
   }, [fetchQueueItems]);
 
+  const rescheduleQueueItem = useCallback(async (itemId: number, newDate: string): Promise<boolean> => {
+    try {
+      setError(null);
+
+      const csrfToken = getCSRFToken();
+      const response = await fetch(`${apiBaseUrl}/api/queue/${itemId}/update/`, {
+        method: 'PUT',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': csrfToken || '',
+        },
+        body: JSON.stringify({ queue_date: newDate }),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `Failed to reschedule queue item: ${response.statusText}`);
+      }
+
+      // Refresh the queue items list
+      await fetchQueueItems();
+      return true;
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to reschedule queue item';
+      setError(errorMessage);
+      console.error('Reschedule queue item error:', err);
+      return false;
+    }
+  }, [fetchQueueItems]);
+
   const addService = useCallback(async (queueDate: string, info: string, userId: number): Promise<boolean> => {
     try {
       setError(null);
@@ -148,6 +180,7 @@ export const useServiceQueue = (): UseServiceQueueReturn => {
     error,
     refresh: fetchQueueItems,
     updateQueueItem,
+    rescheduleQueueItem,
     addService,
   };
 };
