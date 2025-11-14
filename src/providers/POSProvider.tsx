@@ -8,6 +8,7 @@ interface POSItem {
   quantity: number;
   image?: string;
   sku?: string;
+  stock: number;
 }
 
 interface POSState {
@@ -51,15 +52,21 @@ function posReducer(state: POSState, action: POSAction): POSState {
       const existingItem = state.cart.find(item => item.id === action.payload.id);
       
       if (existingItem) {
+        if (existingItem.quantity >= existingItem.stock) {
+          return state;
+        }
         // Update quantity if item already exists
         const updatedCart = state.cart.map(item =>
           item.id === action.payload.id
-            ? { ...item, quantity: item.quantity + 1 }
+            ? { ...item, quantity: Math.min(item.quantity + 1, item.stock) }
             : item
         );
         const total = updatedCart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
         return { ...state, cart: updatedCart, total };
       } else {
+        if (action.payload.stock <= 0) {
+          return state;
+        }
         // Add new item
         const newItem = { ...action.payload, quantity: 1 };
         const updatedCart = [...state.cart, newItem];
@@ -77,7 +84,7 @@ function posReducer(state: POSState, action: POSAction): POSState {
     case 'UPDATE_QUANTITY': {
       const updatedCart = state.cart.map(item =>
         item.id === action.payload.id
-          ? { ...item, quantity: Math.max(0, action.payload.quantity) }
+          ? { ...item, quantity: Math.max(0, Math.min(action.payload.quantity, item.stock)) }
           : item
       ).filter(item => item.quantity > 0); // Remove items with 0 quantity
       

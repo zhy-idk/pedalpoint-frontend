@@ -33,6 +33,7 @@ function StaffPOS() {
           price: parseFloat(product.price),
           sku: product.sku,
           available: product.available,
+          stock: product.stock ?? 0,
         }));
       }
       return [];

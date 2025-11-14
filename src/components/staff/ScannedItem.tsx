@@ -10,6 +10,7 @@ interface ScannedItemProps {
     quantity: number;
     image?: string;
     sku?: string;
+    stock: number;
   };
 }
 
@@ -17,6 +18,10 @@ function ScannedItem({ item }: ScannedItemProps) {
   const { actions } = usePOS();
 
   const handleIncreaseQuantity = () => {
+    if (item.quantity >= item.stock) {
+      alert("Cannot exceed available stock.");
+      return;
+    }
     actions.updateQuantity(item.id, item.quantity + 1);
   };
 
@@ -42,6 +47,9 @@ function ScannedItem({ item }: ScannedItemProps) {
         {item.sku && (
           <div className="text-xs text-gray-500">SKU: {item.sku}</div>
         )}
+        <div className="text-[0.65rem] text-gray-500">
+          In cart: {item.quantity} / {item.stock}
+        </div>
       </div>
       <div className="flex w-18 items-center justify-center">
         <span className="text-sm font-medium">₱{totalPrice.toFixed(2)}</span>
