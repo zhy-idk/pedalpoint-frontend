@@ -316,70 +316,6 @@ function Repair() {
               </div>
             )}
 
-            {!pendingServicesLoading && upcomingService && (
-              <div className="card bg-base-100 shadow-lg">
-                <div className="card-body">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <h2 className="card-title">
-                        Your Scheduled Service — {formattedUpcomingDate}
-                      </h2>
-                      <p className="text-base-content/70">
-                        {upcomingService.info || "No description provided."}
-                      </p>
-                      <p className="text-sm mt-2">
-                        Need to reschedule? Please reach out via the Chat Support
-                        button so our team can assist you.
-                      </p>
-                      {isUpcomingServicePast && (
-                        <p className="text-error text-sm font-medium mt-2">
-                          This appointment date has already passed. Please cancel
-                          it below so you can choose a new schedule.
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col gap-2 sm:items-end">
-                      <span
-                        className={`badge ${
-                          isUpcomingServicePast
-                            ? "badge-warning"
-                            : "badge-success"
-                        }`}
-                      >
-                        {isUpcomingServicePast ? "Past Due" : "Pending"}
-                      </span>
-                      <button
-                        className="btn btn-error btn-sm"
-                        onClick={() => handleCancelService(upcomingService.id)}
-                        disabled={cancelingServiceId === upcomingService.id}
-                      >
-                        {cancelingServiceId === upcomingService.id ? (
-                          <>
-                            <Loader2 size={16} className="animate-spin" />
-                            Cancelling…
-                          </>
-                        ) : (
-                          "Cancel Service"
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                  {cancelMessage && (
-                    <div className="alert alert-success mt-4">
-                      <CheckCircle size={18} />
-                      <span>{cancelMessage}</span>
-                    </div>
-                  )}
-                  {cancelError && (
-                    <div className="alert alert-error mt-4">
-                      <AlertCircle size={18} />
-                      <span>{cancelError}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
-
             {!pendingServicesLoading && userQueueItems.length > 0 && (
               <div className="card bg-base-100 shadow">
                 <div className="card-body">
@@ -477,6 +413,19 @@ function Repair() {
                     })}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {cancelMessage && (
+              <div className="alert alert-success">
+                <CheckCircle size={18} />
+                <span>{cancelMessage}</span>
+              </div>
+            )}
+            {cancelError && (
+              <div className="alert alert-error">
+                <AlertCircle size={18} />
+                <span>{cancelError}</span>
               </div>
             )}
           </div>
