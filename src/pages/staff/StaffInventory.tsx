@@ -425,7 +425,7 @@ function StaffInventory() {
     // Text search
     const matchesSearch =
       item.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      (item.brand && typeof item.brand === 'string' && item.brand.toLowerCase().includes(searchTerm.toLowerCase())) ||
       item.variant_attribute.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.sku.toLowerCase().includes(searchTerm.toLowerCase());
 
@@ -444,7 +444,7 @@ function StaffInventory() {
     // Brand filter
     const matchesBrand =
       !filters.brand ||
-      item.brand.toLowerCase().includes(filters.brand.toLowerCase());
+      (item.brand && typeof item.brand === 'string' && item.brand.toLowerCase().includes(filters.brand.toLowerCase()));
 
     // Stock range filter
     const matchesStockRange = () => {
