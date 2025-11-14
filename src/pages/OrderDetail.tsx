@@ -13,6 +13,7 @@ function OrderDetail() {
   const { order, loading, error, refetch } = useOrderDetail(id);
   const [imageErrors, setImageErrors] = useState<{ [key: number]: boolean }>({});
   const [cancelling, setCancelling] = useState(false);
+  const [markingReceived, setMarkingReceived] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelReason, setCancelReason] = useState('');
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -187,6 +188,37 @@ function OrderDetail() {
       alert(errorMsg);
     } finally {
       setCancelling(false);
+    }
+  };
+
+  const handleMarkAsReceived = async () => {
+    if (!order) {
+      return;
+    }
+
+    if (!window.confirm('Mark this order as received?')) {
+      return;
+    }
+
+    setMarkingReceived(true);
+
+    try {
+      const response = await api.post(`/api/orders/${order.id}/received/`);
+
+      if (response.status === 200) {
+        alert('Order marked as received. Thank you!');
+        if (refetch) {
+          await refetch();
+        } else {
+          navigate('/orders/');
+        }
+      }
+    } catch (error: any) {
+      const errorMsg =
+        error?.response?.data?.error || 'Failed to mark order as received';
+      alert(errorMsg);
+    } finally {
+      setMarkingReceived(false);
     }
   };
 
@@ -468,8 +500,19 @@ function OrderDetail() {
               </>
             )}
             {order.status === 'to_deliver' && (
-              <button className="btn btn-success w-full">
-                Mark as Received
+              <button
+                className="btn btn-success w-full"
+                onClick={handleMarkAsReceived}
+                disabled={markingReceived}
+              >
+                {markingReceived ? (
+                  <>
+                    <span className="loading loading-spinner loading-sm mr-2" />
+                    Updating...
+                  </>
+                ) : (
+                  'Mark as Received'
+                )}
               </button>
             )}
             {(order.status === 'to_pay' || order.status === 'to_ship') && (
