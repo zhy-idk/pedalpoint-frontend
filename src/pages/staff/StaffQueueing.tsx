@@ -97,6 +97,7 @@ function StaffQueueing() {
 
     return queueItems
       .filter((item) => {
+        if (!item.user) return false;
         const itemDate = new Date(item.queue_date);
         itemDate.setHours(0, 0, 0, 0);
         return itemDate < today && item.status !== "completed";
