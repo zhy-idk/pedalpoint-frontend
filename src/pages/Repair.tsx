@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { DayPicker } from "react-day-picker";
 import {
   Calendar,
@@ -8,11 +8,19 @@ import {
   Zap,
   Bot,
   Loader2,
+  AlertCircle,
 } from "lucide-react";
 import ChatButton from "../components/Chat";
 import { apiBaseUrl } from "../api/index";
 import { useAuth } from "../hooks/useAuth";
 import { getCSRFToken } from "../utils/csrf";
+
+interface UserQueueItem {
+  id: number;
+  queue_date: string;
+  info: string;
+  status: "pending" | "completed";
+}
 
 function Repair() {
   const { user, isAuthenticated } = useAuth();
@@ -26,6 +34,43 @@ function Repair() {
   const [queueCount, setQueueCount] = useState<number | null>(null);
   const [isCheckingQueue, setIsCheckingQueue] = useState(false);
   const [queueFull, setQueueFull] = useState(false);
+  const [userQueueItems, setUserQueueItems] = useState<UserQueueItem[]>([]);
+  const [cancelingServiceId, setCancelingServiceId] = useState<number | null>(null);
+  const [cancelMessage, setCancelMessage] = useState<string | null>(null);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+
+  const upcomingService = useMemo(() => {
+    if (!userQueueItems.length) return null;
+    const pendingServices = userQueueItems
+      .filter((service) => service.status === "pending")
+      .sort(
+        (a, b) =>
+          new Date(`${a.queue_date}T00:00:00`).getTime() -
+          new Date(`${b.queue_date}T00:00:00`).getTime(),
+      );
+    return pendingServices[0] || null;
+  }, [userQueueItems]);
+
+  const formattedUpcomingDate = useMemo(() => {
+    if (!upcomingService) return "";
+    return new Date(`${upcomingService.queue_date}T00:00:00`).toLocaleDateString(
+      "en-US",
+      {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      },
+    );
+  }, [upcomingService]);
+
+  const isUpcomingServicePast = useMemo(() => {
+    if (!upcomingService) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const serviceDate = new Date(`${upcomingService.queue_date}T00:00:00`);
+    return serviceDate < today;
+  }, [upcomingService]);
 
   // Check queue count for selected date
   const checkQueueCount = async (selectedDate: Date) => {
@@ -57,10 +102,56 @@ function Repair() {
     }
   };
 
+  const handleCancelService = async (serviceId: number) => {
+    const confirmed = window.confirm(
+      "Cancel this service appointment? This frees your slot so you can schedule a new date.",
+    );
+    if (!confirmed) return;
+
+    setCancelMessage(null);
+    setCancelError(null);
+    setCancelingServiceId(serviceId);
+
+    try {
+      const response = await fetch(
+        `${apiBaseUrl}/api/queue/${serviceId}/cancel/`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRFToken": getCSRFToken() || "",
+          },
+        },
+      );
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(
+          errorData.error || "Failed to cancel your service appointment.",
+        );
+      }
+
+      setCancelMessage(
+        "Your service appointment was cancelled. Pick a new date when you're ready.",
+      );
+      await checkPendingServices();
+    } catch (error) {
+      console.error("Failed to cancel service appointment:", error);
+      setCancelError(
+        error instanceof Error
+          ? error.message
+          : "Failed to cancel your service appointment.",
+      );
+    } finally {
+      setCancelingServiceId(null);
+    }
+  };
+
   // Check for pending services
   const checkPendingServices = async () => {
     if (!isAuthenticated) return;
-    
+
     setPendingServicesLoading(true);
     try {
       const response = await fetch(`${apiBaseUrl}/api/queue/check-pending/`, {
@@ -73,14 +164,27 @@ function Repair() {
 
       if (response.ok) {
         const data = await response.json();
-        setHasPendingServices(data.has_pending_services);
+        setHasPendingServices(Boolean(data.has_pending_services));
+
+        const normalizedQueue: UserQueueItem[] = Array.isArray(data.services)
+          ? data.services.map((service: UserQueueItem) => ({
+              id: service.id,
+              queue_date: service.queue_date,
+              info: service.info,
+              status: service.status,
+            }))
+          : [];
+
+        setUserQueueItems(normalizedQueue);
       } else {
         console.error("Error checking pending services");
         setHasPendingServices(false);
+        setUserQueueItems([]);
       }
     } catch (error) {
       console.error("Error checking pending services:", error);
       setHasPendingServices(false);
+      setUserQueueItems([]);
     } finally {
       setPendingServicesLoading(false);
     }
@@ -90,8 +194,18 @@ function Repair() {
   useEffect(() => {
     if (isAuthenticated) {
       checkPendingServices();
+    } else {
+      setUserQueueItems([]);
+      setHasPendingServices(false);
     }
   }, [isAuthenticated]);
+
+  useEffect(() => {
+    if (!upcomingService) {
+      setCancelMessage(null);
+      setCancelError(null);
+    }
+  }, [upcomingService]);
 
   const disabledDays = [
     { before: new Date() },
@@ -154,6 +268,7 @@ function Repair() {
         throw new Error(errorMessage);
       }
 
+      await checkPendingServices();
       setIsSubmitted(true);
       setTimeout(() => setIsSubmitted(false), 3000);
     } catch (err) {
@@ -177,6 +292,86 @@ function Repair() {
             technicians
           </p>
         </div>
+
+        {isAuthenticated && (
+          <div className="mb-8 space-y-4">
+            {pendingServicesLoading && (
+              <div className="alert alert-info">
+                <Loader2 size={18} className="animate-spin" />
+                <div>
+                  <div className="font-bold">Checking your service queue…</div>
+                  <div className="text-sm">
+                    Hang tight while we pull up your current schedule.
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!pendingServicesLoading && upcomingService && (
+              <div className="card bg-base-100 shadow-lg">
+                <div className="card-body">
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h2 className="card-title">
+                        Your Scheduled Service — {formattedUpcomingDate}
+                      </h2>
+                      <p className="text-base-content/70">
+                        {upcomingService.info || "No description provided."}
+                      </p>
+                      <p className="text-sm mt-2">
+                        Need to reschedule? Please reach out via the Chat Support
+                        button so our team can assist you.
+                      </p>
+                      {isUpcomingServicePast && (
+                        <p className="text-error text-sm font-medium mt-2">
+                          This appointment date has already passed. Please cancel
+                          it below so you can choose a new schedule.
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2 sm:items-end">
+                      <span
+                        className={`badge ${
+                          isUpcomingServicePast
+                            ? "badge-warning"
+                            : "badge-success"
+                        }`}
+                      >
+                        {isUpcomingServicePast ? "Past Due" : "Pending"}
+                      </span>
+                      <button
+                        className="btn btn-error btn-sm"
+                        onClick={() => handleCancelService(upcomingService.id)}
+                        disabled={cancelingServiceId === upcomingService.id}
+                      >
+                        {cancelingServiceId === upcomingService.id ? (
+                          <>
+                            <Loader2 size={16} className="animate-spin" />
+                            Cancelling…
+                          </>
+                        ) : (
+                          "Cancel Service"
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  {cancelMessage && (
+                    <div className="alert alert-success mt-4">
+                      <CheckCircle size={18} />
+                      <span>{cancelMessage}</span>
+                    </div>
+                  )}
+                  {cancelError && (
+                    <div className="alert alert-error mt-4">
+                      <AlertCircle size={18} />
+                      <span>{cancelError}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Main Form */}
         <div className="card bg-base-100 shadow-xl">
@@ -334,13 +529,38 @@ function Repair() {
                 </div>
               </div>
             ) : hasPendingServices ? (
-              <div className="alert alert-warning mb-6">
+              <div className="alert alert-warning mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
-                  <div className="font-bold">Service Already Pending</div>
+                  <div className="font-bold">You already have a scheduled service</div>
                   <div className="text-sm">
-                    You already have a pending service request. Please wait for it to be completed before scheduling another repair.
+                    {formattedUpcomingDate
+                      ? `Your appointment is set for ${formattedUpcomingDate}.`
+                      : "You currently have an active service booking."}
+                    {" "}
+                    Need to reschedule? Message our team via Chat Support and cancel this appointment before picking a new date.
                   </div>
+                  {isUpcomingServicePast && (
+                    <div className="text-xs text-error mt-1">
+                      This appointment date has passed. Please cancel it to open a new slot.
+                    </div>
+                  )}
                 </div>
+                {upcomingService && (
+                  <button
+                    className="btn btn-error btn-sm"
+                    onClick={() => handleCancelService(upcomingService.id)}
+                    disabled={cancelingServiceId === upcomingService.id}
+                  >
+                    {cancelingServiceId === upcomingService.id ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" />
+                        Cancelling…
+                      </>
+                    ) : (
+                      "Cancel Service"
+                    )}
+                  </button>
+                )}
               </div>
             ) : queueFull ? (
               <div className="alert alert-error mb-6">
@@ -408,6 +628,7 @@ function Repair() {
           </div>
         )}
       </div>
+      <ChatButton />
     </div>
   );
 }
