@@ -10,7 +10,7 @@ export interface ServiceQueueItem {
     email: string;
     first_name: string;
     last_name: string;
-  };
+  } | null;
   queue_date: string;
   info: string;
   status: 'pending' | 'completed';

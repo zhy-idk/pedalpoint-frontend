@@ -50,8 +50,8 @@ function StaffQueueing() {
     const grouped: QueueData = {};
 
     queueItems.forEach((item: ServiceQueueItem) => {
-      // Skip items without user data
-      if (!item.user) {
+      // Skip items without user data - use explicit null/undefined check
+      if (!item.user || item.user === null || typeof item.user !== 'object') {
         console.warn("Queue item missing user data:", item);
         return;
       }
@@ -61,12 +61,14 @@ function StaffQueueing() {
         grouped[dateKey] = [];
       }
 
-      // Transform ServiceQueueItem to QueueItem format
+      // Transform ServiceQueueItem to QueueItem format with safe property access
+      // At this point, item.user is guaranteed to exist due to the check above
+      const user = item.user;
       const queueItem: QueueItem = {
         id: item.id,
         customer:
-          `${item.user.first_name || ""} ${item.user.last_name || ""}`.trim() ||
-          item.user.username ||
+          `${user.first_name || ""} ${user.last_name || ""}`.trim() ||
+          user.username ||
           "Unknown",
         description:
           item.info && item.info.length > 50
@@ -74,7 +76,7 @@ function StaffQueueing() {
             : item.info || "",
         fullDescription: item.info || "",
         phone: "N/A", // Phone not available in current model
-        email: item.user.email || "N/A",
+        email: user.email || "N/A",
         status: item.status,
       };
 
@@ -97,7 +99,10 @@ function StaffQueueing() {
 
     return queueItems
       .filter((item) => {
-        if (!item.user) return false;
+        // Explicitly check for user existence
+        if (!item.user || item.user === null || typeof item.user !== 'object') {
+          return false;
+        }
         const itemDate = new Date(item.queue_date);
         itemDate.setHours(0, 0, 0, 0);
         return itemDate < today && item.status !== "completed";
