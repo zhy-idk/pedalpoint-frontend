@@ -23,6 +23,7 @@ function StaffPOS() {
   const [qrPaymentError, setQrPaymentError] = useState<string | null>(null);
   const [qrSaleId, setQrSaleId] = useState<number | null>(null);
   const [qrSaleTotal, setQrSaleTotal] = useState<number | null>(null);
+  const [showQRModal, setShowQRModal] = useState(false);
   // Transform products for POS display - show individual products only
   const posProducts = useMemo(() => {
     if (!productListings) return [];
@@ -89,7 +90,7 @@ function StaffPOS() {
       alert("Cart is empty!");
       return;
     }
-    setShowPaymentModal(true);
+    setShowQRModal(true);
   };
 
   const handleStartQrphCheckout = async () => {
@@ -225,6 +226,23 @@ function StaffPOS() {
     setQrPaymentError(null);
     setQrSaleId(null);
     setQrSaleTotal(null);
+  };
+
+  const handleSetAsPaid = async () => {
+    if (state.cart.length === 0) {
+      alert("Cart is empty!");
+      return;
+    }
+    
+    const result = await processPayment("qrph", {
+      keepPaymentModalOpen: false,
+      suppressSuccessAlert: false,
+      suppressFailureAlert: false,
+    });
+    
+    if (result) {
+      setShowQRModal(false);
+    }
   };
 
   if (isLoading) {
@@ -466,6 +484,49 @@ function StaffPOS() {
               <button
                 className="btn btn-outline"
                 onClick={() => setShowPaymentModal(false)}
+                disabled={isProcessingSale}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* QR Code Modal */}
+      {showQRModal && (
+        <div className="modal modal-open">
+          <div className="modal-box max-w-md">
+            <h3 className="font-bold text-lg mb-4">Scan QR Code to Pay</h3>
+            
+            <div className="flex flex-col items-center justify-center mb-4">
+              <div className="bg-white p-4 rounded-lg shadow-lg">
+                <img 
+                  src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAtoAAALaCAIAAACAjGNkAAAABGdBTUEAALGPC/xhBQAAAAZiS0dEAP8A/wD/oL2nkwAAAAd0SU1FB+kLAxcOFXLNAoUAAD8USURBVHja7d17vGxnXd/x7+9zc8955aEJBASbiUENMRSFNIWSRNICVqERUERpCiFS1oiwp9KRUviAgYmiiXItBUEIhcTUiAJCcn5372nlnP0z/WzJx9Oztz9pq1fuvyeb94heScPbPWs2ZmzXc/a/2en6WUBAAA4Cd47wAAAOg74ggAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcDbx3wIGZee/CaimlGfez5E/WdkBKbr2Kh88+zCoeXtvOl9ylkvtZhdpe4laPveTD2/L2ruLIt+UbofOYHQEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACc9bHQd12+lXtVPLxkiWAV5aa11UzWVkA7+9bX5VvTW1sR6ex865lnf84GFo2X3PrsP9nqotySJ8AqNLDM2AuzIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAzCn030uqyw9pK2mrrFltFdWUVx3P2YVYxotqKsVtd9T27dXfJt5q6Cr6Ni0tqYA3/7PuJKWZHAACAM+IIAABwRhwBAADOiCMAAMAZcQQAADgjjgAAAGcU+jZXbQW0VexSFV1Da+tuOrvaSqxrK4eeXW3VlbOroqrWt/J5XbW1Ta7i1Zy9cJpWt33D7AgAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjELfCtVWh9mWKuUqiglLPrxkCevsW6/iKJVU28sx+3PWNswqittr20/fEdVW7V9yRL6LBbTlJNAozI4AAABnxBEAAOCMOAIAAJwRRwAAgDPiCAAAcEYcAQAAzvpY6Ftbp8fZNbBrqG+TzJJ8KyGr6JRbRVFuFXWYJbuwzr6hks85+8Pb8nL4vsQNLJwuqS1NxbuE2REAAOCMOAIAAJwRRwAAgDPiCAAAcEYcAQAAzogjAADAWR8LfddVsgdsyeecXclCyirq8WqrfK6tTriKYTawa+js+1lbwWdb6kWr2M+SB8S3BrWKna9iQw3cOnXCU8yOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGHAEAAM6MKqNCbWVytbV7ra37bgP3s7ZunL49iqvgWy/q2zK6ts97A6uUG9hkuIrPZltaMfcTsyMAAMAZcQQAADgjjgAAAGfEEQAA4Iw4AgAAnBFHAACAsz529PWt6a2tD2ptxa4lD0jJhzdwmLOrrQ/q7FuvYkO17VIDC7zbUlnawKPUvfbjrT5Z1YDZEQAA4Iw4AgAAnBFHAACAM+IIAABwRhwBAADOiCMAAMBZHzv6NrBEsIFlxrX1/i05opIaWMpY2xvMt33u7Br4VqzigDSwCrS2prhVPLy2A7KuHn6xlsfsCAAAcEYcAQAAzogjAADAGXEEAAA4I44AAABnxBEAAOCMQt+xKjpnrquBhZRVjMi32axv4XRtGlhi7duBtgqtrk7vXp2wrwZ+TXQJsyMAAMAZcQQAADgjjgAAAGfEEQAA4Iw4AgAAnBFHAACAs4H3DjhoYGGq74Zqe87aSqyr2FBPanpn18D62ype99qOvG8n55L7WdsHtuRzzj6ikhrYn7n5mB0BAADOiCMAAMAZcQQAADgjjgAAAGfEEQAA4Iw4AgAAnPWxo++6aqs0a2Cz2QY2HZ39OWurZ67i4b61iA0sHvatTp9dFa+mb9vkkhtq4KfD92NYcuv9/F5mdgQAADgjjgAAAGfEEQAA4Iw4AgAAnBFHAACAM+IIAABw1seOvrMrWQDm2zq4pJ6002zLiEqqbeyzm/0oteV4dq8xbG01vSUPSMkRVfFw337XLcXsCAAAcEYcAQAAzogjAADAGXEEAAA4I44AAABnxBEAAOCMjr7N1cBOpA18Tt9OuQ3sBTq72priNnDnfetFq1DbR6bk1qt4eMn9nF0DP5tdwuwIAABwRhwBAADOiCMAAMAZcQQAADgjjgAAAGfEEQAA4KyPHX3bUqRXRU1aFWOv7TlrK2WsrWPquqpodes79ipezZLDrG3stTXa9X3TVlHTy+veN8yOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGHAEAAM76WOi7rgZWxLV6RLVVKTewnWZtzWZrK1AsuaEqKrSreHvXVpRb2y5V8cJVcUB8GwL7tvX2rdBuFGZHAACAM+IIAABwRhwBAADOiCMAAMAZcQQAADgjjgAAAGfWw4Ii33rR2nrV+lYt1taNsy2qOCC+9Y2zq63YtYHvpdpe9yqes9UlrN1bUqHzmB0BAADOiCMAAMAZcQQAADgjjgAAAGfEEQAA4Iw4AgAAnNHRtwuqqLIrWWY8+8NbXQ5dspiwtjrM2bfue0CqGGZJVVTV1rbWQMkRlXy4bzvikrvUwKLxzmN2BAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGoW/LlCygrYJvf9HayiNrKzucvXC65HPWNszZ+W695C75FqLXVnPu2+e8pNr6XTfwndx8zI4AAABnxBEAAOCMOAIAAJwRRwAAgDPiCAAAcEYcAQAAzij03YhvXVZtVaBVqK0ot4Gdh6tQWyvm2Z+ziv2sTW2ve1taMTewBrWKiuKSW29gx+kuYXYEAAA4I44AAABnxBEAAOCMOAIAAJwRRwAAgDPiCAAAcEah71hbirV8K82qaDrakwLa2noUV/Hw2Q9IyZ+sTQPbUPuq7R1SxdhrO/INrNDuEmZHAACAM+IIAABwRhwBAADOiCMAAMAZcQQAADgjjgAAAGdGlREAAPDF7AgAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHBGHAEAAM6IIwAAwBlxBAAAOCOOAAAAZ8QRAADgjDgCAACcEUcAAIAz4ggAAHD2/wHotr+Zo1QangAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyNS0xMS0wM1QyMzoxNDoyMSswMDowMKzLRc4AAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjUtMTEtMDNUMjM6MTQ6MjErMDA6MDDdlv1yAAAAAElFTkSuQmCC" 
+                  alt="QR Code" 
+                  className="w-64 h-64"
+                />
+              </div>
+              <p className="text-sm text-base-content/70 mt-4 text-center">
+                Total Amount: <span className="font-bold text-lg">₱{state.total.toFixed(2)}</span>
+              </p>
+            </div>
+
+            <div className="modal-action">
+              <button
+                className="btn btn-primary"
+                onClick={handleSetAsPaid}
+                disabled={isProcessingSale || state.cart.length === 0}
+              >
+                {isProcessingSale ? (
+                  <div className="loading loading-spinner loading-sm"></div>
+                ) : (
+                  'Set as Paid'
+                )}
+              </button>
+              <button
+                className="btn btn-outline"
+                onClick={() => setShowQRModal(false)}
                 disabled={isProcessingSale}
               >
                 Close
