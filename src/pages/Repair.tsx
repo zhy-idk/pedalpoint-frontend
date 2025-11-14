@@ -72,6 +72,15 @@ function Repair() {
     return serviceDate < today;
   }, [upcomingService]);
 
+  const sortedQueueItems = useMemo(() => {
+    if (!userQueueItems.length) return [];
+    return [...userQueueItems].sort(
+      (a, b) =>
+        new Date(`${b.queue_date}T00:00:00`).getTime() -
+        new Date(`${a.queue_date}T00:00:00`).getTime(),
+    );
+  }, [userQueueItems]);
+
   // Check queue count for selected date
   const checkQueueCount = async (selectedDate: Date) => {
     setIsCheckingQueue(true);
@@ -367,6 +376,106 @@ function Repair() {
                       <span>{cancelError}</span>
                     </div>
                   )}
+                </div>
+              </div>
+            )}
+
+            {!pendingServicesLoading && userQueueItems.length > 0 && (
+              <div className="card bg-base-100 shadow">
+                <div className="card-body">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="card-title text-lg">Your Service Queue</h3>
+                    <span className="text-xs text-base-content/60">
+                      Showing {userQueueItems.length} booking
+                      {userQueueItems.length === 1 ? "" : "s"}
+                    </span>
+                  </div>
+                  <p className="text-sm text-base-content/70">
+                    Each entry lists the exact service date. Need adjustments?
+                    Chat Support can help you reschedule.
+                  </p>
+
+                  <div className="mt-4 space-y-3">
+                    {sortedQueueItems.map((service) => {
+                      const serviceDate = new Date(
+                        `${service.queue_date}T00:00:00`,
+                      );
+                      const today = new Date();
+                      today.setHours(0, 0, 0, 0);
+                      const formattedDate = serviceDate.toLocaleDateString(
+                        "en-US",
+                        {
+                          weekday: "long",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        },
+                      );
+                      const isPast = serviceDate < today;
+                      const isPending = service.status === "pending";
+
+                      return (
+                        <div
+                          key={service.id}
+                          className="border-base-200 rounded-lg border p-3"
+                        >
+                          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                            <div>
+                              <p className="text-sm text-base-content/70">
+                                Scheduled for
+                              </p>
+                              <p className="font-semibold">{formattedDate}</p>
+                              <p className="text-sm text-base-content/70">
+                                {service.info || "No description provided."}
+                              </p>
+                            </div>
+                            <div className="flex flex-col gap-2 sm:items-end">
+                              <span
+                                className={`badge ${
+                                  isPending
+                                    ? isPast
+                                      ? "badge-warning"
+                                      : "badge-info"
+                                    : "badge-success"
+                                }`}
+                              >
+                                {isPending
+                                  ? isPast
+                                    ? "Pending (Past Date)"
+                                    : "Pending"
+                                  : "Completed"}
+                              </span>
+                              {isPending && (
+                                <button
+                                  className="btn btn-outline btn-error btn-xs"
+                                  onClick={() => handleCancelService(service.id)}
+                                  disabled={cancelingServiceId === service.id}
+                                >
+                                  {cancelingServiceId === service.id ? (
+                                    <>
+                                      <Loader2
+                                        size={14}
+                                        className="animate-spin"
+                                      />
+                                      Cancelling…
+                                    </>
+                                  ) : (
+                                    "Cancel"
+                                  )}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          {isPending && isPast && (
+                            <p className="text-xs text-error mt-2">
+                              This booking is past due. Cancel and pick a new
+                              slot if you still need service.
+                            </p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
                 </div>
               </div>
             )}
