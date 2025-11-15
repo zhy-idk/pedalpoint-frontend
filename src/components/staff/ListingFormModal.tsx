@@ -398,13 +398,13 @@ function ListingFormModal({
   return (
     <div className="modal modal-open">
       <div className="modal-box max-w-4xl max-h-[90vh]">
-        <div className="flex justify-between items-center mb-4">
+        <div className="flex justify-between items-center mb-6">
           <h3 className="font-bold text-lg">
             {editingListing ? 'Edit Product Listing' : 'Add New Product Listing'}
           </h3>
-          <button 
-            type="button" 
-            onClick={onClose} 
+          <button
+            type="button"
+            onClick={onClose}
             className="btn btn-sm btn-circle btn-ghost"
             disabled={isSubmitting}
           >
@@ -413,22 +413,22 @@ function ListingFormModal({
         </div>
 
         {/* Tabs */}
-        <div className="tabs tabs-boxed mb-4">
-          <button 
+        <div className="tabs tabs-boxed mb-6">
+          <button
             className={`tab ${activeTab === 'basic' ? 'tab-active' : ''}`}
             onClick={() => setActiveTab('basic')}
             type="button"
           >
             Basic Info
           </button>
-          <button 
+          <button
             className={`tab ${activeTab === 'images' ? 'tab-active' : ''}`}
             onClick={() => setActiveTab('images')}
             type="button"
           >
             📷 Images
           </button>
-          <button 
+          <button
             className={`tab ${activeTab === 'products' ? 'tab-active' : ''}`}
             onClick={() => setActiveTab('products')}
             type="button"
@@ -436,7 +436,7 @@ function ListingFormModal({
             <Package className="w-4 h-4 mr-1" />
             Products {editingListing && `(${assignedProducts.length})`}
           </button>
-          <button 
+          <button
             className={`tab ${activeTab === 'bike-builder' ? 'tab-active' : ''}`}
             onClick={() => setActiveTab('bike-builder')}
             type="button"
@@ -444,8 +444,8 @@ function ListingFormModal({
             Bike Builder & Compatibility
           </button>
         </div>
-        
-        <form onSubmit={handleSubmit} className="space-y-4">
+
+        <form onSubmit={handleSubmit} className="space-y-6">
           {error && (
             <div className="alert alert-error">
               <span>{error}</span>
@@ -454,10 +454,10 @@ function ListingFormModal({
 
           {/* Basic Info Tab */}
           {activeTab === 'basic' && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Product Name *</span>
+                  <span className="label-text font-medium">Product Name *</span>
                 </label>
                 <input
                   type="text"
@@ -472,7 +472,7 @@ function ListingFormModal({
 
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Category *</span>
+                  <span className="label-text font-medium">Category *</span>
                 </label>
                 <select
                   name="category"
@@ -492,7 +492,7 @@ function ListingFormModal({
 
               <div className="form-control">
                 <label className="label">
-                  <span className="label-text">Description</span>
+                  <span className="label-text font-medium">Description</span>
                 </label>
                 <textarea
                   name="description"
@@ -504,15 +504,15 @@ function ListingFormModal({
               </div>
 
               <div className="form-control">
-                <label className="label cursor-pointer justify-start gap-2">
+                <label className="label cursor-pointer justify-start gap-3">
                   <input
                     type="checkbox"
                     name="available"
                     checked={formData.available}
                     onChange={handleInputChange}
-                    className="checkbox"
+                    className="checkbox checkbox-primary"
                   />
-                  <span className="label-text">Available for purchase</span>
+                  <span className="label-text font-medium">Available for purchase</span>
                 </label>
               </div>
             </div>
@@ -523,9 +523,9 @@ function ListingFormModal({
             <div className="space-y-6">
               {/* Thumbnail */}
               <div className="card bg-base-200">
-                <div className="card-body">
-                  <h4 className="card-title text-lg">Listing Thumbnail</h4>
-                  <p className="text-sm text-base-content/70 mb-4">
+                <div className="card-body pb-6">
+                  <h4 className="card-title text-lg mb-2">Listing Thumbnail</h4>
+                  <p className="text-sm text-base-content/70 mb-6">
                     Main image for the listing (shown in product cards)
                   </p>
                   
@@ -559,9 +559,9 @@ function ListingFormModal({
 
               {/* Product Images */}
               <div className="card bg-base-200">
-                <div className="card-body">
-                  <h4 className="card-title text-lg">Product Gallery Images</h4>
-                  <p className="text-sm text-base-content/70 mb-4">
+                <div className="card-body pb-6">
+                  <h4 className="card-title text-lg mb-2">Product Gallery Images</h4>
+                  <p className="text-sm text-base-content/70 mb-6">
                     Additional images for the product gallery
                   </p>
 
@@ -635,7 +635,7 @@ function ListingFormModal({
 
           {/* Products Tab */}
           {activeTab === 'products' && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               {!editingListing ? (
                 <div className="alert alert-info">
                   <Info className="w-5 h-5" />
@@ -645,9 +645,9 @@ function ListingFormModal({
                 <>
                   {/* Assigned Products */}
                   <div className="card bg-base-200">
-                    <div className="card-body">
-                      <h4 className="card-title text-lg">Assigned Products ({assignedProducts.length})</h4>
-                      <p className="text-sm text-base-content/70 mb-4">
+                    <div className="card-body pb-6">
+                      <h4 className="card-title text-lg mb-2">Assigned Products ({assignedProducts.length})</h4>
+                      <p className="text-sm text-base-content/70 mb-6">
                         Products currently in this listing
                       </p>
                       
@@ -701,10 +701,10 @@ function ListingFormModal({
 
                   {/* Available Products to Assign */}
                   <div className="card bg-base-200">
-                    <div className="card-body">
-                      <div className="flex justify-between items-center mb-4">
+                    <div className="card-body pb-6">
+                      <div className="flex justify-between items-center mb-6">
                         <div>
-                          <h4 className="card-title text-lg">Available Products</h4>
+                          <h4 className="card-title text-lg mb-2">Available Products</h4>
                           <p className="text-sm text-base-content/70">
                             Select products to add to this listing
                           </p>
@@ -785,7 +785,7 @@ function ListingFormModal({
           {/* Bike Builder Tab */}
           {/* Bike Builder & Compatibility Tab */}
           {activeTab === 'bike-builder' && (
-            <div className="space-y-4">
+            <div className="space-y-6">
               <div className="alert alert-info">
                 <Info className="w-5 h-5" />
                 <div className="text-sm">
@@ -796,7 +796,7 @@ function ListingFormModal({
 
               {/* Enable in Bike Builder */}
               <div className="form-control">
-                <label className="label cursor-pointer justify-start gap-2">
+                <label className="label cursor-pointer justify-start gap-3">
                   <input
                     type="checkbox"
                     name="bike_builder_enabled"
@@ -818,7 +818,7 @@ function ListingFormModal({
                   {/* Component Type */}
                   <div className="form-control">
                     <label className="label">
-                      <span className="label-text">Component Type *</span>
+                      <span className="label-text font-medium">Component Type *</span>
                     </label>
                     <select
                       name="builder_category"
@@ -843,7 +843,7 @@ function ListingFormModal({
                   {/* Priority */}
                   <div className="form-control">
                     <label className="label">
-                      <span className="label-text">Display Priority</span>
+                      <span className="label-text font-medium">Display Priority</span>
                     </label>
                     <input
                       type="number"
@@ -861,7 +861,7 @@ function ListingFormModal({
                     </label>
                   </div>
 
-                  <div className="divider">Compatibility Tags</div>
+                  <div className="divider my-6">Compatibility Tags</div>
 
                   {compatibilityLoading ? (
                     <div className="flex justify-center py-4">
@@ -871,26 +871,26 @@ function ListingFormModal({
                     <div className="space-y-6">
                       {/* Use Case */}
                       <div className="card bg-base-200">
-                        <div className="card-body p-4">
-                          <h5 className="font-semibold mb-2">Use Case</h5>
-                          <p className="text-xs text-base-content/70 mb-3">
+                        <div className="card-body pb-6">
+                          <h5 className="font-semibold text-base mb-3">Use Case</h5>
+                          <p className="text-sm text-base-content/70 mb-4">
                             What riding style is this product suited for?
                           </p>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap gap-3">
                             {compatibilityTags
                               .filter(tag => tag.tag_type === 'use_case')
                               .map(tag => (
-                                <label 
+                                <label
                                   key={tag.id}
-                                  className="label cursor-pointer justify-start gap-2 py-1 px-3 border rounded-lg hover:bg-base-300"
+                                  className="label cursor-pointer justify-start gap-3 py-2 px-4 border rounded-lg hover:bg-base-300 transition-colors"
                                 >
                                   <input
                                     type="checkbox"
                                     checked={selectedCompatibilityTags.includes(tag.id)}
                                     onChange={() => handleCompatibilityTagToggle(tag.id)}
-                                    className="checkbox checkbox-sm checkbox-primary"
+                                    className="checkbox checkbox-primary"
                                   />
-                                  <span className="label-text">{tag.display_name}</span>
+                                  <span className="label-text font-medium">{tag.display_name}</span>
                                 </label>
                               ))}
                           </div>
@@ -899,26 +899,26 @@ function ListingFormModal({
 
                       {/* Budget Tier */}
                       <div className="card bg-base-200">
-                        <div className="card-body p-4">
-                          <h5 className="font-semibold mb-2">Budget Tier</h5>
-                          <p className="text-xs text-base-content/70 mb-3">
+                        <div className="card-body pb-6">
+                          <h5 className="font-semibold text-base mb-3">Budget Tier</h5>
+                          <p className="text-sm text-base-content/70 mb-4">
                             Which price range does this product fit in?
                           </p>
-                          <div className="flex flex-wrap gap-2">
+                          <div className="flex flex-wrap gap-3">
                             {compatibilityTags
                               .filter(tag => tag.tag_type === 'budget')
                               .map(tag => (
-                                <label 
+                                <label
                                   key={tag.id}
-                                  className="label cursor-pointer justify-start gap-2 py-1 px-3 border rounded-lg hover:bg-base-300"
+                                  className="label cursor-pointer justify-start gap-3 py-2 px-4 border rounded-lg hover:bg-base-300 transition-colors"
                                 >
                                   <input
                                     type="checkbox"
                                     checked={selectedCompatibilityTags.includes(tag.id)}
                                     onChange={() => handleCompatibilityTagToggle(tag.id)}
-                                    className="checkbox checkbox-sm checkbox-success"
+                                    className="checkbox checkbox-success"
                                   />
-                                  <span className="label-text">{tag.display_name}</span>
+                                  <span className="label-text font-medium">{tag.display_name}</span>
                                 </label>
                               ))}
                           </div>
@@ -927,26 +927,26 @@ function ListingFormModal({
 
                       {/* Physical Compatibility */}
                       <div className="card bg-base-200">
-                        <div className="card-body p-4">
-                          <h5 className="font-semibold mb-2">Physical Compatibility</h5>
-                          <p className="text-xs text-base-content/70 mb-3">
+                        <div className="card-body pb-6">
+                          <h5 className="font-semibold text-base mb-3">Physical Compatibility</h5>
+                          <p className="text-sm text-base-content/70 mb-4">
                             Select all physical specs (brake types, wheel sizes, materials, etc.)
                           </p>
-                          <div className="grid grid-cols-2 gap-2 max-h-64 overflow-y-auto">
+                          <div className="grid grid-cols-2 gap-3 max-h-64 overflow-y-auto">
                             {compatibilityTags
                               .filter(tag => tag.tag_type === 'physical')
                               .map(tag => (
-                                <label 
+                                <label
                                   key={tag.id}
-                                  className="label cursor-pointer justify-start gap-2 py-1 px-2 border rounded hover:bg-base-300"
+                                  className="label cursor-pointer justify-start gap-3 py-2 px-3 border rounded-lg hover:bg-base-300 transition-colors"
                                 >
                                   <input
                                     type="checkbox"
                                     checked={selectedCompatibilityTags.includes(tag.id)}
                                     onChange={() => handleCompatibilityTagToggle(tag.id)}
-                                    className="checkbox checkbox-xs checkbox-secondary"
+                                    className="checkbox checkbox-secondary"
                                   />
-                                  <span className="label-text text-xs">{tag.display_name}</span>
+                                  <span className="label-text text-sm font-medium">{tag.display_name}</span>
                                 </label>
                               ))}
                           </div>
@@ -971,7 +971,7 @@ function ListingFormModal({
             </div>
           )}
 
-          <div className="modal-action">
+          <div className="modal-action mt-8">
             <button
               type="button"
               className="btn btn-ghost"
