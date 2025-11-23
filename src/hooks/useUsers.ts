@@ -36,21 +36,25 @@ interface UseUsersReturn {
   deleteUser: (userId: number) => Promise<boolean>;
 }
 
-const getCSRFToken = () => {
-  const name = "csrftoken";
-  let cookieValue = null;
-  if (document.cookie && document.cookie !== "") {
-    const cookies = document.cookie.split(";");
-    for (let i = 0; i < cookies.length; i++) {
-      const cookie = cookies[i].trim();
-      if (cookie.substring(0, name.length + 1) === name + "=") {
-        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-        break;
-      }
+export function getCSRFToken(): string | null {
+  try {
+    console.log('[getCSRFToken] Retrieving CSRF token from meta tag');
+    
+    const meta = document.querySelector('meta[name="csrf-token"]');
+    const token = meta?.getAttribute('content');
+    
+    if (token && token.trim() !== '') {
+      console.log('[getCSRFToken] Token found, length:', token.length);
+      return token;
+    } else {
+      console.warn('[getCSRFToken] No CSRF token in meta tag');
+      return null;
     }
+  } catch (error) {
+    console.error('[getCSRFToken] Error:', error);
+    return null;
   }
-  return cookieValue;
-};
+}
 
 export const useUsers = (): UseUsersReturn => {
   const [users, setUsers] = useState<User[]>([]);
