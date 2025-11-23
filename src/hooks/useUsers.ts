@@ -100,6 +100,11 @@ export const useUsers = (): UseUsersReturn => {
         body: JSON.stringify(userData),
       });
 
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+      const responseData = await response.json();
+      console.log('Response data:', responseData);
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || `Failed to update user: ${response.statusText}`);
