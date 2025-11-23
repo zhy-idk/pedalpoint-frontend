@@ -36,7 +36,21 @@ interface UseUsersReturn {
   deleteUser: (userId: number) => Promise<boolean>;
 }
 
-
+const getCSRFToken = () => {
+  const name = "csrftoken";
+  let cookieValue = null;
+  if (document.cookie && document.cookie !== "") {
+    const cookies = document.cookie.split(";");
+    for (let i = 0; i < cookies.length; i++) {
+      const cookie = cookies[i].trim();
+      if (cookie.substring(0, name.length + 1) === name + "=") {
+        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+        break;
+      }
+    }
+  }
+  return cookieValue;
+};
 
 export const useUsers = (): UseUsersReturn => {
   const [users, setUsers] = useState<User[]>([]);
@@ -53,7 +67,7 @@ export const useUsers = (): UseUsersReturn => {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-
+          'X-CSRFToken': getCSRFToken() || '',
         },
       });
 
@@ -76,12 +90,14 @@ export const useUsers = (): UseUsersReturn => {
     try {
       setError(null);
 
+      console.log(getCSRFToken());
+
       const response = await fetch(`${apiBaseUrl}/api/users/${userId}/update/`, {
         method: 'PUT',
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-
+          'X-CSRFToken': getCSRFToken() || '',
         },
         body: JSON.stringify(userData),
       });
@@ -116,7 +132,7 @@ export const useUsers = (): UseUsersReturn => {
         credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
-
+          'X-CSRFToken': getCSRFToken() || '',
         },
       });
 
