@@ -39,10 +39,10 @@ interface UseUsersReturn {
 export function getCSRFToken(): string | null {
   try {
     console.log('[getCSRFToken] Retrieving CSRF token from meta tag');
-    
+
     const meta = document.querySelector('meta[name="csrf-token"]');
     const token = meta?.getAttribute('content');
-    
+
     if (token && token.trim() !== '') {
       console.log('[getCSRFToken] Token found, length:', token.length);
       return token;
@@ -110,6 +110,7 @@ export const useUsers = (): UseUsersReturn => {
       console.log('Response ok:', response.ok);
       const responseData = await response.json();
       console.log('Response data:', responseData);
+      console.log('csrftoken:', getCSRFToken());
 
       if (!response.ok) {
         const errorData = await response.json();
