@@ -12,7 +12,7 @@ import {
   CheckCircle,
   AlertCircle,
   ArrowLeft,
-  Banknote
+  Banknote,
 } from "lucide-react";
 
 interface CheckoutFormData {
@@ -29,9 +29,9 @@ function Checkout() {
   const location = useLocation();
 
   // Check if this is a Buy Now flow
-  const buyNowData = location.state as { 
-    buyNow?: boolean; 
-    product?: any; 
+  const buyNowData = location.state as {
+    buyNow?: boolean;
+    product?: any;
     quantity?: number;
     productListing?: any;
   } | null;
@@ -51,20 +51,25 @@ function Checkout() {
   const [userDataLoading, setUserDataLoading] = useState(true);
 
   // Compute order items and totals (works for both cart and buy now)
-  const orderItems = buyNowData?.buyNow && buyNowData.product
-    ? [{
-        product: buyNowData.product,
-        quantity: buyNowData.quantity || 1,
-      }]
-    : cart?.items || [];
+  const orderItems =
+    buyNowData?.buyNow && buyNowData.product
+      ? [
+          {
+            product: buyNowData.product,
+            quantity: buyNowData.quantity || 1,
+          },
+        ]
+      : cart?.items || [];
 
-  const totalItems = buyNowData?.buyNow && buyNowData.quantity
-    ? buyNowData.quantity
-    : cart?.totalItems || 0;
+  const totalItems =
+    buyNowData?.buyNow && buyNowData.quantity
+      ? buyNowData.quantity
+      : cart?.totalItems || 0;
 
-  const totalPrice = buyNowData?.buyNow && buyNowData.product
-    ? parseFloat(buyNowData.product.price) * (buyNowData.quantity || 1)
-    : cart?.totalPrice || 0;
+  const totalPrice =
+    buyNowData?.buyNow && buyNowData.product
+      ? parseFloat(buyNowData.product.price) * (buyNowData.quantity || 1)
+      : cart?.totalPrice || 0;
 
   // Redirect if not authenticated or (cart is empty AND not buy now)
   useEffect(() => {
@@ -84,16 +89,16 @@ function Checkout() {
   useEffect(() => {
     const loadUserData = async () => {
       if (!isAuthenticated) return;
-      
+
       try {
         setUserDataLoading(true);
         const data = await fetchUserInfo();
         setUserData(data);
-        
+
         // Populate form with user info if available
         if (data.user_info && data.user_info.length > 0) {
           const userInfo = data.user_info[0];
-          setFormData(prev => ({
+          setFormData((prev) => ({
             ...prev,
             shipping_address: userInfo.address || "",
             contact_number: userInfo.contact_number || "",
@@ -153,9 +158,9 @@ function Checkout() {
     }
 
     // Basic phone number validation
-    const phoneRegex = /^[\+]?[1-9][\d]{0,15}$/;
-    if (!phoneRegex.test(formData.contact_number.replace(/[\s\-\(\)]/g, ""))) {
-      setError("Please enter a valid contact number");
+    const phoneRegex = /^09\d{9}$/;
+    if (!phoneRegex.test(formData.contact_number.replace(/[\s()-]/g, ""))) {
+      setError("Please enter a valid contact number (format: 09XXXXXXXXX)");
       return false;
     }
 
@@ -174,10 +179,10 @@ function Checkout() {
 
     try {
       // Determine endpoint and payload based on buy now or cart checkout
-      const endpoint = buyNowData?.buyNow 
+      const endpoint = buyNowData?.buyNow
         ? `${getApiBaseUrl()}/api/cart/buy-now-checkout/`
         : `${getApiBaseUrl()}/api/cart/checkout/`;
-      
+
       const payload = buyNowData?.buyNow
         ? {
             ...formData,
@@ -185,7 +190,7 @@ function Checkout() {
             quantity: buyNowData.quantity,
           }
         : formData;
-      
+
       // First, create the order
       const response = await fetch(endpoint, {
         method: "POST",
@@ -208,12 +213,12 @@ function Checkout() {
       if (formData.payment_method === "cash_on_delivery") {
         // For COD, backend already cleared the cart (if cart checkout)
         setOrderSuccess(true);
-        
+
         // Only refetch cart if it was a cart checkout (not buy now)
         if (!buyNowData?.buyNow) {
           await actions.fetchCart(); // Refetch cart to get empty cart from backend
         }
-        
+
         // Redirect to order detail page after a short delay
         setTimeout(() => {
           navigate(`/orders/${orderData.id}`);
@@ -221,64 +226,78 @@ function Checkout() {
       } else {
         // Create PayMongo checkout session for online payments
         try {
-          console.log('=== CREATING PAYMONGO CHECKOUT SESSION ===');
-          
+          console.log("=== CREATING PAYMONGO CHECKOUT SESSION ===");
+
           // Prepare line items from cart or buyNow
-          const lineItems = buyNowData?.buyNow && buyNowData.product
-            ? [{
-                name: `${buyNowData.product.name}${buyNowData.product.variant_attribute ? ` - ${buyNowData.product.variant_attribute}` : ''}`,
-                amount: Math.round(parseFloat(buyNowData.product.price) * 100), // Convert to cents
-                quantity: buyNowData.quantity || 1,
-                currency: "PHP"
-              }]
-            : cart?.items.map(item => ({
-                name: `${item.product.name}${item.product.variant_attribute ? ` - ${item.product.variant_attribute}` : ''}`,
-                amount: Math.round((typeof item.product.price === 'number' ? item.product.price : parseFloat(item.product.price)) * 100), // Convert to cents
-                quantity: item.quantity,
-                currency: "PHP"
-              })) || [];
+          const lineItems =
+            buyNowData?.buyNow && buyNowData.product
+              ? [
+                  {
+                    name: `${buyNowData.product.name}${buyNowData.product.variant_attribute ? ` - ${buyNowData.product.variant_attribute}` : ""}`,
+                    amount: Math.round(
+                      parseFloat(buyNowData.product.price) * 100,
+                    ), // Convert to cents
+                    quantity: buyNowData.quantity || 1,
+                    currency: "PHP",
+                  },
+                ]
+              : cart?.items.map((item) => ({
+                  name: `${item.product.name}${item.product.variant_attribute ? ` - ${item.product.variant_attribute}` : ""}`,
+                  amount: Math.round(
+                    (typeof item.product.price === "number"
+                      ? item.product.price
+                      : parseFloat(item.product.price)) * 100,
+                  ), // Convert to cents
+                  quantity: item.quantity,
+                  currency: "PHP",
+                })) || [];
 
           // Prepare billing information
           const billingInfo = {
-            name: `${userData?.first_name || ''} ${userData?.last_name || ''}`.trim() || 'Customer',
-            email: userData?.email || '',
+            name:
+              `${userData?.first_name || ""} ${userData?.last_name || ""}`.trim() ||
+              "Customer",
+            email: userData?.email || "",
             phone: formData.contact_number,
           };
 
           // Create checkout session
-          const checkoutSession = await paymongoService.createPayMongoCheckoutSession({
-            orderId: orderData.id,
-            billing: billingInfo,
-            lineItems: lineItems,
-            sendEmailReceipt: true,
-          });
+          const checkoutSession =
+            await paymongoService.createPayMongoCheckoutSession({
+              orderId: orderData.id,
+              billing: billingInfo,
+              lineItems: lineItems,
+              sendEmailReceipt: true,
+            });
 
-          console.log('Checkout Session Response:', checkoutSession);
-          
+          console.log("Checkout Session Response:", checkoutSession);
+
           // Store checkout session ID in the backend
           try {
-            await fetch(`${getApiBaseUrl()}/api/orders/${orderData.id}/update-status/`, {
-              method: "PATCH",
-              credentials: "include",
-              headers: getHeaders(),
-              body: JSON.stringify({
-                paymongo_checkout_session_id: checkoutSession.data.id,
-              }),
-            });
+            await fetch(
+              `${getApiBaseUrl()}/api/orders/${orderData.id}/update-status/`,
+              {
+                method: "PATCH",
+                credentials: "include",
+                headers: getHeaders(),
+                body: JSON.stringify({
+                  paymongo_checkout_session_id: checkoutSession.data.id,
+                }),
+              },
+            );
           } catch (storeError) {
-            console.warn('Failed to store checkout session ID:', storeError);
+            console.warn("Failed to store checkout session ID:", storeError);
             // Don't fail the checkout process if storing the session ID fails
           }
-          
+
           // Redirect to PayMongo checkout page
           const checkoutUrl = checkoutSession.data.attributes.checkout_url;
           if (checkoutUrl) {
-            console.log('🔄 Redirecting to PayMongo checkout...');
+            console.log("🔄 Redirecting to PayMongo checkout...");
             window.location.href = checkoutUrl;
           } else {
-            setError('No checkout URL provided');
+            setError("No checkout URL provided");
           }
-          
         } catch (paymentError) {
           console.error("❌ Payment error:", paymentError);
           setError("Failed to initialize payment. Please try again.");
@@ -326,9 +345,7 @@ function Checkout() {
               </div>
               <div className="flex justify-between">
                 <span>Total:</span>
-                <span className="font-semibold">
-                  ₱{totalPrice.toFixed(2)}
-                </span>
+                <span className="font-semibold">₱{totalPrice.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -392,7 +409,9 @@ function Checkout() {
                   <div className="card-body">
                     <div className="flex items-center gap-3">
                       <div className="loading loading-spinner loading-sm"></div>
-                      <span className="text-sm text-base-content/70">Loading account information...</span>
+                      <span className="text-base-content/70 text-sm">
+                        Loading account information...
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -403,36 +422,52 @@ function Checkout() {
                       <CheckCircle className="h-5 w-5" />
                       Account Information
                     </h2>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm text-base-content/70">Name:</span>
-                          <span className="text-sm">{userData.first_name} {userData.last_name}</span>
+                          <span className="text-base-content/70 text-sm font-semibold">
+                            Name:
+                          </span>
+                          <span className="text-sm">
+                            {userData.first_name} {userData.last_name}
+                          </span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm text-base-content/70">Email:</span>
+                          <span className="text-base-content/70 text-sm font-semibold">
+                            Email:
+                          </span>
                           <span className="text-sm">{userData.email}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <span className="font-semibold text-sm text-base-content/70">Username:</span>
+                          <span className="text-base-content/70 text-sm font-semibold">
+                            Username:
+                          </span>
                           <span className="text-sm">{userData.username}</span>
                         </div>
                       </div>
-                      
+
                       {userData.user_info && userData.user_info.length > 0 && (
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
-                            <MapPin className="h-4 w-4 text-base-content/70" />
-                            <span className="font-semibold text-sm text-base-content/70">Saved Address:</span>
+                            <MapPin className="text-base-content/70 h-4 w-4" />
+                            <span className="text-base-content/70 text-sm font-semibold">
+                              Saved Address:
+                            </span>
                           </div>
-                          <p className="text-sm ml-6">{userData.user_info[0].address}</p>
-                          
+                          <p className="ml-6 text-sm">
+                            {userData.user_info[0].address}
+                          </p>
+
                           <div className="flex items-center gap-2">
-                            <Phone className="h-4 w-4 text-base-content/70" />
-                            <span className="font-semibold text-sm text-base-content/70">Saved Contact:</span>
+                            <Phone className="text-base-content/70 h-4 w-4" />
+                            <span className="text-base-content/70 text-sm font-semibold">
+                              Saved Contact:
+                            </span>
                           </div>
-                          <p className="text-sm ml-6">{userData.user_info[0].contact_number}</p>
+                          <p className="ml-6 text-sm">
+                            {userData.user_info[0].contact_number}
+                          </p>
                         </div>
                       )}
                     </div>
@@ -507,47 +542,63 @@ function Checkout() {
                   <div className="flex flex-col gap-2">
                     {/* Online Payment Option */}
                     <label className="cursor-pointer">
-                      <div className={`border rounded-lg p-4 transition-all ${
-                        formData.payment_method === "online_payment" 
-                          ? "border-primary bg-primary/5" 
-                          : "border-base-300 hover:border-base-400"
-                      }`}>
+                      <div
+                        className={`rounded-lg border p-4 transition-all ${
+                          formData.payment_method === "online_payment"
+                            ? "border-primary bg-primary/5"
+                            : "border-base-300 hover:border-base-400"
+                        }`}
+                      >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3">
                             <input
                               type="radio"
                               name="payment_method"
                               value="online_payment"
-                              checked={formData.payment_method === "online_payment"}
+                              checked={
+                                formData.payment_method === "online_payment"
+                              }
                               onChange={handleInputChange}
                               className="radio radio-primary"
                             />
                             <div className="flex items-center space-x-2">
-                              <CreditCard className="h-5 w-5 text-primary" />
-                              <span className="font-medium text-lg">Secure Online Payment</span>
+                              <CreditCard className="text-primary h-5 w-5" />
+                              <span className="text-lg font-medium">
+                                Secure Online Payment
+                              </span>
                             </div>
                           </div>
                           <div className="badge badge-primary">Recommended</div>
                         </div>
                         {formData.payment_method === "online_payment" && (
                           <>
-                            <p className="text-sm text-base-content/70 mt-3 ml-9">
-                              Pay securely with multiple payment options including:
+                            <p className="text-base-content/70 mt-3 ml-9 text-sm">
+                              Pay securely with multiple payment options
+                              including:
                             </p>
-                            <div className="flex flex-wrap gap-2 my-3 ml-9">
-                              <span className="badge badge-outline">Credit/Debit Cards</span>
+                            <div className="my-3 ml-9 flex flex-wrap gap-2">
+                              <span className="badge badge-outline">
+                                Credit/Debit Cards
+                              </span>
                               <span className="badge badge-outline">GCash</span>
-                              <span className="badge badge-outline">PayMaya</span>
-                              <span className="badge badge-outline">Online Banking</span>
+                              <span className="badge badge-outline">
+                                PayMaya
+                              </span>
+                              <span className="badge badge-outline">
+                                Online Banking
+                              </span>
                               <span className="badge badge-outline">QR Ph</span>
                             </div>
                             {/* Payment Security Notice */}
                             <div className="alert alert-info">
                               <CheckCircle className="h-4 w-4" />
                               <div>
-                                <div className="font-medium">Secure Payment Processing</div>
+                                <div className="font-medium">
+                                  Secure Payment Processing
+                                </div>
                                 <div className="text-sm">
-                                  Your payment is secured by PayMongo's 256-bit SSL encryption and PCI DSS compliance
+                                  Your payment is secured by PayMongo's 256-bit
+                                  SSL encryption and PCI DSS compliance
                                 </div>
                               </div>
                             </div>
@@ -558,34 +609,39 @@ function Checkout() {
 
                     {/* Cash on Delivery Option */}
                     <label className="cursor-pointer">
-                      <div className={`border rounded-lg p-4 transition-all ${
-                        formData.payment_method === "cash_on_delivery" 
-                          ? "border-primary bg-primary/5" 
-                          : "border-base-300 hover:border-base-400"
-                      }`}>
+                      <div
+                        className={`rounded-lg border p-4 transition-all ${
+                          formData.payment_method === "cash_on_delivery"
+                            ? "border-primary bg-primary/5"
+                            : "border-base-300 hover:border-base-400"
+                        }`}
+                      >
                         <div className="flex items-center space-x-3">
                           <input
                             type="radio"
                             name="payment_method"
                             value="cash_on_delivery"
-                            checked={formData.payment_method === "cash_on_delivery"}
+                            checked={
+                              formData.payment_method === "cash_on_delivery"
+                            }
                             onChange={handleInputChange}
                             className="radio radio-primary"
                           />
                           <div className="flex items-center space-x-2">
-                            <Banknote className="h-5 w-5 text-primary" />
-                            <span className="font-medium text-lg">Cash on Delivery</span>
+                            <Banknote className="text-primary h-5 w-5" />
+                            <span className="text-lg font-medium">
+                              Cash on Delivery
+                            </span>
                           </div>
                         </div>
                         {formData.payment_method === "cash_on_delivery" && (
-                          <p className="text-sm text-base-content/70 mt-3 ml-9">
-                            Pay with cash when your order is delivered to your doorstep. Please prepare exact amount if possible.
+                          <p className="text-base-content/70 mt-3 ml-9 text-sm">
+                            Pay with cash when your order is delivered to your
+                            doorstep. Please prepare exact amount if possible.
                           </p>
                         )}
                       </div>
                     </label>
-
-
                   </div>
                 </div>
               </div>
@@ -607,8 +663,8 @@ function Checkout() {
                 {loading ? (
                   <>
                     <div className="loading loading-spinner loading-sm"></div>
-                    {formData.payment_method === "cash_on_delivery" 
-                      ? "Placing Order..." 
+                    {formData.payment_method === "cash_on_delivery"
+                      ? "Placing Order..."
                       : "Creating Order..."}
                   </>
                 ) : (
@@ -640,7 +696,11 @@ function Checkout() {
                 <div className="mb-4 space-y-3">
                   {orderItems.map((item, index) => (
                     <div
-                      key={buyNowData?.buyNow ? `buynow-${item.product.id}` : `${item.product.id}-${item.product.sku}`}
+                      key={
+                        buyNowData?.buyNow
+                          ? `buynow-${item.product.id}`
+                          : `${item.product.id}-${item.product.sku}`
+                      }
                       className="flex items-start gap-3"
                     >
                       <div className="flex-1">
@@ -654,7 +714,10 @@ function Checkout() {
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium">
-                          ₱{(parseFloat(item.product.price) * item.quantity).toFixed(2)}
+                          ₱
+                          {(
+                            parseFloat(item.product.price) * item.quantity
+                          ).toFixed(2)}
                         </p>
                       </div>
                     </div>
